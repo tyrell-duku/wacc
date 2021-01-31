@@ -1,9 +1,14 @@
+import scala.io.Source
+
 object Main {
   def main(args: Array[String]) = {
-    println("Hello, World")
+    if (args.length == 0) {
+      throw new Exception("Invalid arguements")
+    }
+    println(readFile(args(0)))
   }
 
-  def succ(x: Int): Int = {
-    x + 1
+  def readFile(str:String) : String = {
+    return Source.fromFile(str).getLines.mkString("\n")
   }
 }
