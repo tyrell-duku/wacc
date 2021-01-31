@@ -1,0 +1,28 @@
+image: openjdk:11
+
+stages:
+  - compile
+  - test
+  - clean
+
+before_script:
+  - apt-get update -y
+  - apt-get install apt-transport-https -y
+  # Add keyserver for SBT
+  - echo "deb http://dl.bintray.com/sbt/debian /" | tee -a /etc/apt/sources.list.d/sbt.list
+  - apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 2EE0EA64E40A89B84B2DF73499E82A75642AC823
+  # Install SBT
+  - apt-get update -y
+  - apt-get install sbt -y
+
+compile:
+  stage: compile
+  script: sbt compile
+
+test:
+  stage: test
+  script: sbt test
+
+clean:
+  stage: clean
+  script: sbt clean  

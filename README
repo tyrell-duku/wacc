@@ -1,6 +1,24 @@
 This is the provided git repository for the WACC compilers lab. You should work 
 in this repository regularly committing and pushing your work back to GitLab.
 
+-----------------------
+Git commit convention  
+-----------------------
+
+> commit message <
+
+<type>[optional scope]: <description>
+
+> types <
+
+- feat: A new feature
+- fix: A bug fix
+- style: Code styling changes
+- refactor: Refactoring code
+- test: Everything tracked related to testing
+- docs: Everything tracked related to documentation
+- maintenance: Everything related to the integrity of repository
+
 ----------------------------
 Provided files/directories  
 ----------------------------
