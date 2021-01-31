@@ -7,3 +7,10 @@ src/antlr
 
 #ignore other junk files
 *~
+.idea
+.bsp
+*.iml
+project/
+
+#ignore Scala files
+target
