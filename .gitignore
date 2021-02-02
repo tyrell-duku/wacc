@@ -10,7 +10,11 @@ src/antlr
 .idea
 .bsp
 *.iml
-project/
+project
+*.bloop
+*.metals
+*.scalafmt.conf
+*.vscode
 
 #ignore Scala files
 target
