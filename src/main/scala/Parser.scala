@@ -13,11 +13,17 @@ object Parser {
 
   val unaryOp: Parsley[UnOp] =
     ('!' #> Not) <|> ('-' #> Negation) <|> ("len" #> Len) <|> ("ord" #> Ord) <|> ("chr" #> Chr)
-  
+
   val binaryOp: Parsley[BinOp] =
     ('*' #> Mul) <|> ('/' #> Div) <|> ('%' #> Mod) <|> ('+' #> Plus) <|>
       ('-' #> Sub) <|> ('>' #> GT) <|> (">=" #> GTE) <|> ('<' #> LT) <|>
       ("<=" #> LTE) <|> ("==" #> Equal) <|> ("!=" #> NotEqual) <|> ("&&" #> And) <|> ("||" #> Or)
+
+  lazy val identifier: Parsley[Ident] =
+    Ident <#> (('_' <|> letter <|> upper) <::>
+      many('_' <|> letter <|> upper <|> digit)).map((x: List[Char]) =>
+      x.mkString
+    )
 
   val escapedChar: Parsley[Char] =
     char('0') <|> char('b') <|> char('t') <|> char('n') <|> char('f') <|>
@@ -31,5 +37,4 @@ object Parser {
 
   val strLiteral: Parsley[StrLiter] =
     '"' *> many(character).map(StrLiter) <* '"'
-
 }

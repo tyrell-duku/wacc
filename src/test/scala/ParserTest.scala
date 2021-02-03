@@ -95,6 +95,32 @@ class BinaryOpTest extends AnyFunSuite {
   }
 }
 
+class Identifier extends AnyFunSuite {
+  test("Successfully parses simple letter identifiers") {
+    assertResult(true) { identifier.runParser("x").isSuccess }
+    assertResult(true) { identifier.runParser("abc").isSuccess }
+    assertResult(true) { identifier.runParser("xyz").isSuccess }
+    assertResult(true) { identifier.runParser("ABC").isSuccess }
+  }
+
+  test("Successfully parses simple alphanumeric identifiers") {
+    assertResult(true) { identifier.runParser("x1").isSuccess }
+    assertResult(true) { identifier.runParser("ABC20").isSuccess }
+    assertResult(true) { identifier.runParser("abc123").isSuccess }
+  }
+
+  test("Successfully parses simple alphanumeric identifiers with underscore") {
+    assertResult(true) { identifier.runParser("_").isSuccess }
+    assertResult(true) { identifier.runParser("temp_variable1").isSuccess }
+    assertResult(true) { identifier.runParser("x1_y2").isSuccess }
+  }
+
+  test("Successfully fails to parses identifiers with underscore") {
+    assertResult(true) { identifier.runParser("10x").isFailure }
+    assertResult(true) { identifier.runParser("!abc").isFailure }
+  }
+}
+
 class BaseTypeTest extends AnyFunSuite {
   test("Successfully parses int type") {
     assertResult(true) { baseType.runParser("int").isSuccess }
