@@ -100,6 +100,10 @@ object Rules {
 
   sealed case class CharLiter(x: Char) extends Expr
 
+  sealed trait Character
+  case class NormalChar(x: Char) extends Character
+  case class Escape(x: Char) extends Character
+
   sealed case class StrLiter(x: String) extends Expr
 
   sealed case class ArrayLiter(x: Array[Expr]) extends AssignRHS
