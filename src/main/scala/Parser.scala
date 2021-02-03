@@ -8,6 +8,9 @@ import Rules._
 import parsley.expr.chain
 
 object Parser {
+  val baseType: Parsley[BaseType] =
+    ("int" #> IntT) <|> ("bool" #> BoolT) <|> ("char" #> CharT) <|> ("string" #> StringT)
+
   val unaryOp: Parsley[UnOp] =
     ('!' #> Not) <|> ('-' #> Negation) <|> ("len" #> Len) <|> ("ord" #> Ord) <|> ("chr" #> Chr)
 
