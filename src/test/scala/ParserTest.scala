@@ -35,63 +35,63 @@ class UnaryOpTest extends AnyFunSuite {
 
 class BinaryOpTest extends AnyFunSuite {
   test("Successful parses * operator") {
-    assertResult(true) {binaryOp.runParser("*").isSuccess}
+    assertResult(true) { binaryOp.runParser("*").isSuccess }
   }
 
   test("Successful parses / operator") {
-    assertResult(true) {binaryOp.runParser("/").isSuccess}
+    assertResult(true) { binaryOp.runParser("/").isSuccess }
   }
 
   test("Successful parses % operator") {
-    assertResult(true) {binaryOp.runParser("%").isSuccess}
+    assertResult(true) { binaryOp.runParser("%").isSuccess }
   }
 
   test("Successful parses + operator") {
-    assertResult(true) {binaryOp.runParser("+").isSuccess}
+    assertResult(true) { binaryOp.runParser("+").isSuccess }
   }
 
   test("Successful parses - operator") {
-    assertResult(true) {binaryOp.runParser("-").isSuccess}
+    assertResult(true) { binaryOp.runParser("-").isSuccess }
   }
 
   test("Successful parses > operator") {
-    assertResult(true) {binaryOp.runParser(">").isSuccess}
+    assertResult(true) { binaryOp.runParser(">").isSuccess }
   }
 
   test("Successful parses >= operator") {
-    assertResult(true) {binaryOp.runParser(">=").isSuccess}
+    assertResult(true) { binaryOp.runParser(">=").isSuccess }
   }
 
   test("Successful parses < operator") {
-    assertResult(true) {binaryOp.runParser("<").isSuccess}
+    assertResult(true) { binaryOp.runParser("<").isSuccess }
   }
 
   test("Successful parses <= operator") {
-    assertResult(true) {binaryOp.runParser("<=").isSuccess}
+    assertResult(true) { binaryOp.runParser("<=").isSuccess }
   }
 
   test("Successful parses == operator") {
-    assertResult(true) {binaryOp.runParser("==").isSuccess}
+    assertResult(true) { binaryOp.runParser("==").isSuccess }
   }
 
   test("Successful parses != operator") {
-    assertResult(true) {binaryOp.runParser("!=").isSuccess}
+    assertResult(true) { binaryOp.runParser("!=").isSuccess }
   }
 
   test("Successful parses && operator") {
-    assertResult(true) {binaryOp.runParser("&&").isSuccess}
+    assertResult(true) { binaryOp.runParser("&&").isSuccess }
   }
 
   test("Successful parses || operator") {
-    assertResult(true) {binaryOp.runParser("||").isSuccess}
+    assertResult(true) { binaryOp.runParser("||").isSuccess }
   }
 
   test("Successful fails to parse & operator") {
-    assertResult(true) {binaryOp.runParser("&").isFailure}
+    assertResult(true) { binaryOp.runParser("&").isFailure }
   }
 
   test("Successful fails to parse | operator") {
-    assertResult(true) {binaryOp.runParser("|").isFailure}
+    assertResult(true) { binaryOp.runParser("|").isFailure }
   }
 }
 
