@@ -98,13 +98,13 @@ object Rules {
 
   sealed case class BoolLiter(x: Boolean) extends Expr
 
-  sealed case class CharLiter(x: Char) extends Expr
+  sealed case class CharLiter(x: Character) extends Expr
 
   sealed trait Character
   case class NormalChar(x: Char) extends Character
   case class Escape(x: Char) extends Character
 
-  sealed case class StrLiter(x: String) extends Expr
+  sealed case class StrLiter(x: List[Character]) extends Expr
 
   sealed case class ArrayLiter(x: Array[Expr]) extends AssignRHS
 
