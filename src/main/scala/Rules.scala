@@ -1,22 +1,17 @@
-import parsley.Parsley._
-import parsley.implicits.{stringLift, charLift}
-import parsley.{Parsley, Result}
-import parsley.character.{anyChar}
-
 object Rules {
 
-  sealed abstract class Program(fs: Array[Func], s: Stat)
+  sealed case class Program(fs: Array[Func], s: Stat)
 
-  sealed abstract class Func(
+  sealed case class Func(
       t: Type,
       i: Ident,
       ps: Option[ParamList] = None,
       s: Stat
   )
 
-  sealed abstract class ParamList(ps: Array[Param])
+  sealed case class ParamList(ps: Array[Param])
 
-  sealed abstract class Param(t: Type, i: Ident)
+  sealed case class Param(t: Type, i: Ident)
 
   sealed trait Stat
   case object Skip extends Stat
@@ -39,7 +34,7 @@ object Rules {
   case class Newpair(x: Expr, y: Expr) extends AssignRHS
   case class Call(x: Ident, y: Option[ArgList] = None) extends AssignRHS
 
-  sealed abstract class ArgList(x: Array[Expr])
+  sealed case class ArgList(x: Array[Expr])
 
   sealed trait PairElem extends AssignLHS with AssignRHS
   case class Fst(x: Expr) extends PairElem
@@ -89,29 +84,26 @@ object Rules {
   case object And extends BinOp
   case object Or extends BinOp
 
-  sealed abstract class Ident(x: String)
-      extends AssignLHS
-      with AssignRHS
-      with Expr
+  sealed case class Ident(x: String) extends AssignLHS with AssignRHS with Expr
 
-  sealed abstract class ArrayElem(x: Ident, y: Array[Expr])
+  sealed case class ArrayElem(x: Ident, y: Array[Expr])
       extends AssignLHS
       with Expr
 
-  sealed abstract class IntLiter(x: Option[IntSign] = None, y: Int) extends Expr
+  sealed case class IntLiter(x: Option[IntSign] = None, y: Int) extends Expr
 
   sealed trait IntSign
   case object Pos extends IntSign
   case object Neg extends IntSign
 
-  sealed abstract class BoolLiter(x: Boolean) extends Expr
+  sealed case class BoolLiter(x: Boolean) extends Expr
 
-  sealed abstract class CharLiter(x: Char) extends Expr
+  sealed case class CharLiter(x: Char) extends Expr
 
-  sealed abstract class StrLiter(x: String) extends Expr
+  sealed case class StrLiter(x: String) extends Expr
 
-  sealed abstract class ArrayLiter(x: Array[Expr]) extends AssignRHS
+  sealed case class ArrayLiter(x: Array[Expr]) extends AssignRHS
 
-  sealed trait PairLiter extends Expr
+  sealed case class PairLiter() extends Expr
 
 }
