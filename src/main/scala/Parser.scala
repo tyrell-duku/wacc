@@ -14,4 +14,17 @@ object Parser {
   val unaryOp: Parsley[UnOp] =
     ('!' #> Not) <|> ('-' #> Negation) <|> ("len" #> Len) <|> ("ord" #> Ord) <|> ("chr" #> Chr)
 
+  val escapedChar: Parsley[Char] =
+    char('0') <|> char('b') <|> char('t') <|> char('n') <|> char('f') <|>
+      char('r') <|> char('"') <|> char('\'') <|> char('\\')
+
+  val character: Parsley[Character] = (Escape <#>
+    '\\' *> escapedChar) <|> (NormalChar <#> noneOf('\\', '\'', '"'))
+
+  val charLiteral: Parsley[CharLiter] =
+    '\'' *> character.map(CharLiter) <* '\''
+
+  val strLiteral: Parsley[StrLiter] =
+    '"' *> many(character).map(StrLiter) <* '"'
+
 }
