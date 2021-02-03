@@ -13,6 +13,11 @@ object Parser {
 
   val unaryOp: Parsley[UnOp] =
     ('!' #> Not) <|> ('-' #> Negation) <|> ("len" #> Len) <|> ("ord" #> Ord) <|> ("chr" #> Chr)
+  
+  val binaryOp: Parsley[BinOp] =
+    ('*' #> Mul) <|> ('/' #> Div) <|> ('%' #> Mod) <|> ('+' #> Plus) <|>
+      ('-' #> Sub) <|> ('>' #> GT) <|> (">=" #> GTE) <|> ('<' #> LT) <|>
+      ("<=" #> LTE) <|> ("==" #> Equal) <|> ("!=" #> NotEqual) <|> ("&&" #> And) <|> ("||" #> Or)
 
   val escapedChar: Parsley[Char] =
     char('0') <|> char('b') <|> char('t') <|> char('n') <|> char('f') <|>
