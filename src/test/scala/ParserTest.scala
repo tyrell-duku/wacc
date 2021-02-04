@@ -95,7 +95,65 @@ class BinaryOpTest extends AnyFunSuite {
   }
 }
 
-class BoolLiteral extends AnyFunSuite {
+class IntLiter extends AnyFunSuite {
+  test("Successfully parses digit without sign") {
+    assertResult(true) {
+      intLiter.runParser("100").contains(IntLiter(None, 100))
+    }
+    assertResult(true) { intLiter.runParser("1").contains(IntLiter(None, 1)) }
+  }
+
+  test("Successfully parses digit with sign") {
+    assertResult(true) {
+      intLiter.runParser("+100").contains(IntLiter(Some(Pos), 100))
+    }
+    assertResult(true) {
+      intLiter.runParser("-100").contains(IntLiter(Some(Neg), 100))
+    }
+  }
+
+  test("Successfully fails to parse sign without digit") {
+    assertResult(true) { intLiter.runParser("+").isFailure }
+    assertResult(true) { intLiter.runParser("-").isFailure }
+  }
+
+  test("Successfully fails to parse number with decimal part") {
+    assertResult(true) {
+      intLiter.runParser("+100.5").contains(IntLiter(Some(Pos), 100))
+    }
+    assertResult(true) {
+      intLiter.runParser("-0.5").contains(IntLiter(Some(Neg), 0))
+    }
+  }
+}
+
+class NaturalTest extends AnyFunSuite {
+  test("Successfully parses natural numbers") {
+    assertResult(true) { natural.runParser("100").contains(100) }
+    assertResult(true) { natural.runParser("2").contains(2) }
+    assertResult(true) { natural.runParser("0").contains(0) }
+    assertResult(true) { natural.runParser("400").contains(400) }
+  }
+
+  test("Successfully fails to parse decimal part of a number") {
+    assertResult(true) {
+      natural.runParser("100.5").contains(100)
+    }
+    assertResult(true) { natural.runParser("0.5").contains(0) }
+  }
+}
+
+class IntSignTest extends AnyFunSuite {
+  test("Successfully parses +") {
+    assertResult(true) { intSign.runParser("+").isSuccess }
+  }
+
+  test("Successfully parses -") {
+    assertResult(true) { intSign.runParser("-").isSuccess }
+  }
+}
+
+class BoolLiteralTest extends AnyFunSuite {
   test("Successfully parses true") {
     assertResult(true) { identifier.runParser("true").isSuccess }
   }
@@ -105,7 +163,7 @@ class BoolLiteral extends AnyFunSuite {
   }
 }
 
-class Identifier extends AnyFunSuite {
+class IdentifierTest extends AnyFunSuite {
   test("Successfully parses simple letter identifiers") {
     assertResult(true) { identifier.runParser("x").isSuccess }
     assertResult(true) { identifier.runParser("abc").isSuccess }
@@ -125,7 +183,7 @@ class Identifier extends AnyFunSuite {
     assertResult(true) { identifier.runParser("x1_y2").isSuccess }
   }
 
-  test("Successfully fails to parses identifiers with underscore") {
+  test("Successfully fails to parse identifiers with underscore") {
     assertResult(true) { identifier.runParser("10x").isFailure }
     assertResult(true) { identifier.runParser("!abc").isFailure }
   }

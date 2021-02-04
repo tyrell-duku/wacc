@@ -19,6 +19,15 @@ object Parser {
       ('-' #> Sub) <|> ('>' #> GT) <|> (">=" #> GTE) <|> ('<' #> LT) <|>
       ("<=" #> LTE) <|> ("==" #> Equal) <|> ("!=" #> NotEqual) <|> ("&&" #> And) <|> ("||" #> Or)
 
+  val natural: Parsley[Int] =
+    digit.foldLeft1[Int](0)((n, d) => n * 10 + d.asDigit)
+  val intSign: Parsley[IntSign] = ('+' #> Pos) <|> ('-' #> Neg)
+  val intLiter: Parsley[IntLiter] = lift2(
+    (x: Option[IntSign], y: Int) => IntLiter(x, y),
+    option(intSign),
+    natural
+  )
+
   val boolLiteral: Parsley[BoolLiter] =
     ("true" #> BoolLiter(true)) <|> ("false" #> BoolLiter(false))
 
