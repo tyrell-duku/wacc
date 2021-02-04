@@ -290,3 +290,21 @@ class StringLitTest extends AnyFunSuite {
     assertResult(true) { strLiteral.runParser("\"\\thello world\"").isSuccess }
   }
 }
+
+class ArrayTypeTest extends AnyFunSuite {
+  test("Successfully parses base type arrays") {
+    assert(types.runParser("int[]").contains(OfArrayType(IntT)))
+    assert(types.runParser("string[]").contains(OfArrayType(StringT)))
+    assert(types.runParser("char[]").contains(OfArrayType(CharT)))
+    assert(types.runParser("bool[]").contains(OfArrayType(BoolT)))
+  }
+
+  test("Successfully parses nested arrays") {
+    assert(types.runParser("int[][]").contains(OfArrayType(OfArrayType(IntT))))
+    assert(
+      types
+        .runParser("bool[][][]")
+        .contains(OfArrayType(OfArrayType(OfArrayType(BoolT))))
+    )
+  }
+}

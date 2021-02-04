@@ -5,11 +5,17 @@ import parsley.character.{anyChar, char, digit, letter, noneOf, upper}
 import parsley.combinator.{many, option}
 import parsley.lift.lift2
 import Rules._
-import parsley.expr.chain
+import parsley.expr.{GOps, Levels, Ops, Postfix, Prefix, chain, precedence}
 
 object Parser {
-  val baseType: Parsley[BaseType] =
+  lazy val baseType: Parsley[BaseType] =
     ("int" #> IntT) <|> ("bool" #> BoolT) <|> ("char" #> CharT) <|> ("string" #> StringT)
+
+  val types = precedence[Type, Type](
+    baseType,
+    Ops[Type](Postfix)("[]" #> OfArrayType) +:
+      Levels.empty[Type]
+  )
 
   val unaryOp: Parsley[UnOp] =
     ('!' #> Not) <|> ('-' #> Negation) <|> ("len" #> Len) <|> ("ord" #> Ord) <|> ("chr" #> Chr)
