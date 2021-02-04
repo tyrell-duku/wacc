@@ -95,6 +95,16 @@ class BinaryOpTest extends AnyFunSuite {
   }
 }
 
+class BoolLiteral extends AnyFunSuite {
+  test("Successfully parses true") {
+    assertResult(true) { identifier.runParser("true").isSuccess }
+  }
+
+  test("Successfully parses false") {
+    assertResult(true) { identifier.runParser("false").isSuccess }
+  }
+}
+
 class Identifier extends AnyFunSuite {
   test("Successfully parses simple letter identifiers") {
     assertResult(true) { identifier.runParser("x").isSuccess }

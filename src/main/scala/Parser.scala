@@ -19,6 +19,9 @@ object Parser {
       ('-' #> Sub) <|> ('>' #> GT) <|> (">=" #> GTE) <|> ('<' #> LT) <|>
       ("<=" #> LTE) <|> ("==" #> Equal) <|> ("!=" #> NotEqual) <|> ("&&" #> And) <|> ("||" #> Or)
 
+  val boolLiteral: Parsley[BoolLiter] =
+    ("true" #> BoolLiter(true)) <|> ("false" #> BoolLiter(false))
+
   lazy val identifier: Parsley[Ident] =
     Ident <#> (('_' <|> letter <|> upper) <::>
       many('_' <|> letter <|> upper <|> digit)).map((x: List[Char]) =>
