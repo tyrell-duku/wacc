@@ -5,111 +5,111 @@ import parsley.Success
 
 class UnaryOpTest extends AnyFunSuite {
   test("Successful parses not operator") {
-    assertResult(true) { unaryOp.runParser("!").isSuccess }
+    assert(unaryOp.runParser("!").contains(Not))
   }
 
   test("Successful parses negation operator") {
-    assertResult(true) { unaryOp.runParser("-").isSuccess }
+    assert(unaryOp.runParser("-").contains(Negation))
   }
 
   test("Successful parses len operator") {
-    assertResult(true) { unaryOp.runParser("len").isSuccess }
+    assert(unaryOp.runParser("len").contains(Len))
   }
 
   test("Successful parses ord operator") {
-    assertResult(true) { unaryOp.runParser("ord").isSuccess }
+    assert(unaryOp.runParser("ord").contains(Ord))
   }
 
   test("Successful parses chr operator") {
-    assertResult(true) { unaryOp.runParser("chr").isSuccess }
+    assert(unaryOp.runParser("chr").contains(Chr))
   }
 
   test("Successfully fails to parse random string '##!!!'") {
-    assertResult(true) { unaryOp.runParser("##!!!").isFailure }
+    assert(unaryOp.runParser("##!!!").isFailure)
   }
 
   test("Successfully fails to parse random string 'l3n'") {
-    assertResult(true) { unaryOp.runParser("l3n").isFailure }
+    assert(unaryOp.runParser("l3n").isFailure)
   }
 }
 
 class BinaryOpTest extends AnyFunSuite {
   test("Successful parses * operator") {
-    assertResult(true) { binaryOp.runParser("*").isSuccess }
+    assert(binaryOp.runParser("*").contains(Mul))
   }
 
   test("Successful parses / operator") {
-    assertResult(true) { binaryOp.runParser("/").isSuccess }
+    assert(binaryOp.runParser("/").contains(Div))
   }
 
   test("Successful parses % operator") {
-    assertResult(true) { binaryOp.runParser("%").isSuccess }
+    assert(binaryOp.runParser("%").contains(Mod))
   }
 
   test("Successful parses + operator") {
-    assertResult(true) { binaryOp.runParser("+").isSuccess }
+    assert(binaryOp.runParser("+").contains(Plus))
   }
 
   test("Successful parses - operator") {
-    assertResult(true) { binaryOp.runParser("-").isSuccess }
+    assert(binaryOp.runParser("-").contains(Sub))
   }
 
   test("Successful parses > operator") {
-    assertResult(true) { binaryOp.runParser(">").isSuccess }
+    assert(binaryOp.runParser(">").contains(GT))
   }
 
   test("Successful parses >= operator") {
-    assertResult(true) { binaryOp.runParser(">=").isSuccess }
+    assert(binaryOp.runParser(">=").contains(GTE))
   }
 
   test("Successful parses < operator") {
-    assertResult(true) { binaryOp.runParser("<").isSuccess }
+    assert(binaryOp.runParser("<").contains(LT))
   }
 
   test("Successful parses <= operator") {
-    assertResult(true) { binaryOp.runParser("<=").isSuccess }
+    assert(binaryOp.runParser("<=").contains(LTE))
   }
 
   test("Successful parses == operator") {
-    assertResult(true) { binaryOp.runParser("==").isSuccess }
+    assert(binaryOp.runParser("==").contains(Equal))
   }
 
   test("Successful parses != operator") {
-    assertResult(true) { binaryOp.runParser("!=").isSuccess }
+    assert(binaryOp.runParser("!=").contains(NotEqual))
   }
 
   test("Successful parses && operator") {
-    assertResult(true) { binaryOp.runParser("&&").isSuccess }
+    assert(binaryOp.runParser("&&").contains(And))
   }
 
   test("Successful parses || operator") {
-    assertResult(true) { binaryOp.runParser("||").isSuccess }
+    assert(binaryOp.runParser("||").contains(Or))
   }
 
   test("Successful fails to parse & operator") {
-    assertResult(true) { binaryOp.runParser("&").isFailure }
+    assert(binaryOp.runParser("&").isFailure)
   }
 
   test("Successful fails to parse | operator") {
-    assertResult(true) { binaryOp.runParser("|").isFailure }
+    assert(binaryOp.runParser("|").isFailure)
   }
 }
 
 class IntLiter extends AnyFunSuite {
   test("Successfully parses digit without sign") {
-    assertResult(true) {
+    assert(
       intLiter.runParser("100").contains(IntLiter(None, 100))
-    }
-    assertResult(true) { intLiter.runParser("1").contains(IntLiter(None, 1)) }
+    )
+    assert(intLiter.runParser("1").contains(IntLiter(None, 1)))
   }
 
   test("Successfully parses digit with sign") {
-    assertResult(true) {
+    assert(
       intLiter.runParser("+100").contains(IntLiter(Some(Pos), 100))
-    }
-    assertResult(true) {
+    )
+    assert(
       intLiter.runParser("-100").contains(IntLiter(Some(Neg), 100))
-    }
+    )
   }
 
   test("Successfully fails to parse sign without digit") {
@@ -129,165 +129,165 @@ class IntLiter extends AnyFunSuite {
 
 class NaturalTest extends AnyFunSuite {
   test("Successfully parses natural numbers") {
-    assertResult(true) { natural.runParser("100").contains(100) }
-    assertResult(true) { natural.runParser("2").contains(2) }
-    assertResult(true) { natural.runParser("0").contains(0) }
-    assertResult(true) { natural.runParser("400").contains(400) }
+    assert(natural.runParser("100").contains(100))
+    assert(natural.runParser("2").contains(2))
+    assert(natural.runParser("0").contains(0))
+    assert(natural.runParser("400").contains(400))
   }
 
   test("Successfully fails to parse decimal part of a number") {
-    assertResult(true) {
-      natural.runParser("100.5").contains(100)
-    }
-    assertResult(true) { natural.runParser("0.5").contains(0) }
+    assert(natural.runParser("100.5").contains(100))
+    assert(natural.runParser("0.5").contains(0))
   }
 }
 
 class IntSignTest extends AnyFunSuite {
   test("Successfully parses +") {
-    assertResult(true) { intSign.runParser("+").isSuccess }
+    assert(intSign.runParser("+").contains(Pos))
   }
 
   test("Successfully parses -") {
-    assertResult(true) { intSign.runParser("-").isSuccess }
+    assert(intSign.runParser("-").contains(Neg))
   }
 }
 
 class BoolLiteralTest extends AnyFunSuite {
   test("Successfully parses true") {
-    assertResult(true) { identifier.runParser("true").isSuccess }
+    assert(boolLiteral.runParser("true").contains(BoolLiter(true)))
   }
 
   test("Successfully parses false") {
-    assertResult(true) { identifier.runParser("false").isSuccess }
+    assert(boolLiteral.runParser("false").contains(BoolLiter(false)))
   }
 }
 
 class IdentifierTest extends AnyFunSuite {
   test("Successfully parses simple letter identifiers") {
-    assertResult(true) { identifier.runParser("x").isSuccess }
-    assertResult(true) { identifier.runParser("abc").isSuccess }
-    assertResult(true) { identifier.runParser("xyz").isSuccess }
-    assertResult(true) { identifier.runParser("ABC").isSuccess }
+    assert(identifier.runParser("x").contains(Ident("x")))
+    assert(identifier.runParser("abc").contains(Ident("abc")))
+    assert(identifier.runParser("xyz").contains(Ident("xyz")))
+    assert(identifier.runParser("ABC").contains(Ident("ABC")))
   }
 
   test("Successfully parses simple alphanumeric identifiers") {
-    assertResult(true) { identifier.runParser("x1").isSuccess }
-    assertResult(true) { identifier.runParser("ABC20").isSuccess }
-    assertResult(true) { identifier.runParser("abc123").isSuccess }
+    assert(identifier.runParser("x1").contains(Ident("x1")))
+    assert(identifier.runParser("ABC20").contains(Ident("ABC20")))
+    assert(identifier.runParser("abc123").contains(Ident("abc123")))
   }
 
   test("Successfully parses simple alphanumeric identifiers with underscore") {
-    assertResult(true) { identifier.runParser("_").isSuccess }
-    assertResult(true) { identifier.runParser("temp_variable1").isSuccess }
-    assertResult(true) { identifier.runParser("x1_y2").isSuccess }
+    assert(identifier.runParser("_").contains(Ident("_")))
+    assert(
+      identifier.runParser("temp_variable1").contains(Ident("temp_variable1"))
+    )
+    assert(identifier.runParser("x1_y2").contains(Ident("x1_y2")))
   }
 
   test("Successfully fails to parse identifiers with underscore") {
-    assertResult(true) { identifier.runParser("10x").isFailure }
-    assertResult(true) { identifier.runParser("!abc").isFailure }
+    assert(identifier.runParser("10x").isFailure)
+    assert(identifier.runParser("!abc").isFailure)
   }
 }
 
 class BaseTypeTest extends AnyFunSuite {
   test("Successfully parses int type") {
-    assertResult(true) { baseType.runParser("int").isSuccess }
+    assert(baseType.runParser("int").contains(IntT))
   }
 
   test("Successfully parses bool type") {
-    assertResult(true) { baseType.runParser("bool").isSuccess }
+    assert(baseType.runParser("bool").contains(BoolT))
   }
 
   test("Successfully parses char type") {
-    assertResult(true) { baseType.runParser("char").isSuccess }
+    assert(baseType.runParser("char").contains(CharT))
   }
 
   test("Successfully parses string type") {
-    assertResult(true) { baseType.runParser("string").isSuccess }
+    assert(baseType.runParser("string").contains(StringT))
   }
 
   test("Successfully fails to parse string 'float'") {
-    assertResult(true) { unaryOp.runParser("float").isFailure }
+    assert(baseType.runParser("float").isFailure)
   }
 }
 
 class EscapedCharTest extends AnyFunSuite {
   test("Successfully parses character 0") {
-    assertResult(true) { escapedChar.runParser("0").isSuccess }
+    assert(escapedChar.runParser("0").contains('0'))
   }
 
   test("Successfully parses character b") {
-    assertResult(true) { escapedChar.runParser("b").isSuccess }
+    assert(escapedChar.runParser("b").contains('b'))
   }
 
   test("Successfully parses character t") {
-    assertResult(true) { escapedChar.runParser("t").isSuccess }
+    assert(escapedChar.runParser("t").contains('t'))
   }
 
   test("Successfully parses character n") {
-    assertResult(true) { escapedChar.runParser("n").isSuccess }
+    assert(escapedChar.runParser("n").contains('n'))
   }
 
   test("Successfully parses character f") {
-    assertResult(true) { escapedChar.runParser("f").isSuccess }
+    assert(escapedChar.runParser("f").contains('f'))
   }
 
   test("Successfully parses character r") {
-    assertResult(true) { escapedChar.runParser("r").isSuccess }
+    assert(escapedChar.runParser("r").contains('r'))
   }
 
   test("Successfully parses character '\"' ") {
-    assertResult(true) { escapedChar.runParser("\"").isSuccess }
+    assert(escapedChar.runParser("\"").contains('\"'))
   }
 
   test("Successfully parses character '") {
-    assertResult(true) { escapedChar.runParser("\'").isSuccess }
+    assert(escapedChar.runParser("\'").contains('\''))
   }
 
   test("Successfully parses character '\' ") {
-    assertResult(true) { escapedChar.runParser("\\").isSuccess }
+    assert(escapedChar.runParser("\\").contains('\\'))
   }
 }
 
 class CharacterTest extends AnyFunSuite {
   test("Successfully parses escaped b character") {
-    assertResult(true) { character.runParser("\\b").isSuccess }
+    assert(character.runParser("\\b").contains(Escape('b')))
   }
 
   test("Successfully fails to parse '\\' character") {
-    assertResult(true) { character.runParser("\\").isFailure }
+    assert(character.runParser("\\").isFailure)
   }
 
   test("Successfully parses the character 'a'") {
-    assertResult(true) { character.runParser("a").isSuccess }
+    assert(character.runParser("a").contains(NormalChar('a')))
   }
 }
 
 class CharLitTest extends AnyFunSuite {
   test("Successfully parses escaped b char literal") {
-    assertResult(true) { charLiteral.runParser("'\\b'").isSuccess }
+    assert(charLiteral.runParser("'\\b'").contains(CharLiter(Escape('b'))))
   }
 
   test("Successfully fails to parse '\\' char literal") {
-    assertResult(true) { charLiteral.runParser("'\\'").isFailure }
+    assert(charLiteral.runParser("'\\'").isFailure)
   }
 
   test("Successfully parses the char literal 'a'") {
-    assertResult(true) { charLiteral.runParser("'a'").isSuccess }
+    assert(charLiteral.runParser("'a'").contains(CharLiter(NormalChar('a'))))
   }
 }
 
 class StringLitTest extends AnyFunSuite {
   test("Successfully parses string literal \"hello world\"") {
-    assertResult(true) { strLiteral.runParser("\"hello world\"").isSuccess }
+    assert(strLiteral.runParser("\"hello world\"").isSuccess)
   }
 
   test("Successfully fails to parse \"Joe's\" string literal") {
-    assertResult(true) { strLiteral.runParser("\"Joe's\"").isFailure }
+    assert(strLiteral.runParser("\"Joe's\"").isFailure)
   }
 
   test("Successfully parses string literal \"\\thello world\"") {
-    assertResult(true) { strLiteral.runParser("\"\\thello world\"").isSuccess }
+    assert(strLiteral.runParser("\"\\thello world\"").isSuccess)
   }
 }
 
