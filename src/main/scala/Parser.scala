@@ -58,7 +58,7 @@ object Parser {
 
   val expr: Parsley[Expr] = precedence[Expr, Expr](
     intLiter <|> boolLiteral <|> charLiteral <|> strLiteral <|> pairLiteral <|>
-      identifier <|> ('(' *> expr.map(Parens) <* ')'),
+      arrayElem <\> identifier <|> ('(' *> expr.map(Parens) <* ')'),
     Ops[Expr](Prefix)(
       '!' #> Not,
       '-' #> Negation,
@@ -77,4 +77,13 @@ object Parser {
       Ops[Expr](InfixL)("||" #> Or) +:
       Levels.empty[Expr]
   )
+
+  val argList: Parsley[ArgList] = (expr <::> many(',' *> expr)).map(ArgList)
+
+  val arrayElem: Parsley[ArrayElem] = lift2(
+    ArrayElem,
+    identifier,
+    '[' *> expr <* ']' <::> many('[' *> expr <* ']')
+  )
+
 }

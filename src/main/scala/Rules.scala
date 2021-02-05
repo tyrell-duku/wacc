@@ -9,7 +9,7 @@ object Rules {
       s: Stat
   )
 
-  sealed case class ParamList(ps: Array[Param])
+  sealed case class ParamList(ps: List[Param])
 
   sealed case class Param(t: Type, i: Ident)
 
@@ -34,7 +34,7 @@ object Rules {
   case class Newpair(x: Expr, y: Expr) extends AssignRHS
   case class Call(x: Ident, y: Option[ArgList] = None) extends AssignRHS
 
-  sealed case class ArgList(x: Array[Expr])
+  sealed case class ArgList(x: List[Expr])
 
   sealed trait PairElem extends AssignLHS with AssignRHS
   case class Fst(x: Expr) extends PairElem
@@ -85,7 +85,7 @@ object Rules {
 
   sealed case class Ident(x: String) extends AssignLHS with AssignRHS with Expr
 
-  sealed case class ArrayElem(x: Ident, y: Array[Expr])
+  sealed case class ArrayElem(x: Ident, y: List[Expr])
       extends AssignLHS
       with Expr
 
@@ -105,7 +105,7 @@ object Rules {
 
   sealed case class StrLiter(x: List[Character]) extends Expr
 
-  sealed case class ArrayLiter(x: Array[Expr]) extends AssignRHS
+  sealed case class ArrayLiter(x: Option[List[Expr]]) extends AssignRHS
 
   sealed case class PairLiter() extends Expr
 
