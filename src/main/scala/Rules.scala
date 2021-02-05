@@ -42,13 +42,13 @@ object Rules {
 
   sealed trait Type
 
-  sealed trait BaseType extends Type with PairElemType
+  sealed trait BaseType extends Type
   case object IntT extends BaseType
   case object BoolT extends BaseType
   case object CharT extends BaseType
   case object StringT extends BaseType
 
-  sealed trait ArrayType extends Type with PairElemType
+  sealed trait ArrayType extends Type
   case class OfArrayType(x: Type) extends ArrayType
 
   sealed trait PairType extends Type
@@ -56,6 +56,7 @@ object Rules {
 
   sealed trait PairElemType
   case object PairElemPair extends PairElemType
+  case class PairElemT(x: Type) extends PairElemType
 
   sealed trait Expr extends AssignRHS
   case class Parens(x: Expr) extends Expr

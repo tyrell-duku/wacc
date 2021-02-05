@@ -436,3 +436,76 @@ class ArrayTypeTest extends AnyFunSuite {
     )
   }
 }
+
+class PairTypeTest extends AnyFunSuite {
+  test("Successfully parses pair of base types") {
+    assert(
+      types
+        .runParser("pair(int,int)")
+        .contains(Pair(PairElemT(IntT), PairElemT(IntT)))
+    )
+    assert(
+      types
+        .runParser("pair(char,int)")
+        .contains(Pair(PairElemT(CharT), PairElemT(IntT)))
+    )
+  }
+
+  test("Successfully parses pair with array-types") {
+    assert(
+      types
+        .runParser("pair(int[],int[])")
+        .contains(
+          Pair(PairElemT(OfArrayType(IntT)), PairElemT(OfArrayType(IntT)))
+        )
+    )
+    assert(
+      types
+        .runParser("pair(bool[],int[])")
+        .contains(
+          Pair(PairElemT(OfArrayType(BoolT)), PairElemT(OfArrayType(IntT)))
+        )
+    )
+    assert(
+      types
+        .runParser("pair(bool[],int[])")
+        .contains(
+          Pair(PairElemT(OfArrayType(BoolT)), PairElemT(OfArrayType(IntT)))
+        )
+    )
+    assert(
+      types
+        .runParser("pair(bool[][],int[])")
+        .contains(
+          Pair(
+            PairElemT(OfArrayType(OfArrayType(BoolT))),
+            PairElemT(OfArrayType(IntT))
+          )
+        )
+    )
+    assert(
+      types
+        .runParser("pair(char[][],int[])[]")
+        .contains(
+          OfArrayType(
+            Pair(
+              PairElemT(OfArrayType(OfArrayType(CharT))),
+              PairElemT(OfArrayType(IntT))
+            )
+          )
+        )
+    )
+  }
+
+  test("Successfully fails to parse pair-type within pair-type") {
+    assert(types.runParser("pair(int,pair(char,int))").isFailure)
+  }
+
+  test("Successfully parses 'pair' within pair-type") {
+    assert(
+      types
+        .runParser("pair(pair,pair)")
+        .contains(Pair(PairElemPair, PairElemPair))
+    )
+  }
+}

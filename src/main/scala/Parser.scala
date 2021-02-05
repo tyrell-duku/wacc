@@ -11,11 +11,17 @@ object Parser {
   lazy val baseType: Parsley[BaseType] =
     ("int" #> IntT) <|> ("bool" #> BoolT) <|> ("char" #> CharT) <|> ("string" #> StringT)
 
-  val types = precedence[Type, Type](
-    baseType,
+  val types: Parsley[Type] = precedence[Type, Type](
+    baseType <|> pairType,
     Ops[Type](Postfix)("[]" #> OfArrayType) +:
       Levels.empty[Type]
   )
+
+  val pairElemType: Parsley[PairElemType] =
+    "pair" #> PairElemPair <|> types.map(PairElemT)
+
+  lazy val pairType: Parsley[PairType] =
+    "pair(" *> lift2(Pair, pairElemType, ',' *> pairElemType <* ')')
 
   val natural: Parsley[Int] =
     digit.foldLeft1[Int](0)((n, d) => n * 10 + d.asDigit)
