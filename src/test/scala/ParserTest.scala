@@ -136,7 +136,94 @@ class BinaryOpTest extends AnyFunSuite {
   }
 }
 
-class IntLiter extends AnyFunSuite {
+class ExprTest extends AnyFunSuite {
+  test("Successfully parses expr within parentheses") {
+    assert(
+      expr
+        .runParser("((10))+(5)")
+        .contains(
+          Plus(Parens(Parens(IntLiter(None, 10))), Parens(IntLiter(None, 5)))
+        )
+    )
+  }
+
+  test("Successfully parses nested unary operations") {
+    assert(
+      expr
+        .runParser("ord(chr(10))")
+        .contains(Ord(Parens(Chr(Parens(IntLiter(None, 10))))))
+    )
+  }
+
+  test("Successfully parses bool operators in correct precedence") {
+    assert(
+      expr
+        .runParser("!(!true||false)")
+        .contains(Not(Parens(Or(Not(BoolLiter(true)), BoolLiter(false)))))
+    )
+  }
+
+  test("Successfully parses arithmetic operations in correct precedence") {
+    assert(
+      expr
+        .runParser("2*8+5/9-1")
+        .contains(
+          Sub(
+            Plus(
+              Mul(IntLiter(None, 2), IntLiter(None, 8)),
+              Div(IntLiter(None, 5), IntLiter(None, 9))
+            ),
+            IntLiter(None, 1)
+          )
+        )
+    )
+    assert(
+      expr
+        .runParser("100+8*5/9-1")
+        .contains(
+          Sub(
+            Plus(
+              IntLiter(None, 100),
+              Div(Mul(IntLiter(None, 8), IntLiter(None, 5)), IntLiter(None, 9))
+            ),
+            IntLiter(None, 1)
+          )
+        )
+    )
+    assert(
+      expr
+        .runParser("100+8*5+100-1")
+        .contains(
+          Sub(
+            Plus(
+              Plus(
+                IntLiter(None, 100),
+                Mul(IntLiter(None, 8), IntLiter(None, 5))
+              ),
+              IntLiter(None, 100)
+            ),
+            IntLiter(None, 1)
+          )
+        )
+    )
+  }
+
+  test("Successfully fails parsing empty parenthesis ") {
+    assert(expr.runParser("()").isFailure)
+  }
+
+  test("Successfully parses binary operators on logical atoms") {
+    assert(
+      expr
+        .runParser("var1==(ord('c'))")
+        .contains(
+          Equal(Ident("var1"), Parens(Ord(Parens(CharLiter(NormalChar('c'))))))
+        )
+    )
+  }
+}
+
+class IntLiterTest extends AnyFunSuite {
   test("Successfully parses digit without sign") {
     assert(
       intLiter.runParser("100").contains(IntLiter(None, 100))
