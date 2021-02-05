@@ -2,96 +2,137 @@ import org.scalatest.funsuite.AnyFunSuite
 import Parser._
 import Rules._
 import parsley.Success
+import parsley.character.whitespace
+import parsley.token.{LanguageDef, Lexer, Parser}
 
 class UnaryOpTest extends AnyFunSuite {
+
   test("Successful parses not operator") {
-    assert(unaryOp.runParser("!").contains(Not))
+    assert(expr.runParser("!var").contains(Not(Ident("var"))))
   }
 
   test("Successful parses negation operator") {
-    assert(unaryOp.runParser("-").contains(Negation))
+    assert(expr.runParser("-var").contains(Negation(Ident("var"))))
   }
 
   test("Successful parses len operator") {
-    assert(unaryOp.runParser("len").contains(Len))
+    assert(expr.runParser("len\"hello\"").isSuccess)
   }
 
   test("Successful parses ord operator") {
-    assert(unaryOp.runParser("ord").contains(Ord))
+    assert(expr.runParser("ord'c'").contains(Ord(CharLiter(NormalChar('c')))))
   }
 
   test("Successful parses chr operator") {
-    assert(unaryOp.runParser("chr").contains(Chr))
+    assert(expr.runParser("chr10").contains(Chr(IntLiter(None, 10))))
   }
 
   test("Successfully fails to parse random string '##!!!'") {
-    assert(unaryOp.runParser("##!!!").isFailure)
+    assert(expr.runParser("##!!!").isFailure)
   }
 
   test("Successfully fails to parse random string 'l3n'") {
-    assert(unaryOp.runParser("l3n").isFailure)
+    assert(expr.runParser("l3n").isFailure)
   }
 }
 
 class BinaryOpTest extends AnyFunSuite {
   test("Successful parses * operator") {
-    assert(binaryOp.runParser("*").contains(Mul))
+    assert(
+      expr
+        .runParser("10*5")
+        .contains(Mul(IntLiter(None, 10), IntLiter(None, 5)))
+    )
   }
 
   test("Successful parses / operator") {
-    assert(binaryOp.runParser("/").contains(Div))
+    assert(
+      expr.runParser("4/2").contains(Div(IntLiter(None, 4), IntLiter(None, 2)))
+    )
   }
 
   test("Successful parses % operator") {
-    assert(binaryOp.runParser("%").contains(Mod))
+    assert(
+      expr.runParser("3%1").contains(Mod(IntLiter(None, 3), IntLiter(None, 1)))
+    )
   }
 
   test("Successful parses + operator") {
-    assert(binaryOp.runParser("+").contains(Plus))
+    assert(
+      expr
+        .runParser("14+5")
+        .contains(Plus(IntLiter(None, 14), IntLiter(None, 5)))
+    )
   }
 
   test("Successful parses - operator") {
-    assert(binaryOp.runParser("-").contains(Sub))
+    assert(
+      expr
+        .runParser("6-18")
+        .contains(Sub(IntLiter(None, 6), IntLiter(None, 18)))
+    )
   }
 
   test("Successful parses > operator") {
-    assert(binaryOp.runParser(">").contains(GT))
+    assert(
+      expr.runParser("10>5").contains(GT(IntLiter(None, 10), IntLiter(None, 5)))
+    )
   }
 
   test("Successful parses >= operator") {
-    assert(binaryOp.runParser(">=").contains(GTE))
+    assert(
+      expr.runParser("3>=7").contains(GTE(IntLiter(None, 3), IntLiter(None, 7)))
+    )
   }
 
   test("Successful parses < operator") {
-    assert(binaryOp.runParser("<").contains(LT))
+    assert(
+      expr.runParser("6<4").contains(LT(IntLiter(None, 6), IntLiter(None, 4)))
+    )
   }
 
   test("Successful parses <= operator") {
-    assert(binaryOp.runParser("<=").contains(LTE))
+    assert(
+      expr.runParser("6<=1").contains(LTE(IntLiter(None, 6), IntLiter(None, 1)))
+    )
   }
 
   test("Successful parses == operator") {
-    assert(binaryOp.runParser("==").contains(Equal))
+    assert(
+      expr.runParser("true==var").contains(Equal(BoolLiter(true), Ident("var")))
+    )
   }
 
   test("Successful parses != operator") {
-    assert(binaryOp.runParser("!=").contains(NotEqual))
+    assert(
+      expr
+        .runParser("false!=var")
+        .contains(NotEqual(BoolLiter(false), Ident("var")))
+    )
   }
 
   test("Successful parses && operator") {
-    assert(binaryOp.runParser("&&").contains(And))
+    assert(
+      expr
+        .runParser("true&&true")
+        .contains(And(BoolLiter(true), BoolLiter(true)))
+    )
   }
 
   test("Successful parses || operator") {
-    assert(binaryOp.runParser("||").contains(Or))
+    assert(
+      expr
+        .runParser("false||true")
+        .contains(Or(BoolLiter(false), BoolLiter(true)))
+    )
   }
 
   test("Successful fails to parse & operator") {
-    assert(binaryOp.runParser("&").isFailure)
+    assert(expr.runParser("&").isFailure)
   }
 
   test("Successful fails to parse | operator") {
-    assert(binaryOp.runParser("|").isFailure)
+    assert(expr.runParser("|").isFailure)
   }
 }
 

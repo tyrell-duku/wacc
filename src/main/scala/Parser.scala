@@ -5,7 +5,7 @@ import parsley.character.{anyChar, char, digit, letter, noneOf, upper}
 import parsley.combinator.{many, option}
 import parsley.lift.lift2
 import Rules._
-import parsley.expr.{GOps, Levels, Ops, Postfix, Prefix, chain, precedence}
+import parsley.expr.{GOps, Levels, Ops, Postfix, Prefix, InfixL, precedence}
 
 object Parser {
   lazy val baseType: Parsley[BaseType] =
@@ -16,14 +16,6 @@ object Parser {
     Ops[Type](Postfix)("[]" #> OfArrayType) +:
       Levels.empty[Type]
   )
-
-  val unaryOp: Parsley[UnOp] =
-    ('!' #> Not) <|> ('-' #> Negation) <|> ("len" #> Len) <|> ("ord" #> Ord) <|> ("chr" #> Chr)
-
-  val binaryOp: Parsley[BinOp] =
-    ('*' #> Mul) <|> ('/' #> Div) <|> ('%' #> Mod) <|> ('+' #> Plus) <|>
-      ('-' #> Sub) <|> ('>' #> GT) <|> (">=" #> GTE) <|> ('<' #> LT) <|>
-      ("<=" #> LTE) <|> ("==" #> Equal) <|> ("!=" #> NotEqual) <|> ("&&" #> And) <|> ("||" #> Or)
 
   val natural: Parsley[Int] =
     digit.foldLeft1[Int](0)((n, d) => n * 10 + d.asDigit)
@@ -36,6 +28,8 @@ object Parser {
 
   val boolLiteral: Parsley[BoolLiter] =
     ("true" #> BoolLiter(true)) <|> ("false" #> BoolLiter(false))
+
+  val pairLiteral: Parsley[PairLiter] = "null" #> PairLiter()
 
   lazy val identifier: Parsley[Ident] =
     Ident <#> (('_' <|> letter <|> upper) <::>
@@ -55,4 +49,26 @@ object Parser {
 
   val strLiteral: Parsley[StrLiter] =
     '"' *> many(character).map(StrLiter) <* '"'
+
+  val expr: Parsley[Expr] = precedence[Expr, Expr](
+    intLiter <|> boolLiteral <|> charLiteral <|> strLiteral <|> pairLiteral <|>
+      identifier <|> ('(' *> expr.map(Parens) <* ')'),
+    Ops[Expr](Prefix)(
+      '!' #> Not,
+      '-' #> Negation,
+      "len" #> Len,
+      "ord" #> Ord,
+      "chr" #> Chr
+    ) +:
+      Ops[Expr](InfixL)('*' #> Mul, '/' #> Div, '%' #> Mod) +:
+      Ops[Expr](InfixL)('+' #> Plus, '-' #> Sub) +:
+      Ops[Expr](InfixL)(
+        (">=" #> GTE) <\> ('>' #> GT),
+        ("<=" #> LTE) <\> ('<' #> LT)
+      ) +:
+      Ops[Expr](InfixL)("==" #> Equal, "!=" #> NotEqual) +:
+      Ops[Expr](InfixL)("&&" #> And) +:
+      Ops[Expr](InfixL)("||" #> Or) +:
+      Levels.empty[Expr]
+  )
 }

@@ -58,31 +58,29 @@ object Rules {
   case object PairElemPair extends PairElemType
 
   sealed trait Expr extends AssignRHS
-  case class Unary(x: UnOp, y: Expr) extends Expr
-  case class Binary(l: Expr, op: BinOp, r: Expr) extends Expr
   case class Parens(x: Expr) extends Expr
 
-  sealed trait UnOp
-  case object Not extends UnOp
-  case object Negation extends UnOp
-  case object Len extends UnOp
-  case object Ord extends UnOp
-  case object Chr extends UnOp
+  sealed trait UnOp extends Expr
+  case class Not(x: Expr) extends UnOp
+  case class Negation(x: Expr) extends UnOp
+  case class Len(x: Expr) extends UnOp
+  case class Ord(x: Expr) extends UnOp
+  case class Chr(x: Expr) extends UnOp
 
-  sealed trait BinOp
-  case object Mul extends BinOp
-  case object Div extends BinOp
-  case object Mod extends BinOp
-  case object Plus extends BinOp
-  case object Sub extends BinOp
-  case object GT extends BinOp
-  case object GTE extends BinOp
-  case object LT extends BinOp
-  case object LTE extends BinOp
-  case object Equal extends BinOp
-  case object NotEqual extends BinOp
-  case object And extends BinOp
-  case object Or extends BinOp
+  sealed trait BinOp extends Expr
+  case class Mul(l: Expr, r: Expr) extends BinOp
+  case class Div(l: Expr, r: Expr) extends BinOp
+  case class Mod(l: Expr, r: Expr) extends BinOp
+  case class Plus(l: Expr, r: Expr) extends BinOp
+  case class Sub(l: Expr, r: Expr) extends BinOp
+  case class GT(l: Expr, r: Expr) extends BinOp
+  case class GTE(l: Expr, r: Expr) extends BinOp
+  case class LT(l: Expr, r: Expr) extends BinOp
+  case class LTE(l: Expr, r: Expr) extends BinOp
+  case class Equal(l: Expr, r: Expr) extends BinOp
+  case class NotEqual(l: Expr, r: Expr) extends BinOp
+  case class And(l: Expr, r: Expr) extends BinOp
+  case class Or(l: Expr, r: Expr) extends BinOp
 
   sealed case class Ident(x: String) extends AssignLHS with AssignRHS with Expr
 
