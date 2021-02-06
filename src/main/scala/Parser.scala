@@ -86,4 +86,33 @@ object Parser {
     '[' *> expr <* ']' <::> many('[' *> expr <* ']')
   )
 
+  val skipStat: Parsley[Stat] = "skip" #> Skip
+  val freeStat: Parsley[Stat] = ("free" *> expr).map(Free)
+  val retStat: Parsley[Stat] = ("return" *> expr).map(Return)
+  val exitStat: Parsley[Stat] = ("exit" *> expr).map(Exit)
+  val printStat: Parsley[Stat] = ("print" *> expr).map(Print)
+  val printlnStat: Parsley[Stat] = ("println" *> expr).map(PrintLn)
+  val pairElem: Parsley[PairElem] =
+    ("fst" *> expr.map(Fst)) <|> ("snd" *> expr.map(Snd))
+  val statement: Parsley[Stat] = skipStat <|> printlnStat <\> printStat <|>
+    retStat <|> exitStat <|> freeStat
+
+
+  val arrayLiter: Parsley[ArrayLiter] =
+    '[' *> option(expr <::> many(',' *> expr)).map(ArrayLiter) <* ']'
+
+  val assignLHS: Parsley[AssignLHS] = arrayElem <\> identifier <|> pairElem
+
+  val assignRHS: Parsley[AssignRHS] =
+    ("newpair(" *> lift2(Newpair, expr, ',' *> expr <* ')')) <|>
+      ("call " *> lift2(
+        Call,
+        identifier,
+        '(' *> option(argList) <* ')'
+      )) <|> pairElem <|> expr <|> arrayLiter
+
+  def run(): Unit = {
+    println(assignRHS.runParser("call x(call y)"))
+  }
+
 }
