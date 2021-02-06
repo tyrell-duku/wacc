@@ -15,8 +15,8 @@ object Rules {
 
   sealed trait Stat
   case object Skip extends Stat
-  case class EqIdent(t: Type, i: Ident, a: AssignLHS) extends Stat
-  case class EqAssign(l: AssignRHS, r: AssignLHS) extends Stat
+  case class EqIdent(t: Type, i: Ident, a: AssignRHS) extends Stat
+  case class EqAssign(l: AssignLHS, r: AssignRHS) extends Stat
   case class Read(x: AssignLHS) extends Stat
   case class Free(x: Expr) extends Stat
   case class Return(x: Expr) extends Stat
@@ -26,7 +26,7 @@ object Rules {
   case class If(x: Expr, y: Stat, z: Stat) extends Stat
   case class While(x: Expr, y: Stat) extends Stat
   case class Begin(x: Stat) extends Stat
-  case class Colon(x: Stat, y: Stat) extends Stat
+  case class Seq(x: Stat, y: Stat) extends Stat
 
   sealed trait AssignLHS
 

@@ -86,17 +86,8 @@ object Parser {
     '[' *> expr <* ']' <::> many('[' *> expr <* ']')
   )
 
-  val skipStat: Parsley[Stat] = "skip" #> Skip
-  val freeStat: Parsley[Stat] = ("free" *> expr).map(Free)
-  val retStat: Parsley[Stat] = ("return" *> expr).map(Return)
-  val exitStat: Parsley[Stat] = ("exit" *> expr).map(Exit)
-  val printStat: Parsley[Stat] = ("print" *> expr).map(Print)
-  val printlnStat: Parsley[Stat] = ("println" *> expr).map(PrintLn)
   val pairElem: Parsley[PairElem] =
     ("fst" *> expr.map(Fst)) <|> ("snd" *> expr.map(Snd))
-  val statement: Parsley[Stat] = skipStat <|> printlnStat <\> printStat <|>
-    retStat <|> exitStat <|> freeStat
-
 
   val arrayLiter: Parsley[ArrayLiter] =
     '[' *> option(expr <::> many(',' *> expr)).map(ArrayLiter) <* ']'
@@ -105,14 +96,31 @@ object Parser {
 
   val assignRHS: Parsley[AssignRHS] =
     ("newpair(" *> lift2(Newpair, expr, ',' *> expr <* ')')) <|>
-      ("call " *> lift2(
+      ("call" *> lift2(
         Call,
         identifier,
         '(' *> option(argList) <* ')'
       )) <|> pairElem <|> expr <|> arrayLiter
 
-  def run(): Unit = {
-    println(assignRHS.runParser("call x(call y)"))
-  }
+  val skipStat: Parsley[Stat] = "skip" #> Skip
+  val eqIdent: Parsley[Stat] =
+    lift3(EqIdent, types, identifier, '=' *> assignRHS)
+  val eqAssign: Parsley[Stat] = lift2(EqAssign, assignLHS, '=' *> assignRHS)
+  val readStat: Parsley[Stat] = "read" *> assignLHS.map(Read)
+  val freeStat: Parsley[Stat] = "free" *> expr.map(Free)
+  val retStat: Parsley[Stat] = "return" *> expr.map(Return)
+  val exitStat: Parsley[Stat] = "exit" *> expr.map(Exit)
+  val printStat: Parsley[Stat] = "print" *> expr.map(Print)
+  val printlnStat: Parsley[Stat] = "println" *> expr.map(PrintLn)
+  val ifStat: Parsley[Stat] =
+    "if" *> lift3(If, expr, "then" *> statement, "else" *> statement <* "fi")
+  val whileStat: Parsley[Stat] =
+    "while" *> lift2(While, expr, "do" *> statement <* "done")
+  val beginStat: Parsley[Stat] = "begin" *> statement.map(Begin) <* "end"
+  val seqStat: Parsley[Stat] = lift2(Seq, statement, ';' *> statement)
+
+  lazy val statement: Parsley[Stat] = skipStat <|> eqIdent <|> eqAssign <|>
+    readStat <\> retStat <|> freeStat <|> exitStat <|> printlnStat <\> printStat <|>
+    ifStat <|> whileStat <|> beginStat <|> seqStat
 
 }
