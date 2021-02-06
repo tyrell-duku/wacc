@@ -539,8 +539,10 @@ class ArrayElemTest extends AnyFunSuite {
       arrayElem
         .runParser("var[var[10]]")
         .contains(
-          ArrayElem(Ident("var"),
-            List(ArrayElem(Ident("var"), List(IntLiter(None, 10)))))
+          ArrayElem(
+            Ident("var"),
+            List(ArrayElem(Ident("var"), List(IntLiter(None, 10))))
+          )
         )
     )
 
@@ -594,52 +596,69 @@ class ArgListTest extends AnyFunSuite {
         .runParser("10*6")
         .contains(ArgList(List(Mul(IntLiter(None, 10), IntLiter(None, 6)))))
     )
-    assert(argList.runParser("var[10]").contains(ArgList(List(ArrayElem(Ident("var"), List(IntLiter(None, 10)))))))
+    assert(
+      argList
+        .runParser("var[10]")
+        .contains(
+          ArgList(List(ArrayElem(Ident("var"), List(IntLiter(None, 10)))))
+        )
+    )
   }
 }
 
 class StatTest extends AnyFunSuite {
-  test("Successfully parses skip statements") {
+  test("Successfully parses skip statement") {
     assert(statement.runParser("skip").contains(Skip))
   }
 
-  test("Successfully parses print statements") {
-    assert(statement.runParser("print(a+y)").contains(Print(Parens(Plus(Ident
-    ("a"), Ident("y"))
-    ))))
+  test("Successfully parses print statement") {
+    assert(
+      statement
+        .runParser("print(a+y)")
+        .contains(Print(Parens(Plus(Ident("a"), Ident("y")))))
+    )
   }
 
-  test("Successfully parses println statements") {
-    assert(statement.runParser("println(a)").contains(PrintLn(Parens(Ident
-    ("a")))))
+  test("Successfully parses println statement") {
+    assert(
+      statement.runParser("println(a)").contains(PrintLn(Parens(Ident("a"))))
+    )
   }
-  test("Successfully parses return statements") {
-    assert(statement.runParser("return(0)").contains(Return(Parens(IntLiter
-    (None, 0)))))
+  test("Successfully parses return statement") {
+    assert(
+      statement
+        .runParser("return(0)")
+        .contains(Return(Parens(IntLiter(None, 0))))
+    )
   }
-  test("Successfully parses exit statements") {
-    assert(statement.runParser("exit(5)").contains(Exit(Parens(IntLiter(None,
-      5)))))
+  test("Successfully parses exit statement") {
+    assert(
+      statement.runParser("exit(5)").contains(Exit(Parens(IntLiter(None, 5))))
+    )
   }
-  test("Successfully parses free statements") {
-    assert(statement.runParser("free(100)").contains(Free(Parens(IntLiter
-    (None, 100)))))
+  test("Successfully parses free statement") {
+    assert(
+      statement
+        .runParser("free(100)")
+        .contains(Free(Parens(IntLiter(None, 100))))
+    )
   }
-
 }
 
 class PairElemTest extends AnyFunSuite {
   test("Successfully parses fst statements") {
-    assert(pairElem.runParser("fst(65)").contains(Fst(Parens(IntLiter(None, 65)
-    ))))
+    assert(
+      pairElem.runParser("fst(65)").contains(Fst(Parens(IntLiter(None, 65))))
+    )
   }
   test("Successfully fails to parse fst statements w/ non-exp parameter") {
     assert(pairElem.runParser("fst(fst(90))").isFailure)
   }
 
   test("Successfully parses snd statements") {
-    assert(pairElem.runParser("snd(5)").contains(Snd(Parens(IntLiter(None, 5)
-    ))))
+    assert(
+      pairElem.runParser("snd(5)").contains(Snd(Parens(IntLiter(None, 5))))
+    )
   }
   test("Successfully fails to parse snd statements w/ non-exp parameter") {
     assert(pairElem.runParser("fst(snd(fst(90)))").isFailure)
@@ -649,23 +668,99 @@ class PairElemTest extends AnyFunSuite {
 
 class AssignRHSTests extends AnyFunSuite {
   test("Successfully parses function calls with one argument") {
-    assert(assignRHS.runParser("call p(q)").contains(Call(Ident("p"), Some
-    (ArgList(List(Ident("q")))))))
+    assert(
+      assignRHS
+        .runParser("call_var(q)")
+        .contains(Call(Ident("_var"), Some(ArgList(List(Ident("q"))))))
+    )
   }
   test("Successfully parses function calls with multiple arguments") {
-    assert(assignRHS.runParser("call p(q,r,s)").contains(Call(Ident("p"), Some
-    (ArgList(List(Ident("q"), Ident("r"), Ident("s")))))))
+    assert(
+      assignRHS
+        .runParser("call_var(q,r,s)")
+        .contains(
+          Call(
+            Ident("_var"),
+            Some(ArgList(List(Ident("q"), Ident("r"), Ident("s"))))
+          )
+        )
+    )
   }
 
   test("Successfully parses function calls with no arguments") {
-    assert(assignRHS.runParser("call p()").contains(Call(Ident("p"), None)))
+    assert(assignRHS.runParser("call_p()").contains(Call(Ident("_p"), None)))
   }
 
   test("Successfully fails to parse embedded function calls") {
-    assert(assignRHS.runParser("call p(call q(call r()))").isFailure)
+    assert(assignRHS.runParser("call_p(call q(call r()))").isFailure)
   }
 
 }
 
+class ArrayLiterTest extends AnyFunSuite {
+  test("Successfully parses double array literal") {
+    assert(
+      arrayLiter
+        .runParser("[10][2]")
+        .contains(
+          ArrayLiter(Some(List(IntLiter(None, 10))))
+        )
+    )
+  }
 
+  test("Successfully parses an empty array literal") {
+    assert(arrayLiter.runParser("[]").contains(ArrayLiter(None)))
+  }
 
+  test("Successfully parses single element array literal") {
+    assert(
+      arrayLiter
+        .runParser("[10]")
+        .contains(ArrayLiter(Some(List(IntLiter(None, 10)))))
+    )
+
+  }
+  test("Successfully parses array elem within array literal") {
+    assert(
+      arrayLiter
+        .runParser("[var[10]]")
+        .contains(
+          ArrayLiter(
+            Some(List(ArrayElem(Ident("var"), List(IntLiter(None, 10)))))
+          )
+        )
+    )
+  }
+
+  test("Fails to parse array literal within itself") {
+    assert(arrayLiter.runParser("[[10,9,8]]").isFailure)
+  }
+
+  test("Successfully parses multiple expression array literal") {
+    assert(
+      arrayLiter
+        .runParser("[10,9,8]")
+        .contains(
+          ArrayLiter(
+            Some(List(IntLiter(None, 10), IntLiter(None, 9), IntLiter(None, 8)))
+          )
+        )
+    )
+    assert(
+      arrayLiter
+        .runParser("['a','b','c']")
+        .contains(
+          ArrayLiter(
+            Some(
+              List(
+                CharLiter(NormalChar('a')),
+                CharLiter(NormalChar('b')),
+                CharLiter(NormalChar('c'))
+              )
+            )
+          )
+        )
+    )
+  }
+
+}
