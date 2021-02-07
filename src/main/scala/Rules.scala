@@ -1,6 +1,6 @@
 object Rules {
 
-  sealed case class Program(fs: Array[Func], s: Stat)
+  sealed case class Program(fs: List[Func], s: Stat)
 
   sealed case class Func(
       t: Type,
