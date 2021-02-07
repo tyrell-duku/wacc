@@ -92,4 +92,77 @@ class StatTest extends AnyFunSuite {
         )
     )
   }
+
+  test("Successfully fails to parse invalid if statement") {
+    assert(
+      statWhitespace
+        .runParser("if 10 == 11 then print \"invalid\" else skip")
+        .isFailure
+    )
+    assert(
+      statWhitespace
+        .runParser("if var print \"invalid\" else skip fi")
+        .isFailure
+    )
+    assert(
+      statWhitespace
+        .runParser("if var then print \"invalid\" skip fi")
+        .isFailure
+    )
+  }
+
+  test("Successfully fails to parse invalid while statement") {
+    assert(statWhitespace.runParser("while var print 5 done").isFailure)
+    assert(statWhitespace.runParser("while var do print 5").isFailure)
+    assert(statWhitespace.runParser("while var do print 5").isFailure)
+  }
+
+  test("Successfully fails to parse invalid begin statement") {
+    assert(statWhitespace.runParser("begin skip").isFailure)
+  }
+
+  test("Successfully parses assignLHS = assignRHS") {
+    assert(
+      statWhitespace
+        .runParser("x = x + 1")
+        .contains(EqAssign(Ident("x"), Plus(Ident("x"), IntLiter(None, 1))))
+    )
+  }
+
+  test("Successfully parses identifier assignment") {
+    assert(
+      statWhitespace
+        .runParser("int var = 1")
+        .contains(EqIdent(IntT, Ident("var"), IntLiter(None, 1)))
+    )
+  }
+
+  test("Successfully parses nested statements") {
+    assert(
+      statWhitespace
+        .runParser("while x < y do x = x + 1 ; y = y + 1 done")
+        .contains(
+          While(
+            LT(Ident("x"), Ident("y")),
+            Seq(
+              EqAssign(Ident("x"), Plus(Ident("x"), IntLiter(None, 1))),
+              EqAssign(Ident("y"), Plus(Ident("y"), IntLiter(None, 1)))
+            )
+          )
+        )
+    )
+    assert(
+      statWhitespace
+        .runParser(
+          "if var1 then if var2 then return var2 else skip fi else return var1 fi"
+        )
+        .contains(
+          If(
+            Ident("var1"),
+            If(Ident("var2"), Return(Ident("var2")), Skip),
+            Return(Ident("var1"))
+          )
+        )
+    )
+  }
 }
