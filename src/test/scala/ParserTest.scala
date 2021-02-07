@@ -4,6 +4,7 @@ import Rules._
 import parsley.Success
 import parsley.character.whitespace
 import parsley.token.{LanguageDef, Lexer, Parser}
+import parsley.combinator.eof
 
 class UnaryOpTest extends AnyFunSuite {
 
@@ -20,19 +21,15 @@ class UnaryOpTest extends AnyFunSuite {
   }
 
   test("Successful parses ord operator") {
-    assert(expr.runParser("ord'c'").contains(Ord(CharLiter(NormalChar('c')))))
+    assert(expr.runParser("ord 'c'").contains(Ord(CharLiter(NormalChar('c')))))
   }
 
   test("Successful parses chr operator") {
-    assert(expr.runParser("chr10").contains(Chr(IntLiter(None, 10))))
+    assert(expr.runParser("chr 10").contains(Chr(IntLiter(None, 10))))
   }
 
   test("Successfully fails to parse random string '##!!!'") {
     assert(expr.runParser("##!!!").isFailure)
-  }
-
-  test("Successfully fails to parse random string 'l3n'") {
-    assert(expr.runParser("l3n").isFailure)
   }
 }
 
@@ -608,12 +605,12 @@ class ArgListTest extends AnyFunSuite {
 
 class StatTest extends AnyFunSuite {
   test("Successfully parses skip statement") {
-    assert(statement.runParser("skip").contains(Skip))
+    assert(stat.runParser("skip").contains(Skip))
   }
 
   test("Successfully parses print statement") {
     assert(
-      statement
+      stat
         .runParser("print(a+y)")
         .contains(Print(Parens(Plus(Ident("a"), Ident("y")))))
     )
@@ -621,49 +618,117 @@ class StatTest extends AnyFunSuite {
 
   test("Successfully parses println statement") {
     assert(
-      statement.runParser("println(a)").contains(PrintLn(Parens(Ident("a"))))
+      stat.runParser("println(a)").contains(PrintLn(Parens(Ident("a"))))
     )
   }
   test("Successfully parses return statement") {
     assert(
-      statement
+      stat
         .runParser("return(0)")
         .contains(Return(Parens(IntLiter(None, 0))))
     )
   }
   test("Successfully parses exit statement") {
     assert(
-      statement.runParser("exit(5)").contains(Exit(Parens(IntLiter(None, 5))))
+      stat.runParser("exit(5)").contains(Exit(Parens(IntLiter(None, 5))))
     )
   }
   test("Successfully parses free statement") {
     assert(
-      statement
+      stat
         .runParser("free(100)")
         .contains(Free(Parens(IntLiter(None, 100))))
     )
   }
+
+  val statWhitespace = lexer.whiteSpace *> stat <* eof
+  test("Successfully parses if statement with whitespace") {
+    assert(
+      statWhitespace
+        .runParser("if (100 == 5) then print 100 else print 5 fi")
+        .contains(
+          If(
+            Parens(Equal(IntLiter(None, 100), IntLiter(None, 5))),
+            Print(IntLiter(None, 100)),
+            Print(IntLiter(None, 5))
+          )
+        )
+    )
+  }
+
+  test("Successfully parses while statement with whitespace") {
+    assert(
+      statWhitespace
+        .runParser("while true do skip done")
+        .contains(While(BoolLiter(true), Skip))
+    )
+  }
+
+  test("Successfully parses begin statement with whitespace") {
+    assert(
+      statWhitespace
+        .runParser("begin while true do print x + 1 done end")
+        .contains(
+          Begin(
+            While(BoolLiter(true), Print(Plus(Ident("x"), IntLiter(None, 1))))
+          )
+        )
+    )
+  }
+
+  test("Successfully parses consecutive statements with whitespace") {
+    assert(
+      statWhitespace
+        .runParser("while true do print x done ; begin print 5 end")
+        .contains(
+          Seq(
+            While(BoolLiter(true), Print(Ident("x"))),
+            Begin(Print(IntLiter(None, 5)))
+          )
+        )
+    )
+  }
+
 }
 
 class PairElemTest extends AnyFunSuite {
-  test("Successfully parses fst statements") {
+  test("Successfully parses fst") {
     assert(
       pairElem.runParser("fst(65)").contains(Fst(Parens(IntLiter(None, 65))))
     )
   }
-  test("Successfully fails to parse fst statements w/ non-exp parameter") {
+
+  test("Successfully fails to parse fst with non-valid expr") {
     assert(pairElem.runParser("fst(fst(90))").isFailure)
   }
 
-  test("Successfully parses snd statements") {
+  test("Successfully parses snd") {
     assert(
       pairElem.runParser("snd(5)").contains(Snd(Parens(IntLiter(None, 5))))
     )
   }
-  test("Successfully fails to parse snd statements w/ non-exp parameter") {
+
+  test("Successfully fails to parse snd with non-valid expr") {
     assert(pairElem.runParser("fst(snd(fst(90)))").isFailure)
   }
 
+  val pairElemWhitespace = lexer.whiteSpace *> pairElem <* eof
+
+  test("Successfully parses fst with whitespace") {
+    assert(
+      pairElemWhitespace
+        .runParser("fst 65")
+        .contains(Fst(IntLiter(None, 65)))
+    )
+  }
+
+  test("Successfully parses snd with whitespace") {
+    assert(
+      pairElemWhitespace
+        .runParser(" snd  65")
+        .contains(Snd(IntLiter(None, 65)))
+    )
+  }
 }
 
 class AssignRHSTests extends AnyFunSuite {
@@ -695,6 +760,23 @@ class AssignRHSTests extends AnyFunSuite {
     assert(assignRHS.runParser("call_p(call q(call r()))").isFailure)
   }
 
+  val assignRHSWhitespace = lexer.whiteSpace *> assignRHS <* eof
+
+  test("Successfully parses call with no arg-list, with whitespace") {
+    assert(
+      assignRHSWhitespace
+        .runParser("call _p()")
+        .contains(Call(Ident("_p"), None))
+    )
+  }
+
+  test("Successfully parses call with whitespace") {
+    assert(
+      assignRHSWhitespace
+        .runParser(" call   _p (65)")
+        .contains(Call(Ident("_p"), Some(ArgList(List(IntLiter(None, 65))))))
+    )
+  }
 }
 
 class ArrayLiterTest extends AnyFunSuite {
@@ -763,4 +845,40 @@ class ArrayLiterTest extends AnyFunSuite {
     )
   }
 
+  val arrayLiterWhitespace = lexer.whiteSpace *> arrayLiter <* eof
+
+  test("Successfully parses int array-liter with whitespace ") {
+    assert(
+      arrayLiterWhitespace
+        .runParser("[ 12, 67]")
+        .contains(
+          ArrayLiter(Some(List(IntLiter(None, 12), IntLiter(None, 67))))
+        )
+    )
+  }
+
+  test("Successfully parses char array-liter with whitespace") {
+    assert(
+      arrayLiterWhitespace
+        .runParser("['a', 'b', 'c']")
+        .contains(
+          ArrayLiter(
+            Some(
+              List(
+                CharLiter(NormalChar('a')),
+                CharLiter(NormalChar('b')),
+                CharLiter(NormalChar('c'))
+              )
+            )
+          )
+        )
+    )
+  }
+}
+
+class AssignLHSTests extends AnyFunSuite {
+  val assignLHSWhitespace = lexer.whiteSpace *> assignLHS <* eof
+  test("Successfully parses assignment for idents") {
+    assert(assignLHSWhitespace.runParser(" example").contains(Ident("example")))
+  }
 }
