@@ -34,7 +34,9 @@ object Parser {
     "pair" #> PairElemPair <|> types.map(PairElemT)
 
   lazy val pairType: Parsley[PairType] =
-    "pair" *> lexer.parens(lift2(Pair, pairElemType, lexer.comma *> pairElemType))
+    "pair" *> lexer.parens(
+      lift2(Pair, pairElemType, lexer.comma *> pairElemType)
+    )
 
   val natural: Parsley[Int] = lexer.decimal
   val intSign: Parsley[IntSign] = ("+" #> Pos) <|> ("-" #> Neg)
@@ -51,9 +53,16 @@ object Parser {
 
   lazy val identifier: Parsley[Ident] = lexer.identifier <#> Ident
 
-  val escapedChar: Parsley[Char] = oneOf(Set('0','b','t','n','f','r','"','\'','\\'))
+  val escapedChar: Parsley[Char] = oneOf(
+    Set('0', 'b', 't', 'n', 'f', 'r', '"', '\'', '\\')
+  )
 
-  val character: Parsley[Character] = ("\\" *> escapedChar <#> Escape) <|> (noneOf('\\', '\'', '"') <#> NormalChar)
+  val character: Parsley[Character] =
+    ("\\" *> escapedChar <#> Escape) <|> (noneOf(
+      '\\',
+      '\'',
+      '"'
+    ) <#> NormalChar)
 
   val charLiteral: Parsley[CharLiter] =
     "\'" *> character <* "\'" <#> CharLiter
@@ -118,19 +127,19 @@ object Parser {
   private val printStat: Parsley[Stat] = "print" *> expr <#> Print
   private val printlnStat: Parsley[Stat] = "println" *> expr <#> PrintLn
   private val ifStat: Parsley[Stat] =
-    "if" *> lift3(If, expr, "then" *> statement, "else" *> statement <* "fi")
+    "if" *> lift3(If, expr, "then" *> stat, "else" *> stat <* "fi")
   private val whileStat: Parsley[Stat] =
-    "while" *> lift2(While, expr, "do" *> statement <* "done")
+    "while" *> lift2(While, expr, "do" *> stat <* "done")
   private val beginStat: Parsley[Stat] =
-    "begin" *> statement.map(Begin) <* "end"
+    "begin" *> stat <* "end" <#> Begin
 
   private lazy val statement
       : Parsley[Stat] = skipStat <|> eqIdent <|> eqAssign <|>
     readStat <\> retStat <|> freeStat <|> exitStat <|> printlnStat <\> printStat <|>
     ifStat <|> whileStat <|> beginStat
 
-  val stat: Parsley[Stat] = precedence[Stat](
+  lazy val stat: Parsley[Stat] = precedence[Stat](
     statement,
-    Ops(InfixR)(lexer.semi #> Seq)
+    Ops(InfixR)(";" #> Seq)
   )
 }
