@@ -71,6 +71,8 @@ class StringLitTest extends AnyFunSuite {
 }
 
 class ArrayLiterTest extends AnyFunSuite {
+  val arrayLiterWhitespace = lexer.whiteSpace *> arrayLiter <* eof
+
   test("Successfully parses double array literal") {
     assert(
       arrayLiter
@@ -136,8 +138,6 @@ class ArrayLiterTest extends AnyFunSuite {
     )
   }
 
-  val arrayLiterWhitespace = lexer.whiteSpace *> arrayLiter <* eof
-
   test("Successfully parses int array literal, with whitespace") {
     assert(
       arrayLiterWhitespace
@@ -167,4 +167,8 @@ class ArrayLiterTest extends AnyFunSuite {
   }
 }
 
-// TODO: pairLiterTest
+class PairLiterTest extends AnyFunSuite {
+  test("Successfully parses pair-liter") {
+    assert(pairLiteral.runParser("null").contains(PairLiter()))
+  }
+}
