@@ -27,7 +27,7 @@ class EscapedCharTest extends AnyFunSuite {
     assert(escapedChar.runParser("r").contains('r'))
   }
 
-  test("Successfully parses character '\"' ") {
+  test("Successfully parses character \"") {
     assert(escapedChar.runParser("\"").contains('\"'))
   }
 
@@ -35,7 +35,7 @@ class EscapedCharTest extends AnyFunSuite {
     assert(escapedChar.runParser("\'").contains('\''))
   }
 
-  test("Successfully parses character '\' ") {
+  test("Successfully parses character \\") {
     assert(escapedChar.runParser("\\").contains('\\'))
   }
 }
