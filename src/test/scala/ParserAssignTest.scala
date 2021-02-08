@@ -9,6 +9,19 @@ class AssignLHSTest extends AnyFunSuite {
   test("Successfully parses ident") {
     assert(assignLHSWhitespace.runParser(" example").contains(Ident("example")))
   }
+
+  test("Successfully parses an array-elem") {
+    assert(
+      assignLHSWhitespace
+        .runParser("list[21][2]")
+        .contains(ArrayElem(Ident("list"), List(IntLiter(21), IntLiter(2))))
+    )
+  }
+
+  test("Successfully parses a pair-elem") {
+    assert(assignLHSWhitespace.runParser("fst 10").contains(Fst(IntLiter(10))))
+    assert(assignLHSWhitespace.runParser("snd x").contains(Snd(Ident("x"))))
+  }
 }
 
 class AssignRHSTest extends AnyFunSuite {
