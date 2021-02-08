@@ -2,6 +2,7 @@ import parsley.Parsley
 import parsley.Parsley._
 import parsley.character.{char, digit, letter, noneOf, oneOf, upper, whitespace}
 import parsley.combinator.{between, many, manyN, option}
+import parsley.implicits.charLift
 import parsley.lift.{lift2, lift3, lift4}
 import Rules._
 import parsley.expr.{InfixL, InfixR, Ops, Postfix, Prefix, precedence}
@@ -55,10 +56,10 @@ object Parser {
     (NormalChar <#> noneOf('\\', '\'', '"'))
 
   val charLiteral: Parsley[CharLiter] =
-    CharLiter <#> "\'" *> character <* "\'"
+    CharLiter <#> '\'' *> character <* "\'"
 
   val strLiteral: Parsley[StrLiter] =
-    StrLiter <#> "\"" *> many(character) <* "\""
+    StrLiter <#> '\"' *> many(character) <* "\""
 
   val expr: Parsley[Expr] = precedence[Expr](
     intLiter <|> boolLiteral <|> charLiteral <|> strLiteral <|> pairLiteral <|>
