@@ -1,14 +1,14 @@
-import scala.io.Source
+import java.io.File
 
 object Main {
   def main(args: Array[String]) = {
     if (args.length == 0) {
-      throw new Exception("Invalid arguements")
+      throw new Exception("Invalid number of arguments, please enter a file.")
     }
-    println(readFile(args(0)))
-  }
 
-  def readFile(str:String) : String = {
-    return Source.fromFile(str).getLines.mkString("\n")
+    val file = new File(args(0))
+    if (!file.exists()){
+      throw new Exception("File not present, please enter a valid file.")
+    }
   }
 }
