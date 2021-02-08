@@ -99,7 +99,7 @@ object Parser {
   val arrayLiter: Parsley[ArrayLiter] =
     lexer.brackets(option(lexer.commaSep1(expr))) <#> ArrayLiter
 
-  val assignLHS: Parsley[AssignLHS] = arrayElem <\> identifier <|> pairElem
+  val assignLHS: Parsley[AssignLHS] = pairElem <|> arrayElem <\> identifier
 
   val assignRHS: Parsley[AssignRHS] =
     ("newpair" *> lexer.parens(lift2(Newpair, expr, lexer.comma *> expr))) <|>
