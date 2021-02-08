@@ -21,7 +21,7 @@ class UnaryOpTest extends AnyFunSuite {
   }
 
   test("Successful parses chr operator") {
-    assert(expr.runParser("chr 10").contains(Chr(IntLiter(None, 10))))
+    assert(expr.runParser("chr 10").contains(Chr(IntLiter(10))))
   }
 
   test("Successfully fails to parse random string '##!!!'") {
@@ -34,19 +34,19 @@ class BinaryOpTest extends AnyFunSuite {
     assert(
       expr
         .runParser("10*5")
-        .contains(Mul(IntLiter(None, 10), IntLiter(None, 5)))
+        .contains(Mul(IntLiter(10), IntLiter(5)))
     )
   }
 
   test("Successful parses / operator") {
     assert(
-      expr.runParser("4/2").contains(Div(IntLiter(None, 4), IntLiter(None, 2)))
+      expr.runParser("4/2").contains(Div(IntLiter(4), IntLiter(2)))
     )
   }
 
   test("Successful parses % operator") {
     assert(
-      expr.runParser("3%1").contains(Mod(IntLiter(None, 3), IntLiter(None, 1)))
+      expr.runParser("3%1").contains(Mod(IntLiter(3), IntLiter(1)))
     )
   }
 
@@ -54,7 +54,7 @@ class BinaryOpTest extends AnyFunSuite {
     assert(
       expr
         .runParser("14+5")
-        .contains(Plus(IntLiter(None, 14), IntLiter(None, 5)))
+        .contains(Plus(IntLiter(14), IntLiter(5)))
     )
   }
 
@@ -62,31 +62,31 @@ class BinaryOpTest extends AnyFunSuite {
     assert(
       expr
         .runParser("6-18")
-        .contains(Sub(IntLiter(None, 6), IntLiter(None, 18)))
+        .contains(Sub(IntLiter(6), IntLiter(18)))
     )
   }
 
   test("Successful parses > operator") {
     assert(
-      expr.runParser("10>5").contains(GT(IntLiter(None, 10), IntLiter(None, 5)))
+      expr.runParser("10>5").contains(GT(IntLiter(10), IntLiter(5)))
     )
   }
 
   test("Successful parses >= operator") {
     assert(
-      expr.runParser("3>=7").contains(GTE(IntLiter(None, 3), IntLiter(None, 7)))
+      expr.runParser("3>=7").contains(GTE(IntLiter(3), IntLiter(7)))
     )
   }
 
   test("Successful parses < operator") {
     assert(
-      expr.runParser("6<4").contains(LT(IntLiter(None, 6), IntLiter(None, 4)))
+      expr.runParser("6<4").contains(LT(IntLiter(6), IntLiter(4)))
     )
   }
 
   test("Successful parses <= operator") {
     assert(
-      expr.runParser("6<=1").contains(LTE(IntLiter(None, 6), IntLiter(None, 1)))
+      expr.runParser("6<=1").contains(LTE(IntLiter(6), IntLiter(1)))
     )
   }
 

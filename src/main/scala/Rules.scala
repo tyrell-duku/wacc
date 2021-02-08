@@ -89,11 +89,7 @@ object Rules {
       extends AssignLHS
       with Expr
 
-  sealed case class IntLiter(x: Option[IntSign] = None, y: Int) extends Expr
-
-  sealed trait IntSign
-  case object Pos extends IntSign
-  case object Neg extends IntSign
+  sealed case class IntLiter(x: Int) extends Expr
 
   sealed case class BoolLiter(x: Boolean) extends Expr
 

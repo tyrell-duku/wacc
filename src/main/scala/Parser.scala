@@ -38,13 +38,7 @@ object Parser {
       lift2(Pair, pairElemType, lexer.comma *> pairElemType)
     )
 
-  val natural: Parsley[Int] = lexer.decimal
-  val intSign: Parsley[IntSign] = ("+" #> Pos) <|> ("-" #> Neg)
-  val intLiter: Parsley[IntLiter] = lift2(
-    (x: Option[IntSign], y: Int) => IntLiter(x, y),
-    option(intSign),
-    natural
-  )
+  val intLiter: Parsley[IntLiter] = lexer.integer <#> IntLiter
 
   val boolLiteral: Parsley[BoolLiter] =
     ("true" #> BoolLiter(true)) <|> ("false" #> BoolLiter(false))

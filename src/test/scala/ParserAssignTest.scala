@@ -32,7 +32,7 @@ class AssignRHSTest extends AnyFunSuite {
     assert(
       assignRHSWhitespace
         .runParser(" call   _p (65)")
-        .contains(Call(Ident("_p"), Some(ArgList(List(IntLiter(None, 65))))))
+        .contains(Call(Ident("_p"), Some(ArgList(List(IntLiter(65))))))
     )
 
   }

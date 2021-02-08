@@ -22,7 +22,7 @@ class ArgListTest extends AnyFunSuite {
         .runParser("10,2,3")
         .contains(
           ArgList(
-            List(IntLiter(None, 10), IntLiter(None, 2), IntLiter(None, 3))
+            List(IntLiter(10), IntLiter(2), IntLiter(3))
           )
         )
     )
@@ -38,7 +38,7 @@ class ArgListTest extends AnyFunSuite {
   }
 
   test("Successfully parses single element argList") {
-    assert(argList.runParser("10").contains(ArgList(List(IntLiter(None, 10)))))
+    assert(argList.runParser("10").contains(ArgList(List(IntLiter(10)))))
     assert(
       argList
         .runParser("'c''")
@@ -47,13 +47,13 @@ class ArgListTest extends AnyFunSuite {
     assert(
       argList
         .runParser("10*6")
-        .contains(ArgList(List(Mul(IntLiter(None, 10), IntLiter(None, 6)))))
+        .contains(ArgList(List(Mul(IntLiter(10), IntLiter(6)))))
     )
     assert(
       argList
         .runParser("var[10]")
         .contains(
-          ArgList(List(ArrayElem(Ident("var"), List(IntLiter(None, 10)))))
+          ArgList(List(ArrayElem(Ident("var"), List(IntLiter(10)))))
         )
     )
   }

@@ -37,7 +37,7 @@ class FuncTest extends AnyFunSuite {
             IntT,
             Ident("foo"),
             None,
-            EqAssign(Ident("x"), Plus(Ident("x"), IntLiter(None, 1)))
+            EqAssign(Ident("x"), Plus(Ident("x"), IntLiter(1)))
           )
         )
     )
@@ -49,7 +49,7 @@ class FuncTest extends AnyFunSuite {
             OfArrayType(IntT),
             Ident("foo"),
             None,
-            EqAssign(Ident("y"), Plus(Ident("x"), IntLiter(None, 1)))
+            EqAssign(Ident("y"), Plus(Ident("x"), IntLiter(1)))
           )
         )
     )
@@ -92,7 +92,7 @@ class FuncTest extends AnyFunSuite {
             StringT,
             Ident("foo"),
             Some(ParamList(List(Param(OfArrayType(IntT), Ident("arg1"))))),
-            Exit(IntLiter(None, 1))
+            Exit(IntLiter(1))
           )
         )
     )

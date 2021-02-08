@@ -9,7 +9,7 @@ class ArrayElemTest extends AnyFunSuite {
       arrayElem
         .runParser("var[10][2]")
         .contains(
-          ArrayElem(Ident("var"), List(IntLiter(None, 10), IntLiter(None, 2)))
+          ArrayElem(Ident("var"), List(IntLiter(10), IntLiter(2)))
         )
     )
   }
@@ -26,7 +26,7 @@ class ArrayElemTest extends AnyFunSuite {
     assert(
       arrayElem
         .runParser("var[10]")
-        .contains(ArrayElem(Ident("var"), List(IntLiter(None, 10))))
+        .contains(ArrayElem(Ident("var"), List(IntLiter(10))))
     )
     assert(
       arrayElem
@@ -34,7 +34,7 @@ class ArrayElemTest extends AnyFunSuite {
         .contains(
           ArrayElem(
             Ident("var"),
-            List(ArrayElem(Ident("var"), List(IntLiter(None, 10))))
+            List(ArrayElem(Ident("var"), List(IntLiter(10))))
           )
         )
     )
@@ -47,12 +47,12 @@ class PairElemTest extends AnyFunSuite {
 
   test("Successfully parses fst") {
     assert(
-      pairElem.runParser("fst(65)").contains(Fst(Parens(IntLiter(None, 65))))
+      pairElem.runParser("fst(65)").contains(Fst(Parens(IntLiter(65))))
     )
     assert(
       pairElemWhitespace
         .runParser("fst 65")
-        .contains(Fst(IntLiter(None, 65)))
+        .contains(Fst(IntLiter(65)))
     )
   }
 
@@ -62,12 +62,12 @@ class PairElemTest extends AnyFunSuite {
 
   test("Successfully parses snd") {
     assert(
-      pairElem.runParser("snd(5)").contains(Snd(Parens(IntLiter(None, 5))))
+      pairElem.runParser("snd(5)").contains(Snd(Parens(IntLiter(5))))
     )
     assert(
       pairElemWhitespace
         .runParser(" snd  65")
-        .contains(Snd(IntLiter(None, 65)))
+        .contains(Snd(IntLiter(65)))
     )
   }
 

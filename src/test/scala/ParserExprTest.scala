@@ -8,7 +8,7 @@ class ExprTest extends AnyFunSuite {
       expr
         .runParser("((10))+(5)")
         .contains(
-          Plus(Parens(Parens(IntLiter(None, 10))), Parens(IntLiter(None, 5)))
+          Plus(Parens(Parens(IntLiter(10))), Parens(IntLiter(5)))
         )
     )
   }
@@ -17,7 +17,7 @@ class ExprTest extends AnyFunSuite {
     assert(
       expr
         .runParser("ord(chr(10))")
-        .contains(Ord(Parens(Chr(Parens(IntLiter(None, 10))))))
+        .contains(Ord(Parens(Chr(Parens(IntLiter(10))))))
     )
   }
 
@@ -38,10 +38,10 @@ class ExprTest extends AnyFunSuite {
         .contains(
           Sub(
             Plus(
-              Mul(IntLiter(None, 2), IntLiter(None, 8)),
-              Div(IntLiter(None, 5), IntLiter(None, 9))
+              Mul(IntLiter(2), IntLiter(8)),
+              Div(IntLiter(5), IntLiter(9))
             ),
-            IntLiter(None, 1)
+            IntLiter(1)
           )
         )
     )
@@ -51,10 +51,10 @@ class ExprTest extends AnyFunSuite {
         .contains(
           Sub(
             Plus(
-              IntLiter(None, 100),
-              Div(Mul(IntLiter(None, 8), IntLiter(None, 5)), IntLiter(None, 9))
+              IntLiter(100),
+              Div(Mul(IntLiter(8), IntLiter(5)), IntLiter(9))
             ),
-            IntLiter(None, 1)
+            IntLiter(1)
           )
         )
     )
@@ -65,12 +65,12 @@ class ExprTest extends AnyFunSuite {
           Sub(
             Plus(
               Plus(
-                IntLiter(None, 100),
-                Mul(IntLiter(None, 8), IntLiter(None, 5))
+                IntLiter(100),
+                Mul(IntLiter(8), IntLiter(5))
               ),
-              IntLiter(None, 100)
+              IntLiter(100)
             ),
-            IntLiter(None, 1)
+            IntLiter(1)
           )
         )
     )

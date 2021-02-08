@@ -28,13 +28,13 @@ class StatTest extends AnyFunSuite {
     assert(
       stat
         .runParser("return(0)")
-        .contains(Return(Parens(IntLiter(None, 0))))
+        .contains(Return(Parens(IntLiter(0))))
     )
   }
 
   test("Successfully parses exit statement") {
     assert(
-      stat.runParser("exit(5)").contains(Exit(Parens(IntLiter(None, 5))))
+      stat.runParser("exit(5)").contains(Exit(Parens(IntLiter(5))))
     )
   }
 
@@ -42,7 +42,7 @@ class StatTest extends AnyFunSuite {
     assert(
       stat
         .runParser("free(100)")
-        .contains(Free(Parens(IntLiter(None, 100))))
+        .contains(Free(Parens(IntLiter(100))))
     )
   }
 
@@ -52,9 +52,9 @@ class StatTest extends AnyFunSuite {
         .runParser("if (100 == 5) then print 100 else print 5 fi")
         .contains(
           If(
-            Parens(Equal(IntLiter(None, 100), IntLiter(None, 5))),
-            Print(IntLiter(None, 100)),
-            Print(IntLiter(None, 5))
+            Parens(Equal(IntLiter(100), IntLiter(5))),
+            Print(IntLiter(100)),
+            Print(IntLiter(5))
           )
         )
     )
@@ -74,7 +74,7 @@ class StatTest extends AnyFunSuite {
         .runParser("begin while true do print x + 1 done end")
         .contains(
           Begin(
-            While(BoolLiter(true), Print(Plus(Ident("x"), IntLiter(None, 1))))
+            While(BoolLiter(true), Print(Plus(Ident("x"), IntLiter(1))))
           )
         )
     )
@@ -87,7 +87,7 @@ class StatTest extends AnyFunSuite {
         .contains(
           Seq(
             While(BoolLiter(true), Print(Ident("x"))),
-            Begin(Print(IntLiter(None, 5)))
+            Begin(Print(IntLiter(5)))
           )
         )
     )
@@ -125,7 +125,7 @@ class StatTest extends AnyFunSuite {
     assert(
       statWhitespace
         .runParser("x = x + 1")
-        .contains(EqAssign(Ident("x"), Plus(Ident("x"), IntLiter(None, 1))))
+        .contains(EqAssign(Ident("x"), Plus(Ident("x"), IntLiter(1))))
     )
   }
 
@@ -133,7 +133,7 @@ class StatTest extends AnyFunSuite {
     assert(
       statWhitespace
         .runParser("int var = 1")
-        .contains(EqIdent(IntT, Ident("var"), IntLiter(None, 1)))
+        .contains(EqIdent(IntT, Ident("var"), IntLiter(1)))
     )
   }
 
@@ -145,8 +145,8 @@ class StatTest extends AnyFunSuite {
           While(
             LT(Ident("x"), Ident("y")),
             Seq(
-              EqAssign(Ident("x"), Plus(Ident("x"), IntLiter(None, 1))),
-              EqAssign(Ident("y"), Plus(Ident("y"), IntLiter(None, 1)))
+              EqAssign(Ident("x"), Plus(Ident("x"), IntLiter(1))),
+              EqAssign(Ident("y"), Plus(Ident("y"), IntLiter(1)))
             )
           )
         )

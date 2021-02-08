@@ -6,17 +6,17 @@ import parsley.combinator.eof
 class IntLiterTest extends AnyFunSuite {
   test("Successfully parses digit without sign") {
     assert(
-      intLiter.runParser("100").contains(IntLiter(None, 100))
+      intLiter.runParser("100").contains(IntLiter(100))
     )
-    assert(intLiter.runParser("1").contains(IntLiter(None, 1)))
+    assert(intLiter.runParser("1").contains(IntLiter(1)))
   }
 
   test("Successfully parses digit with sign") {
     assert(
-      intLiter.runParser("+100").contains(IntLiter(Some(Pos), 100))
+      intLiter.runParser("+100").contains(IntLiter(100))
     )
     assert(
-      intLiter.runParser("-100").contains(IntLiter(Some(Neg), 100))
+      intLiter.runParser("-100").contains(IntLiter(-100))
     )
   }
 
@@ -27,8 +27,8 @@ class IntLiterTest extends AnyFunSuite {
   }
 
   test("Successfully fails to parse number with decimal part") {
-    assert(intLiter.runParser("+100.5").contains(IntLiter(Some(Pos), 100)))
-    assert(intLiter.runParser("-0.5").contains(IntLiter(Some(Neg), 0)))
+    assert(intLiter.runParser("+100.5").contains(IntLiter(100)))
+    assert(intLiter.runParser("-0.5").contains(IntLiter(-0)))
   }
 }
 
@@ -78,7 +78,7 @@ class ArrayLiterTest extends AnyFunSuite {
       arrayLiter
         .runParser("[10][2]")
         .contains(
-          ArrayLiter(Some(List(IntLiter(None, 10))))
+          ArrayLiter(Some(List(IntLiter(10))))
         )
     )
   }
@@ -91,7 +91,7 @@ class ArrayLiterTest extends AnyFunSuite {
     assert(
       arrayLiter
         .runParser("[10]")
-        .contains(ArrayLiter(Some(List(IntLiter(None, 10)))))
+        .contains(ArrayLiter(Some(List(IntLiter(10)))))
     )
 
   }
@@ -101,7 +101,7 @@ class ArrayLiterTest extends AnyFunSuite {
         .runParser("[var[10]]")
         .contains(
           ArrayLiter(
-            Some(List(ArrayElem(Ident("var"), List(IntLiter(None, 10)))))
+            Some(List(ArrayElem(Ident("var"), List(IntLiter(10)))))
           )
         )
     )
@@ -117,7 +117,7 @@ class ArrayLiterTest extends AnyFunSuite {
         .runParser("[10,9,8]")
         .contains(
           ArrayLiter(
-            Some(List(IntLiter(None, 10), IntLiter(None, 9), IntLiter(None, 8)))
+            Some(List(IntLiter(10), IntLiter(9), IntLiter(8)))
           )
         )
     )
@@ -143,7 +143,7 @@ class ArrayLiterTest extends AnyFunSuite {
       arrayLiterWhitespace
         .runParser("[ 12, 67]")
         .contains(
-          ArrayLiter(Some(List(IntLiter(None, 12), IntLiter(None, 67))))
+          ArrayLiter(Some(List(IntLiter(12), IntLiter(67))))
         )
     )
   }
