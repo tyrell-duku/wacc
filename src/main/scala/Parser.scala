@@ -127,10 +127,9 @@ object Parser {
   private val beginStat: Parsley[Stat] =
     "begin" *> stat <* "end" <#> Begin
 
-  private lazy val statement
-      : Parsley[Stat] = skipStat <|> eqIdent <|> eqAssign <|>
-    readStat <\> retStat <|> freeStat <|> exitStat <|> printlnStat <\> printStat <|>
-    ifStat <|> whileStat <|> beginStat
+  private lazy val statement: Parsley[Stat] = skipStat <|> readStat <\>
+    retStat <|> freeStat <|> exitStat <|> printlnStat <\> printStat <|>
+    ifStat <|> whileStat <|> beginStat <|> eqIdent <|> eqAssign
 
   lazy val stat: Parsley[Stat] = precedence[Stat](
     statement,
