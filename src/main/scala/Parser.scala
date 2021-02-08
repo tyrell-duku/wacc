@@ -1,5 +1,5 @@
-import parsley.Parsley._
 import parsley.Parsley
+import parsley.Parsley._
 import parsley.character.{char, digit, letter, noneOf, oneOf, upper, whitespace}
 import parsley.combinator.{many, manyN, option}
 import parsley.lift.{lift2, lift3, lift4}
@@ -134,7 +134,7 @@ object Parser {
 
   lazy val stat: Parsley[Stat] = precedence[Stat](
     statement,
-    Ops(InfixR)(";" #> Seq)
+    Ops(InfixR)(lexer.semi #> Seq)
   )
 
   val param: Parsley[Param] = lift2(Param, types, identifier)
@@ -148,4 +148,7 @@ object Parser {
     lexer.parens(option(paramList)),
     "is" *> stat <* "end"
   )
+
+  val program: Parsley[Program] =
+    "begin" *> lift2(Program, many(attempt(func)), stat) <* "end"
 }
