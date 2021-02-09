@@ -91,6 +91,10 @@ object Rules {
 
   sealed case class IntLiter(x: Int) extends Expr
 
+  sealed trait IntSign
+  case object Pos extends IntSign
+  case object Neg extends IntSign
+
   sealed case class BoolLiter(x: Boolean) extends Expr
 
   sealed case class CharLiter(x: Character) extends Expr

@@ -40,7 +40,22 @@ object Parser {
       lift2(Pair, pairElemType, lexer.comma *> pairElemType)
     )
 
-  val intLiter: Parsley[IntLiter] = IntLiter <#> lexer.integer
+  val intSign: Parsley[IntSign] = ("+" #> Pos) <|> ("-" #> Neg)
+  val intLiter: Parsley[IntLiter] =
+    IntLiter <#> (option(lookAhead(intSign)) <~> lexer.integer)
+      .filter(notOverflow)
+      .map((x: (Option[IntSign], Int)) => x._2)
+
+  def notOverflow(x: (Option[IntSign], Int)): Boolean = {
+    var (sign, n) = x
+    if ((sign.isEmpty || (sign contains Pos)) && (n < 0)) {
+      return false
+    }
+    if ((sign contains Neg) && (n > 0)) {
+      return false
+    }
+    true
+  }
 
   val boolLiteral: Parsley[BoolLiter] =
     ("true" #> BoolLiter(true)) <|> ("false" #> BoolLiter(false))
@@ -67,7 +82,7 @@ object Parser {
       arrayElem <\> identifier <|> (Parens <#> lexer.parens(expr)),
     Ops[Expr](Prefix)(
       "!" #> Not,
-      "-" #> Negation,
+      notFollowedBy(intLiter) *> "-" #> Negation,
       "len" #> Len,
       "ord" #> Ord,
       "chr" #> Chr
@@ -139,12 +154,12 @@ object Parser {
   val paramList: Parsley[ParamList] = ParamList <#> lexer.commaSep1(param)
 
   private def statTerminates(stat: Stat): Boolean = stat match {
-    case If(_, s1, s2)        => statTerminates(s1) && statTerminates(s2)
-    case While(_, s)          => statTerminates(s)
-    case Begin(s)             => statTerminates(s)
-    case Seq(_, s)            => statTerminates(s)
-    case Exit(_) | Return (_) => true
-    case _                    => false
+    case If(_, s1, s2)       => statTerminates(s1) && statTerminates(s2)
+    case While(_, s)         => statTerminates(s)
+    case Begin(s)            => statTerminates(s)
+    case Seq(_, s)           => statTerminates(s)
+    case Exit(_) | Return(_) => true
+    case _                   => false
   }
 
   val func: Parsley[Func] = lift4(
