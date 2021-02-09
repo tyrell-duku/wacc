@@ -20,4 +20,14 @@ class ProgramTest extends AnyFunSuite {
        }
      }
    }
+
+  for (file <- listAllFiles(new File("wacc_examples/invalid/syntaxErr"))) {
+    if (file.isFile) {
+      test("Successfully fails to parses " + file.getName) {
+        if (programWhitespace.parseFromFile(file).isSuccess) {
+          assert(programWhitespace.parseFromFile(file).contains())
+        }
+      }
+    }
+  }
 }
