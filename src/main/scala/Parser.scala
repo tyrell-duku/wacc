@@ -24,11 +24,12 @@ object Parser {
   implicit def implicitSymbol(s: String): Parsley[String] = lexer.symbol_(s)
 
   lazy val baseType: Parsley[BaseType] =
-    ("int" #> IntT) <|> ("bool" #> BoolT) <|> ("char" #> CharT) <|> ("string" #> StringT)
+    (lexer.keyword("int") #> IntT) <|> (lexer.keyword("bool") #> BoolT) <|>
+      (lexer.keyword("char") #> CharT) <|> (lexer.keyword("string") #> StringT)
 
   val types: Parsley[Type] = precedence[Type](
     baseType <|> pairType,
-    Ops[Type](Postfix)("[]" #> OfArrayType)
+    Ops[Type](Postfix)(lexer.keyword("[]") #> OfArrayType)
   )
 
   val pairElemType: Parsley[PairElemType] =
