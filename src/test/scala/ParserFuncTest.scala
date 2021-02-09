@@ -6,50 +6,30 @@ class FuncTest extends AnyFunSuite {
   test("Successfully parses func with no param-list") {
     assert(
       func
-        .runParser("int foo () is skip end")
-        .contains(Func(IntT, Ident("foo"), None, Skip))
+        .runParser("int foo () is return 10 end")
+        .contains(Func(IntT, Ident("foo"), None, Return(IntLiter(10))))
     )
     assert(
       func
-        .runParser("bool foo () is skip end")
-        .contains(Func(BoolT, Ident("foo"), None, Skip))
-    )
-    assert(
-      func
-        .runParser("char foo () is skip end")
-        .contains(Func(CharT, Ident("foo"), None, Skip))
-    )
-    assert(
-      func
-        .runParser("string foo () is skip end")
-        .contains(Func(StringT, Ident("foo"), None, Skip))
-    )
-    assert(
-      func
-        .runParser("int foo () is return x end")
-        .contains(Func(IntT, Ident("foo"), None, Return(Ident("x"))))
-    )
-    assert(
-      func
-        .runParser("int foo () is x = x + 1 end")
+        .runParser("int foo () is x = x + 1 ; exit 0 end")
         .contains(
           Func(
             IntT,
             Ident("foo"),
             None,
-            EqAssign(Ident("x"), Plus(Ident("x"), IntLiter(1)))
+            Seq(EqAssign(Ident("x"),Plus(Ident("x"),IntLiter(1))),Exit(IntLiter(0)))
           )
         )
     )
     assert(
       func
-        .runParser("int[] foo () is y = x + 1 end")
+        .runParser("int[] foo () is y = x + 1 ; return y end")
         .contains(
           Func(
             OfArrayType(IntT),
             Ident("foo"),
             None,
-            EqAssign(Ident("y"), Plus(Ident("x"), IntLiter(1)))
+            Seq(EqAssign(Ident("y"),Plus(Ident("x"),IntLiter(1))),Return(Ident("y")))
           )
         )
     )
@@ -95,6 +75,29 @@ class FuncTest extends AnyFunSuite {
             Exit(IntLiter(1))
           )
         )
+    )
+  }
+
+  test("Successfully fails to parse functions that don't end in 'return' or 'exit'"){
+    assert(
+      func
+        .runParser("int foo () is skip end")
+        .isFailure
+    )
+    assert(
+      func
+        .runParser("bool foo () is print 10 end")
+        .isFailure
+    )
+    assert(
+      func
+        .runParser("char foo () is free var end")
+        .isFailure
+    )
+    assert(
+      func
+        .runParser("string foo () is x = var end")
+        .isFailure
     )
   }
 }

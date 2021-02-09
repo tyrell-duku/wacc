@@ -137,12 +137,21 @@ object Parser {
 
   val paramList: Parsley[ParamList] = ParamList <#> lexer.commaSep1(param)
 
+  private def statTerminates(stat: Stat): Boolean = stat match {
+    case If(_, s1, s2)        => statTerminates(s1) && statTerminates(s2)
+    case While(_, s)          => statTerminates(s)
+    case Begin(s)             => statTerminates(s)
+    case Seq(_, s)            => statTerminates(s)
+    case Exit(_) | Return (_) => true
+    case _                    => false
+  }
+
   val func: Parsley[Func] = lift4(
     Func,
     types,
     identifier,
     lexer.parens(option(paramList)),
-    between("is", "end", stat)
+    between("is", "end", stat.filter(statTerminates))
   )
 
   val program: Parsley[Program] =
