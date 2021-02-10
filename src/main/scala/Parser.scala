@@ -45,11 +45,11 @@ object Parser {
   val intSign: Parsley[IntSign] = ("+" #> Pos) <|> ("-" #> Neg)
   val intLiter: Parsley[IntLiter] =
     IntLiter <#> (option(lookAhead(intSign)) <~> lexer.integer)
-      .filter(notOverflow)
+      .guard(notOverflow, "Integer is not between -2^31 and 2^31-1")
       .map((x: (Option[IntSign], Int)) => x._2) ? "number"
 
   def notOverflow(x: (Option[IntSign], Int)): Boolean = {
-    var (sign, n) = x
+    val (sign, n) = x
     if ((sign.isEmpty || (sign contains Pos)) && (n < 0)) {
       return false
     }
@@ -188,7 +188,7 @@ object Parser {
   val param: Parsley[Param] = lift2(Param, types, identifier) ? "<type> <ident>"
 
   val paramList: Parsley[ParamList] =
-    ParamList <#> sepBy1(expr, ",") ? "<param> (, <param>)*"
+    ParamList <#> sepBy1(param, ",") ? "<param> (, <param>)*"
 
   private def statTerminates(stat: Stat): Boolean = stat match {
     case If(_, s1, s2)       => statTerminates(s1) && statTerminates(s2)
