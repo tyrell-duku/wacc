@@ -199,6 +199,11 @@ object Parser {
     case _                   => false
   }
 
+  private def funcMsg(f: Func): String = f match {
+    case Func(_, Ident(s), _, _) =>
+      "Function " + s + " is not ended with return or exit statement"
+  }
+
   val func: Parsley[Func] = lift4(
     Func,
     types,
@@ -207,9 +212,9 @@ object Parser {
     between(
       "is",
       "end",
-      stat.filter(statTerminates)
+      stat
     ) ? "<type> <ident> (<param-list>?) is <stat> end"
-  )
+  ).guard((x: Func) => statTerminates(x.s), (x: Func) => funcMsg(x))
 
   val program: Parsley[Program] =
     between(
