@@ -48,8 +48,7 @@ object Rules {
   case object CharT extends BaseType
   case object StringT extends BaseType
 
-  sealed trait ArrayType extends Type
-  case class OfArrayType(x: Type) extends ArrayType
+  sealed case class ArrayT(x: Type) extends Type
 
   sealed trait PairType extends Type
   case class Pair(x: PairElemType, y: PairElemType) extends PairType
