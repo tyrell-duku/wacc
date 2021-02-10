@@ -5,7 +5,7 @@ import parsley.combinator.{between, many, manyN, option, sepBy1}
 import parsley.implicits.charLift
 import parsley.lift.{lift2, lift3, lift4}
 import Rules._
-import parsley.expr.{InfixL, InfixR, Ops, Postfix, Prefix, precedence}
+import parsley.expr.{InfixL, Ops, Postfix, Prefix, precedence}
 import parsley.token.{LanguageDef, Lexer}
 
 object Parser {
@@ -39,7 +39,7 @@ object Parser {
 
   lazy val pairType: Parsley[PairType] =
     ("pair" *> lexer.parens(
-      lift2(Pair, pairElemType, lexer.comma *> pairElemType)
+      lift2(Pair, pairElemType, "," *> pairElemType)
     )) ? "pair(<pair-elem-type>, <pair-elem-type>)"
 
   val intSign: Parsley[IntSign] = ("+" #> Pos) <|> ("-" #> Neg)
@@ -114,7 +114,7 @@ object Parser {
   )
 
   val argList: Parsley[ArgList] =
-    ArgList <#> lexer.commaSep1(expr) ? "<expr> (',' <expr>)*"
+    ArgList <#> sepBy1(expr, ",") ? "<expr> (',' <expr>)*"
 
   lazy val arrayElem: Parsley[ArrayElem] = lift2(
     ArrayElem,
@@ -126,7 +126,7 @@ object Parser {
     (Fst <#> "fst" *> expr ? "fst <expr>") <|> (Snd <#> "snd" *> expr ? "snd <expr>")
 
   val arrayLiter: Parsley[ArrayLiter] = ArrayLiter <#> lexer.brackets(
-    option(lexer.commaSep1(expr))
+    option(sepBy1(expr, ","))
   ) ? "[(<expr> (',' <expr>)*)?]"
 
   val assignLHS: Parsley[AssignLHS] = pairElem <|> arrayElem <\> identifier
@@ -134,7 +134,7 @@ object Parser {
   val assignRHS: Parsley[AssignRHS] =
     ("newpair" *> lexer
       .parens(
-        lift2(Newpair, expr, lexer.comma *> expr)
+        lift2(Newpair, expr, "," *> expr)
       )) <|>
       ("call" *> lift2(
         Call,
@@ -188,7 +188,7 @@ object Parser {
   val param: Parsley[Param] = lift2(Param, types, identifier) ? "<type> <ident>"
 
   val paramList: Parsley[ParamList] =
-    ParamList <#> lexer.commaSep1(param) ? "<param> (, <param>)*"
+    ParamList <#> sepBy1(expr, ",") ? "<param> (, <param>)*"
 
   private def statTerminates(stat: Stat): Boolean = stat match {
     case If(_, s1, s2)       => statTerminates(s1) && statTerminates(s2)
