@@ -86,8 +86,10 @@ class StatTest extends AnyFunSuite {
         .runParser("while true do print x done ; begin print 5 end")
         .contains(
           Seq(
-            While(BoolLiter(true), Print(Ident("x"))),
-            Begin(Print(IntLiter(5)))
+            List(
+              While(BoolLiter(true), Print(Ident("x"))),
+              Begin(Print(IntLiter(5)))
+            )
           )
         )
     )
@@ -145,8 +147,10 @@ class StatTest extends AnyFunSuite {
           While(
             LT(Ident("x"), Ident("y")),
             Seq(
-              EqAssign(Ident("x"), Plus(Ident("x"), IntLiter(1))),
-              EqAssign(Ident("y"), Plus(Ident("y"), IntLiter(1)))
+              List(
+                EqAssign(Ident("x"), Plus(Ident("x"), IntLiter(1))),
+                EqAssign(Ident("y"), Plus(Ident("y"), IntLiter(1)))
+              )
             )
           )
         )

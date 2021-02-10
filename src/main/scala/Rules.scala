@@ -26,7 +26,7 @@ object Rules {
   case class If(x: Expr, y: Stat, z: Stat) extends Stat
   case class While(x: Expr, y: Stat) extends Stat
   case class Begin(x: Stat) extends Stat
-  case class Seq(x: Stat, y: Stat) extends Stat
+  case class Seq(x: List[Stat]) extends Stat
 
   sealed trait AssignLHS
 

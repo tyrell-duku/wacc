@@ -1,7 +1,7 @@
 import parsley.Parsley
 import parsley.Parsley._
 import parsley.character.{char, digit, letter, noneOf, oneOf, upper, whitespace}
-import parsley.combinator.{between, many, manyN, option}
+import parsley.combinator.{between, many, manyN, option, sepBy1}
 import parsley.implicits.charLift
 import parsley.lift.{lift2, lift3, lift4}
 import Rules._
@@ -182,10 +182,8 @@ object Parser {
     retStat <|> freeStat <|> exitStat <|> printlnStat <\> printStat <|>
     ifStat <|> whileStat <|> beginStat <|> eqIdent <|> eqAssign
 
-  lazy val stat: Parsley[Stat] = precedence[Stat](
-    statement,
-    Ops(InfixR)(lexer.semi #> Seq ? "<stat> ';' <stat>")
-  )
+  lazy val stat: Parsley[Stat] =
+    (statement <* notFollowedBy(";")) <\> (Seq <#> sepBy1(statement, ";"))
 
   val param: Parsley[Param] = lift2(Param, types, identifier) ? "<type> <ident>"
 
@@ -196,7 +194,7 @@ object Parser {
     case If(_, s1, s2)       => statTerminates(s1) && statTerminates(s2)
     case While(_, s)         => statTerminates(s)
     case Begin(s)            => statTerminates(s)
-    case Seq(_, s)           => statTerminates(s)
+    case Seq(s)              => statTerminates(s.last)
     case Exit(_) | Return(_) => true
     case _                   => false
   }
