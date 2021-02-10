@@ -33,7 +33,7 @@ object Rules {
   sealed trait AssignLHS
 
   sealed trait AssignRHS {
-    def getType(hMap : mutable.HashMap[Ident, Type]) : Type = NA
+    def getType(hMap: mutable.HashMap[Ident, Type]): Type = NA
 
     def typeChecker(b: Boolean, t: Type): Type = {
       if (b) t else NA
@@ -91,7 +91,7 @@ object Rules {
     override def getType(hMap: mutable.HashMap[Ident, Type]): Type = {
       x.getType(hMap) match {
         case ArrayT(_) => IntT
-        case _  =>  NA
+        case _         => NA
       }
     }
   }
@@ -107,8 +107,8 @@ object Rules {
   }
 
   sealed trait BinOp extends Expr {
-    val l : Expr
-    val r : Expr
+    val l: Expr
+    val r: Expr
   }
   sealed trait ArithOps extends BinOp {
     override def getType(hMap: mutable.HashMap[Ident, Type]): Type = {
@@ -123,7 +123,11 @@ object Rules {
 
   sealed trait ComparOps extends BinOp {
     override def getType(hMap: mutable.HashMap[Ident, Type]): Type = {
-      typeChecker((l.getType(hMap) == r.getType(hMap)) && ((l.getType(hMap) == IntT) || (l.getType(hMap) == CharT)), BoolT)
+      typeChecker(
+        (l.getType(hMap) == r.getType(hMap)) && ((l.getType(hMap) == IntT) || (l
+          .getType(hMap) == CharT)),
+        BoolT
+      )
     }
   }
   case class GT(l: Expr, r: Expr) extends ComparOps
@@ -141,22 +145,28 @@ object Rules {
 
   sealed trait LogicalOps extends BinOp {
     override def getType(hMap: mutable.HashMap[Ident, Type]): Type = {
-      typeChecker((l.getType(hMap) == BoolT) && (r.getType(hMap) == BoolT), BoolT)
+      typeChecker(
+        (l.getType(hMap) == BoolT) && (r.getType(hMap) == BoolT),
+        BoolT
+      )
     }
   }
   case class And(l: Expr, r: Expr) extends LogicalOps
   case class Or(l: Expr, r: Expr) extends LogicalOps
 
-  sealed case class Ident(x: String) extends AssignLHS with AssignRHS with Expr {
+  sealed case class Ident(x: String)
+      extends AssignLHS
+      with AssignRHS
+      with Expr {
     override def getType(hMap: mutable.HashMap[Ident, Type]): Type = {
-      if (!hMap.contains(this)){
+      if (!hMap.contains(this)) {
         return NA
       }
       hMap.apply(this)
     }
   }
 
-  // TO DO: Check only ints in list y?
+  // TO DO: Check only ints in list y?, length of array (runtime error)
   sealed case class ArrayElem(x: Ident, y: List[Expr])
       extends AssignLHS
       with Expr {
@@ -199,17 +209,16 @@ object Rules {
         return ArrayT(NA)
       }
       val arrayLiter = x.get
-      val types = List[Type]()
-      for (i <- arrayLiter.indices) {
-        types :+ arrayLiter.apply(i).getType(hMap)
-      }
+      var types = arrayLiter.map(_.getType(hMap))
+      println(types)
       typeChecker(types.forall(_ == types.head), ArrayT(types.head))
     }
   }
 
   // To DO: confim correct type for pair liter
   sealed case class PairLiter() extends Expr {
-    override def getType(hMap: mutable.HashMap[Ident, Type]): Type = Pair(null, null)
+    override def getType(hMap: mutable.HashMap[Ident, Type]): Type =
+      Pair(null, null)
   }
 
 }
