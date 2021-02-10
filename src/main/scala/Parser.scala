@@ -1,11 +1,11 @@
 import parsley.Parsley
 import parsley.Parsley._
 import parsley.character.{char, digit, letter, noneOf, oneOf, upper, whitespace}
-import parsley.combinator.{between, many, manyN, option}
+import parsley.combinator.{between, many, manyN, option, sepBy1}
 import parsley.implicits.charLift
 import parsley.lift.{lift2, lift3, lift4}
 import Rules._
-import parsley.expr.{InfixL, InfixR, Ops, Postfix, Prefix, precedence}
+import parsley.expr.{InfixL, Ops, Postfix, Prefix, precedence}
 import parsley.token.{LanguageDef, Lexer}
 
 object Parser {
@@ -39,17 +39,17 @@ object Parser {
 
   lazy val pairType: Parsley[PairType] =
     ("pair" *> lexer.parens(
-      lift2(Pair, pairElemType, lexer.comma *> pairElemType)
+      lift2(Pair, pairElemType, "," *> pairElemType)
     )) ? "pair(<pair-elem-type>, <pair-elem-type>)"
 
   val intSign: Parsley[IntSign] = ("+" #> Pos) <|> ("-" #> Neg)
   val intLiter: Parsley[IntLiter] =
     IntLiter <#> (option(lookAhead(intSign)) <~> lexer.integer)
-      .filter(notOverflow)
+      .guard(notOverflow, "Integer is not between -2^31 and 2^31-1")
       .map((x: (Option[IntSign], Int)) => x._2) ? "number"
 
   def notOverflow(x: (Option[IntSign], Int)): Boolean = {
-    var (sign, n) = x
+    val (sign, n) = x
     if ((sign.isEmpty || (sign contains Pos)) && (n < 0)) {
       return false
     }
@@ -114,7 +114,7 @@ object Parser {
   )
 
   val argList: Parsley[ArgList] =
-    ArgList <#> lexer.commaSep1(expr) ? "<expr> (',' <expr>)*"
+    ArgList <#> sepBy1(expr, ",") ? "<expr> (',' <expr>)*"
 
   lazy val arrayElem: Parsley[ArrayElem] = lift2(
     ArrayElem,
@@ -126,7 +126,7 @@ object Parser {
     (Fst <#> "fst" *> expr ? "fst <expr>") <|> (Snd <#> "snd" *> expr ? "snd <expr>")
 
   val arrayLiter: Parsley[ArrayLiter] = ArrayLiter <#> lexer.brackets(
-    option(lexer.commaSep1(expr))
+    option(sepBy1(expr, ","))
   ) ? "[(<expr> (',' <expr>)*)?]"
 
   val assignLHS: Parsley[AssignLHS] = pairElem <|> arrayElem <\> identifier
@@ -134,7 +134,7 @@ object Parser {
   val assignRHS: Parsley[AssignRHS] =
     ("newpair" *> lexer
       .parens(
-        lift2(Newpair, expr, lexer.comma *> expr)
+        lift2(Newpair, expr, "," *> expr)
       )) <|>
       ("call" *> lift2(
         Call,
@@ -182,23 +182,26 @@ object Parser {
     retStat <|> freeStat <|> exitStat <|> printlnStat <\> printStat <|>
     ifStat <|> whileStat <|> beginStat <|> eqIdent <|> eqAssign
 
-  lazy val stat: Parsley[Stat] = precedence[Stat](
-    statement,
-    Ops(InfixR)(lexer.semi #> Seq ? "<stat> ';' <stat>")
-  )
+  lazy val stat: Parsley[Stat] =
+    (statement <* notFollowedBy(";")) <\> (Seq <#> sepBy1(statement, ";"))
 
   val param: Parsley[Param] = lift2(Param, types, identifier) ? "<type> <ident>"
 
   val paramList: Parsley[ParamList] =
-    ParamList <#> lexer.commaSep1(param) ? "<param> (, <param>)*"
+    ParamList <#> sepBy1(param, ",") ? "<param> (, <param>)*"
 
   private def statTerminates(stat: Stat): Boolean = stat match {
     case If(_, s1, s2)       => statTerminates(s1) && statTerminates(s2)
     case While(_, s)         => statTerminates(s)
     case Begin(s)            => statTerminates(s)
-    case Seq(_, s)           => statTerminates(s)
+    case Seq(s)              => statTerminates(s.last)
     case Exit(_) | Return(_) => true
     case _                   => false
+  }
+
+  private def funcMsg(f: Func): String = f match {
+    case Func(_, Ident(s), _, _) =>
+      "Function " + s + " is not ended with return or exit statement"
   }
 
   val func: Parsley[Func] = lift4(
@@ -209,9 +212,9 @@ object Parser {
     between(
       "is",
       "end",
-      stat.filter(statTerminates)
+      stat
     ) ? "<type> <ident> (<param-list>?) is <stat> end"
-  )
+  ).guard((x: Func) => statTerminates(x.s), (x: Func) => funcMsg(x))
 
   val program: Parsley[Program] =
     between(

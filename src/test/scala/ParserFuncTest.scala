@@ -17,7 +17,12 @@ class FuncTest extends AnyFunSuite {
             IntT,
             Ident("foo"),
             None,
-            Seq(EqAssign(Ident("x"),Plus(Ident("x"),IntLiter(1))),Exit(IntLiter(0)))
+            Seq(
+              List(
+                EqAssign(Ident("x"), Plus(Ident("x"), IntLiter(1))),
+                Exit(IntLiter(0))
+              )
+            )
           )
         )
     )
@@ -29,7 +34,12 @@ class FuncTest extends AnyFunSuite {
             OfArrayType(IntT),
             Ident("foo"),
             None,
-            Seq(EqAssign(Ident("y"),Plus(Ident("x"),IntLiter(1))),Return(Ident("y")))
+            Seq(
+              List(
+                EqAssign(Ident("y"), Plus(Ident("x"), IntLiter(1))),
+                Return(Ident("y"))
+              )
+            )
           )
         )
     )
@@ -78,7 +88,9 @@ class FuncTest extends AnyFunSuite {
     )
   }
 
-  test("Successfully fails to parse functions that don't end in 'return' or 'exit'"){
+  test(
+    "Successfully fails to parse functions that don't end in 'return' or 'exit'"
+  ) {
     assert(
       func
         .runParser("int foo () is skip end")
