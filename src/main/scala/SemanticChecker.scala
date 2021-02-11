@@ -1,4 +1,3 @@
-import scala.collection.mutable.HashMap
 import Rules._
 import parsley.combinator.eof
 import java.io.File
@@ -6,6 +5,8 @@ import Parser._
 import parsley.Parsley
 
 object SemanticChecker {
+  private var semErrs: List[SemanticError] = List()
+
   private def convertToTable(f: Func): (Ident, Meta) = {
     val Func(t, i, ps, _) = f
     val ParamList(fromOption) = ps.getOrElse(ParamList(List()))
@@ -13,7 +14,7 @@ object SemanticChecker {
     (i, Meta(t, Some(res)))
   }
 
-  def progAnalysis(p: Program): Unit = {
+  def progAnalysis(p: Program): List[SemanticError] = {
     val Program(funcs, s) = p
     val globalTable = SymbolTable(null, null)
     val globalFuncs = funcs.map(convertToTable)
@@ -25,6 +26,7 @@ object SemanticChecker {
 
     statAnalysis(s, globalTable)
 
+    semErrs.reverse
   }
 
   def getParam(p: Param): (Ident, Type) = {
@@ -46,20 +48,17 @@ object SemanticChecker {
   def eqIdentAnalysis(
       lhsType: Type,
       id: Ident,
-      aRHS: AssignRHS,
+      rhs: AssignRHS,
       sTable: SymbolTable
   ): Unit = {
     if (sTable.containScope(id)) {
-      return println(
-        "Variable " + id.s + " has already been declared within this scope, it cannot be redefined"
-      )
+      semErrs ::= variableDeclared(id)
+      return
     }
-    val rhsType = aRHS.getType(sTable)
+    val rhsType = rhs.getType(sTable)
     sTable.add(id, lhsType)
     if (lhsType != rhsType) {
-      return println(
-        "Type mismatch, expected type: " + lhsType + ", actual type: " + rhsType
-      )
+      semErrs ::= typeMismatch(rhs, rhsType, List(lhsType))
     }
   }
 
@@ -70,29 +69,31 @@ object SemanticChecker {
   ): Unit = lhs match {
     case elem: PairElem =>
       eqAssignPairElem(elem, rhs, sTable)
-    case Ident(s) =>
-      eqAssignIdent(Ident(s), rhs, sTable)
+    case i @ Ident(s) =>
+      eqAssignIdent(i, rhs, sTable)
     case ArrayElem(id, _) =>
       val lhsType = id.getType(sTable)
       if (lhsType == StringT) {
-        return println("Element access is not permitted for strings")
+        semErrs ::= elementAccessDenied(id)
+        return
       }
       eqAssignIdent(id, rhs, sTable)
   }
 
   def eqAssignIdent(id: Ident, rhs: AssignRHS, sTable: SymbolTable): Unit = {
     if (!sTable.contains(id)) {
-      return println("Variable " + id.s + " is undeclared in current scope")
+      semErrs ::= variableNotDeclared(id)
+      return
+    }
+    if (sTable.isFunc(id)) {
+      semErrs ::= functionIllegalAssignment(id)
+      return
     }
     val lhsType = id.getType(sTable)
     val rhsType = rhs.getType(sTable)
+
     if (lhsType != rhsType) {
-      return println(
-        "Type mismatch, expected type: " + lhsType + ", actual type: " + rhsType
-      )
-    }
-    if (sTable.isFunc(id)) {
-      return println("Unable to assign to function")
+      semErrs ::= typeMismatch(rhs, rhsType, List(lhsType))
     }
   }
 
@@ -107,21 +108,14 @@ object SemanticChecker {
       typeInFst match {
         case Pair(PairElemT(t), _) =>
           if (t != rhsType)
-            println(
-              "Type mismatch, expected type: " + t + ", actual type: " + rhsType
-            )
+            semErrs ::= typeMismatch(rhs, rhsType, List(t))
         case Pair(PairElemPair, _) =>
           rhsType match {
             case Pair(_, _) =>
             case _ =>
-              println(
-                "Type mismatch, expected type: Pair" + ", actual type: " + rhsType
-              )
+              semErrs ::= typeMismatch(rhs, rhsType, List(Pair(null, null)))
           }
-        case _ =>
-          println(
-            "Invalid type in fst, expected type: Pair" + ", actual type: " + typeInFst
-          )
+        case _ => semErrs ::= typeMismatch(rhs, rhsType, List(Pair(null, null)))
       }
     case Snd(Ident(s)) =>
       val typeInSnd = Ident(s).getType(sTable)
@@ -129,23 +123,18 @@ object SemanticChecker {
       typeInSnd match {
         case Pair(PairElemT(t), _) =>
           if (t != rhsType)
-            println(
-              "Type mismatch, expected type: " + t + ", actual type: " + rhsType
-            )
+            semErrs ::= typeMismatch(rhs, rhsType, List(t))
         case Pair(PairElemPair, _) =>
           rhsType match {
             case Pair(_, _) =>
             case _ =>
-              println(
-                "Type mismatch, expected type: Pair, actual type: " + rhsType
-              )
+              semErrs ::= typeMismatch(rhs, rhsType, List(Pair(null, null)))
           }
         case _ =>
-          println(
-            "Invalid type in snd, expected type: Pair, actual type: " + typeInSnd
-          )
+          semErrs ::= typeMismatch(rhs, typeInSnd, List(Pair(null, null)))
       }
-    case _ => println("Invalid type within pair-elem, expected type: Pair")
+    case _ =>
+      semErrs ::= typeMismatch(rhs, rhs.getType(sTable), List(Pair(null, null)))
   }
 
   def statAnalysis(s: Stat, sTable: SymbolTable): Unit = s match {
@@ -158,52 +147,56 @@ object SemanticChecker {
           lhsType match {
             case Pair(_, _) | ArrayT(_) =>
             case _ =>
-              println(
-                "Read statement expecting PairElem or Array Actual: " + lhsType
+              semErrs ::= typeMismatch(
+                Ident(v),
+                lhsType,
+                List(Pair(null, null), ArrayT(null))
               )
+
           }
-        case _ => println("Read statement expecting an Ident Actual: " + lhs)
+        case _ =>
+        //   semErrs ::= typeMismatch(
+        //     lhs,
+        //     lhs.getType(sTable),
+        //     List(Pair(null, null), ArrayT(null))
+        //   )
       }
     case Free(e) =>
-      e.getType(sTable) match {
+      val eType = e.getType(sTable)
+      eType match {
         case Pair(_, _) | ArrayT(_) =>
         case _ =>
-          println(
-            "free statement expecting: Pair or Array, Acutal: " + e.getType(
-              sTable
-            )
+          semErrs ::= typeMismatch(
+            e,
+            eType,
+            List(Pair(null, null), ArrayT(null))
           )
       }
     case Return(e) =>
       val t = e.getType(sTable)
       val ft = sTable.getFuncRetType
-      if (t != ft) {
-        if (ft == Err) {
-          return println("Cannot return from main")
-        }
-        println(
-          "Return type: " + t + " does not match function return type: " + ft
-        )
+
+      // return declared in main
+      if (ft == Err) {
+        semErrs ::= invalidReturn(e)
+        return
       }
+
+      if (t != ft) {
+        semErrs ::= typeMismatch(e, t, List(ft))
+      }
+
     case Exit(e) =>
       val t = e.getType(sTable)
       if (t != IntT) {
-        println("exit statement expecting: Int, Actual: " + t)
+        semErrs ::= typeMismatch(e, t, List(IntT))
       }
-    case Print(e) =>
-      val t = e.getType(sTable)
-      if (t == Err) {
-        println("Unable to resolve expression " + t)
-      }
-    case PrintLn(e) =>
-      val t = e.getType(sTable)
-      if (t == Err) {
-        println("Unable to resolve expression " + t)
-      }
+    case Print(e)   => // skip
+    case PrintLn(e) => // skip
     case If(cond, s1, s2) =>
       val condType = cond.getType(sTable)
       if (condType != BoolT) {
-        println("If condition expecting: Bool, Actual: " + condType)
+        semErrs ::= typeMismatch(cond, condType, List(BoolT))
       }
       val ifScope = SymbolTable(sTable, sTable.funcId)
       val elseScope = SymbolTable(sTable, sTable.funcId)
@@ -212,9 +205,7 @@ object SemanticChecker {
     case While(cond, s) =>
       val condType = cond.getType(sTable)
       if (condType != BoolT) {
-        println(
-          "While condition expecting: Bool, Actual: " + condType
-        )
+        semErrs ::= typeMismatch(cond, condType, List(BoolT))
       }
       val whileScope = SymbolTable(sTable, sTable.funcId)
       statAnalysis(s, whileScope)
@@ -224,22 +215,4 @@ object SemanticChecker {
     case Seq(x) => x.map(s => statAnalysis(s, sTable))
     case _      => // ignore Skip
   }
-
-  private def listAllFiles(dir: File): Array[File] = {
-    val curFiles = dir.listFiles
-    curFiles ++ curFiles.filter(_.isDirectory).flatMap(listAllFiles)
-  }
-
-  def test() = {
-    val programWhitespace: Parsley[Program] = lexer.whiteSpace *> program <* eof
-
-    for (file <- listAllFiles(new File("wacc_examples/invalid/semanticErr"))) {
-      if (file.isFile) {
-        println(file.getName)
-        progAnalysis(programWhitespace.parseFromFile(file).get)
-        println()
-      }
-    }
-  }
-
 }
