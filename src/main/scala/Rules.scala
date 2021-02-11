@@ -244,8 +244,9 @@ object Rules {
 
   sealed case class ArrayLiter(arr: Option[List[Expr]]) extends AssignRHS {
     override def getType(sTable: SymbolTable): Type = {
-      if (arr.isEmpty)
-        return Err //typeErrGenerator(this, ArrayLiter, List(ArrayT(null)))
+      if (arr.isEmpty) {
+        return ArrayT(null)
+      }
       val arrLitTypes = arr.get.map(_.getType(sTable))
       if (arrLitTypes.forall(_ == arrLitTypes.head)) {
         return ArrayT(arrLitTypes.head)
