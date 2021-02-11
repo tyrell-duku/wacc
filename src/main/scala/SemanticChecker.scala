@@ -6,15 +6,15 @@ object SemanticChecker {
 
   var identTable = new HashMap[Ident, Type]
 
-  def convertToTable(f: Func): (Ident, Meta) = {
-    var Func(t, i, ps, _) = f
+  private def convertToTable(f: Func): (Ident, Meta) = {
+    val Func(t, i, ps, _) = f
     (i, Meta(t, ps))
   }
 
-  def progAnalysis(p: Program) = {
-    var Program(funcs, s) = p
-    var globalTable = SymbolTable(null, new HashMap[Ident, Meta])
-    var globalFuncs = funcs.map(convertToTable)
+  def progAnalysis(p: Program): Unit = {
+    val Program(funcs, s) = p
+    val globalTable = SymbolTable(null, new HashMap[Ident, Meta])
+    val globalFuncs = funcs.map(convertToTable)
     globalTable.dict.addAll(globalFuncs)
 
     for (f <- funcs) {
@@ -30,57 +30,113 @@ object SemanticChecker {
     (i, t)
   }
 
-  def funcAnalysis(f: Func, table: SymbolTable) = {
-    val Func(t, i, ps, s) = f
-    if (!ps.isEmpty) {
-      val ParamList(pList) = ps.getOrElse()
-
-      table.addAll(pList.map(p => getParam(p)))
+  def funcAnalysis(f: Func, sTable: SymbolTable): Unit = {
+    val Func(_, _, ps, s) = f
+    if (ps.isDefined) {
+      val Some(ParamList(pList)) = ps
+      sTable.addAll(pList.map(getParam))
     }
-    statAnalysis(s, table)
+    statAnalysis(s, sTable)
+  }
+
+  def eqIdentAnalysis(
+      lhsType: Type,
+      id: Ident,
+      aRHS: AssignRHS,
+      sTable: SymbolTable
+  ): Unit = {
+    if (sTable.containScope(id)) {
+      return println(
+        "Variable " + id.s + " has already been declared within this scope, it cannot be redefined"
+      )
+    }
+    val rhsType = aRHS.getType(sTable)
+    if (lhsType != rhsType) {
+      return println(
+        "Type mismatch, expected type: " + lhsType + ", actual type: " + rhsType
+      )
+    }
+    identTable.addOne(id, lhsType)
+  }
+
+  def eqAssignAnalysis(
+      lhs: AssignLHS,
+      rhs: AssignRHS,
+      sTable: SymbolTable
+  ): Unit = lhs match {
+    case elem: PairElem   => eqAssignPairElem(elem, rhs, sTable)
+    case Ident(s)         => eqAssignIdent(Ident(s), rhs, sTable)
+    case ArrayElem(id, _) => eqAssignIdent(id, rhs, sTable)
+  }
+
+  def eqAssignIdent(id: Ident, rhs: AssignRHS, sTable: SymbolTable): Unit = {
+    if (!sTable.contains(id)) {
+      return println("Variable " + id.s + "  is undeclared in current scope")
+    }
+    val lhsType = id.getType(sTable)
+    val rhsType = rhs.getType(sTable)
+    if (lhsType != rhsType) {
+      return println(
+        "Type mismatch, expected type: " + lhsType + ", actual type: " + rhsType
+      )
+    }
+  }
+
+  def eqAssignPairElem(
+      pe: PairElem,
+      rhs: AssignRHS,
+      sTable: SymbolTable
+  ): Unit = pe match {
+    case Fst(Ident(s)) =>
+      val typeInFst = Ident(s).getType(sTable)
+      val rhsType = rhs.getType(sTable)
+      typeInFst match {
+        case Pair(PairElemT(t), _) =>
+          if (t != rhsType)
+            println(
+              "Type mismatch, expected type: " + t + ", actual type: " + rhsType
+            )
+        case Pair(PairElemPair, _) =>
+          rhsType match {
+            case Pair(_, _) =>
+            case _ =>
+              println(
+                "Type mismatch, expected type: Pair" + ", actual type: " + rhsType
+              )
+          }
+        case _ =>
+          println(
+            "Invalid type in fst, expected type: Pair" + ", actual type: " + typeInFst
+          )
+      }
+    case Snd(Ident(s)) =>
+      val typeInSnd = Ident(s).getType(sTable)
+      val rhsType = rhs.getType(sTable)
+      typeInSnd match {
+        case Pair(PairElemT(t), _) =>
+          if (t != rhsType)
+            println(
+              "Type mismatch, expected type: " + t + ", actual type: " + rhsType
+            )
+        case Pair(PairElemPair, _) =>
+          rhsType match {
+            case Pair(_, _) =>
+            case _ =>
+              println(
+                "Type mismatch, expected type: Pair" + ", actual type: " + rhsType
+              )
+          }
+        case _ =>
+          println(
+            "Invalid type in snd, expected type: Pair" + ", actual type: " + typeInSnd
+          )
+      }
+    case _ => println("Invalid type within pair-elem, expected type: Pair")
   }
 
   def statAnalysis(s: Stat, sTable: SymbolTable): Unit = s match {
-    case EqIdent(t, i, r) =>
-      if (t == r.getType(sTable) && !identTable.contains(i))
-        identTable.addOne(i, t)
-      else println("ERROR")
-    case EqAssign(l, r) =>
-      l match {
-        case Ident(v) =>
-          if (
-            !identTable.contains(Ident(v)) || Ident(v).getType(sTable) != r
-              .getType(sTable)
-          ) println("ERROR")
-        case ArrayElem(Ident(x), y) =>
-          if (
-            !identTable.contains(Ident(x)) || Ident(x).getType(sTable) != r
-              .getType(sTable)
-          ) println("ERROR")
-        case Fst(Ident(x)) =>
-          val rT: Type = r.getType(sTable)
-          Ident(x).getType(sTable) match {
-            case Pair(PairElemT(t), _) => if (t != rT) println("ERROR")
-            case Pair(PairElemPair, _) =>
-              rT match {
-                case Pair(_, _) =>
-                case _          => println("ERROR")
-              }
-            case _ => println("ERROR")
-          }
-        case Snd(Ident(x)) =>
-          val rT: Type = r.getType(sTable)
-          Ident(x).getType(sTable) match {
-            case Pair(_, PairElemT(t)) => if (t != rT) println("ERROR")
-            case Pair(_, PairElemPair) =>
-              rT match {
-                case Pair(_, _) =>
-                case _          => println("ERROR")
-              }
-            case _ => println("ERROR")
-          }
-        case _ => println("ERROR")
-      }
+    case EqIdent(t, i, r) => eqIdentAnalysis(t, i, r, sTable)
+    case EqAssign(l, r)   => eqAssignAnalysis(l, r, sTable)
     case Read(x) =>
       x match {
         case Ident(v) =>
