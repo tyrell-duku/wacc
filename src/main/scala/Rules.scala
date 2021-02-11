@@ -67,9 +67,29 @@ object Rules {
   sealed case class ArgList(args: List[Expr])
 
   // TODO: type for fst and snd
+  // PairElemT(CharT) | PairElemT
   sealed trait PairElem extends AssignLHS with AssignRHS
-  case class Fst(e: Expr) extends PairElem
-  case class Snd(e: Expr) extends PairElem
+  case class Fst(e: Expr) extends PairElem {
+    override def getType(sTable: SymbolTable): Type = e match {
+      case Ident(v) =>
+        e.getType(sTable) match {
+          case Pair(fst, _) => fst.getType
+          case _            => Err
+        }
+      case _ => Err
+    }
+  }
+
+  case class Snd(e: Expr) extends PairElem {
+    override def getType(sTable: SymbolTable): Type = e match {
+      case Ident(v) =>
+        e.getType(sTable) match {
+          case Pair(_, snd) => snd.getType
+          case _            => Err
+        }
+      case _ => Err
+    }
+  }
 
   sealed trait Type
 
@@ -96,12 +116,18 @@ object Rules {
   sealed trait PairType extends Type
   case class Pair(x: PairElemType, y: PairElemType) extends PairType
 
-  sealed trait PairElemType
+  sealed trait PairElemType {
+    def getType: Type
+  }
   case object PairElemPair extends PairElemType {
     override def toString: String = "pair"
+
+    override def getType: Type = Pair(null, null)
   }
   case class PairElemT(t: Type) extends PairElemType {
     override def toString: String = t.toString
+
+    override def getType: Type = t
   }
 
   sealed trait Expr extends AssignRHS
