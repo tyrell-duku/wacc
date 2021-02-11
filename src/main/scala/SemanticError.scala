@@ -1,7 +1,7 @@
 import Rules._
 
 sealed trait SemanticError {
-  override def toString(): String = this match {
+  override def toString: String = this match {
     case typeMismatch(invalid, actualT, expected) =>
       "Type mismatch: LHS of type " + expected + "but RHS of type " + actualT
     case variableNotDeclared(id) =>

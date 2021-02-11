@@ -73,17 +73,17 @@ object Rules {
     override def toString(): String = "int"
   }
   case object BoolT extends BaseType {
-    override def toString(): String = "bool"
+    override def toString: String = "bool"
   }
   case object CharT extends BaseType {
-    override def toString(): String = "char"
+    override def toString: String = "char"
   }
   case object StringT extends BaseType {
-    override def toString(): String = "string"
+    override def toString: String = "string"
   }
 
   sealed case class ArrayT(t: Type) extends Type {
-    override def toString(): String = t + "[]"
+    override def toString: String = t + "[]"
   }
 
   sealed trait PairType extends Type
@@ -91,10 +91,10 @@ object Rules {
 
   sealed trait PairElemType
   case object PairElemPair extends PairElemType {
-    override def toString(): String = "pair"
+    override def toString: String = "pair"
   }
   case class PairElemT(t: Type) extends PairElemType {
-    override def toString(): String = t
+    override def toString: String = t.toString
   }
 
   sealed trait Expr extends AssignRHS
