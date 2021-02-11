@@ -3,7 +3,7 @@ import Rules._
 
 import scala.collection.mutable.HashMap
 
-case class Meta(t: Type, value: Any)
+case class Meta(t: Type, pList: Option[List[Type]])
 
 case class SymbolTable(
     parent: SymbolTable,
@@ -48,4 +48,36 @@ case class SymbolTable(
     funcRet.t
   }
 
+  def isFunc(id: Ident): Boolean = {
+    val meta = lookupAll(id)
+    if (meta == null) {
+      return false
+    }
+    val Meta(_, pList) = meta
+    pList != None
+  }
+
+  def funcParamMatch(id: Ident, args: Option[ArgList]): Boolean = {
+    val meta = lookupAll(id)
+    if (meta == null) {
+      return false
+    }
+    val Meta(_, value) = meta
+    if (args.isEmpty) {
+      return value.exists(_.isEmpty)
+    }
+    val argList = args.get.args
+    val pList = value.get
+    val len = argList.length
+    // false if number of arguments > number of parameters
+    if (len != pList.length) {
+      return false
+    }
+
+    var valid = true
+    for (i <- 0 to len - 1) {
+      valid = valid && (argList(i).getType(this) == pList(i))
+    }
+    valid
+  }
 }

@@ -45,7 +45,7 @@ object Rules {
       Err
     }
   }
-  // TO DO: Newpair, Call, fst, snd correct types?
+  // TODO: Newpair, Call, fst, snd correct types?
   case class Newpair(fst: Expr, snd: Expr) extends AssignRHS {
     override def getType(sTable: SymbolTable): Type = {
       Pair(PairElemT(fst.getType(sTable)), PairElemT(snd.getType(sTable)))
@@ -54,7 +54,13 @@ object Rules {
   // check correct param list?
   case class Call(id: Ident, args: Option[ArgList] = None) extends AssignRHS {
     override def getType(sTable: SymbolTable): Type = {
-      id.getType(sTable)
+      val idType = id.getType(sTable)
+      val paramCheck = sTable.funcParamMatch(id, args)
+      if (paramCheck) {
+        return idType
+      }
+      println("Param mismatch")
+      Err
     }
   }
 
