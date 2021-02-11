@@ -5,7 +5,11 @@ import scala.collection.mutable.HashMap
 
 case class Meta(t: Type, value: Any)
 
-case class SymbolTable(parent: SymbolTable, dict: HashMap[Ident, Meta]) {
+case class SymbolTable(
+    parent: SymbolTable,
+    funcId: Ident
+) {
+  val dict = new HashMap[Ident, Meta]
   def lookupAll(id: Ident): Meta = {
     var curSymbol = this
     var d = curSymbol.dict
@@ -34,6 +38,10 @@ case class SymbolTable(parent: SymbolTable, dict: HashMap[Ident, Meta]) {
   def addAll(entries: List[(Ident, Type)]) {
     val toMeta = entries.map((x: (Ident, Type)) => (x._1, Meta(x._2, None)))
     dict.addAll(toMeta)
+  }
+
+  def getFuncRetType: Type = {
+    lookupAll(funcId).t
   }
 
 }
