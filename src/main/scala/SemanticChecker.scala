@@ -170,6 +170,9 @@ object SemanticChecker {
       val t = e.getType(sTable)
       val ft = sTable.getFuncRetType
       if (t != ft) {
+        if (ft == Err) {
+          return println("Cannot return from main")
+        }
         println(
           "Return type: " + t + " does not match function return type: " + ft
         )
@@ -213,33 +216,4 @@ object SemanticChecker {
     case Seq(x) => x.map(s => statAnalysis(s, sTable))
     case _      => // ignore Skip
   }
-
-  private def listAllFiles(dir: File): Array[File] = {
-    val curFiles = dir.listFiles
-    curFiles ++ curFiles.filter(_.isDirectory).flatMap(listAllFiles)
-  }
-
-  def test() = {
-
-    val programWhitespace = lexer.whiteSpace *> program <* eof
-
-    for (file <- listAllFiles(new File("wacc_examples/invalid/semanticErr"))) {
-      if (file.isFile) {
-        println("Checking file: " + file.getName)
-        println(progAnalysis(programWhitespace.parseFromFile(file).get))
-        println()
-      }
-    }
-
-//     val str = """begin
-//   string str = "hello world!" ;
-//   println str ;
-//   str[0] = 'H' ;
-//   println str
-// end"""
-//     val cfg = programWhitespace.runParser(str)
-//     // println(cfg)
-//     progAnalysis(cfg.get)
-  }
-
 }
