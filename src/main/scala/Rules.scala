@@ -33,10 +33,18 @@ object Rules {
   sealed trait AssignLHS
 
   sealed trait AssignRHS {
-    def getType(hMap: mutable.HashMap[Ident, Type]): Type = NA
+    def getType(hMap: mutable.HashMap[Ident, Type]): Type = Err
 
-    def typeChecker(b: Boolean, t: Type): Type = {
-      if (b) t else NA
+    protected def typeErr(
+        aRHS: AssignRHS,
+        actual: Type,
+        expect: List[Type]
+    ): Type = {
+      println(
+        "Incompatible type at " + aRHS + " (expected type: " + expect
+          .mkString(" or ") + ", actual type: " + actual
+      )
+      Err
     }
   }
   // TO DO: Newpair, Call, fst, snd correct types?
@@ -51,13 +59,13 @@ object Rules {
 
   sealed trait Type
 
+  case object Err extends Type
+
   sealed trait BaseType extends Type
   case object IntT extends BaseType
   case object BoolT extends BaseType
   case object CharT extends BaseType
   case object StringT extends BaseType
-
-  case object NA extends Type
 
   sealed case class ArrayT(x: Type) extends Type
 
@@ -69,51 +77,72 @@ object Rules {
   case class PairElemT(x: Type) extends PairElemType
 
   sealed trait Expr extends AssignRHS
-  case class Parens(x: Expr) extends Expr {
+  case class Parens(e: Expr) extends Expr {
+    override def getType(hMap: mutable.HashMap[Ident, Type]): Type =
+      e.getType(hMap)
+  }
+
+  sealed trait UnOp extends Expr {
+    val e: Expr
+    val expected: (Type, Type)
+
     override def getType(hMap: mutable.HashMap[Ident, Type]): Type = {
-      x.getType(hMap)
+      val actual = e.getType(hMap)
+      if (actual == expected._1) return expected._2
+      typeErr(e, actual, List(expected._1))
     }
   }
 
-  sealed trait UnOp extends Expr
-  case class Not(x: Expr) extends UnOp {
-    override def getType(hMap: mutable.HashMap[Ident, Type]): Type = {
-      typeChecker(x.getType(hMap) == BoolT, BoolT)
-    }
+  case class Not(e: Expr) extends UnOp {
+    override val expected: (Type, Type) = (BoolT, BoolT)
   }
-  case class Negation(x: Expr) extends UnOp {
-    override def getType(hMap: mutable.HashMap[Ident, Type]): Type = {
-      typeChecker(x.getType(hMap) == IntT, IntT)
-    }
+  case class Negation(e: Expr) extends UnOp {
+    override val expected: (Type, Type) = (IntT, IntT)
   }
+  case class Len(e: Expr) extends UnOp {
+    override val expected: (Type, Type) = (ArrayT(null), IntT)
 
-  case class Len(x: Expr) extends UnOp {
     override def getType(hMap: mutable.HashMap[Ident, Type]): Type = {
-      x.getType(hMap) match {
-        case ArrayT(_) => IntT
-        case _         => NA
+      val actual = e.getType(hMap)
+      actual match {
+        case ArrayT(_) => expected._2
+        case _         => typeErr(e, actual, List(expected._1))
       }
     }
   }
-  case class Ord(x: Expr) extends UnOp {
-    override def getType(hMap: mutable.HashMap[Ident, Type]): Type = {
-      typeChecker(x.getType(hMap) == CharT, IntT)
-    }
+  case class Ord(e: Expr) extends UnOp {
+    override val expected: (Type, Type) = (CharT, IntT)
   }
-  case class Chr(x: Expr) extends UnOp {
-    override def getType(hMap: mutable.HashMap[Ident, Type]): Type = {
-      typeChecker(x.getType(hMap) == IntT, CharT)
-    }
+  case class Chr(e: Expr) extends UnOp {
+    override val expected: (Type, Type) = (IntT, CharT)
   }
 
   sealed trait BinOp extends Expr {
     val l: Expr
     val r: Expr
-  }
-  sealed trait ArithOps extends BinOp {
+    val expected: (List[Type], Type)
+
     override def getType(hMap: mutable.HashMap[Ident, Type]): Type = {
-      typeChecker((l.getType(hMap) == IntT) && (r.getType(hMap) == IntT), IntT)
+      val actualL = l.getType(hMap)
+      val actualR = r.getType(hMap)
+      if (actualL == actualR) {
+        if (expected._1.contains(actualL) && expected._1.contains(actualR))
+          return expected._2
+        if (expected._1.isEmpty) return expected._2
+      } else {
+        if (expected._1.contains(actualL))
+          return typeErr(r, actualR, List(actualL))
+        if (expected._1.contains(actualR))
+          return typeErr(l, actualL, List(actualR))
+      }
+      // neither types are correct
+      typeErr(l, actualL, expected._1)
+      typeErr(r, actualR, expected._1)
     }
+  }
+
+  sealed trait ArithOps extends BinOp {
+    override val expected: (List[Type], Type) = (List(IntT), IntT)
   }
   case class Mul(l: Expr, r: Expr) extends ArithOps
   case class Div(l: Expr, r: Expr) extends ArithOps
@@ -122,13 +151,7 @@ object Rules {
   case class Sub(l: Expr, r: Expr) extends ArithOps
 
   sealed trait ComparOps extends BinOp {
-    override def getType(hMap: mutable.HashMap[Ident, Type]): Type = {
-      typeChecker(
-        (l.getType(hMap) == r.getType(hMap)) && ((l.getType(hMap) == IntT) || (l
-          .getType(hMap) == CharT)),
-        BoolT
-      )
-    }
+    override val expected: (List[Type], Type) = (List(CharT, IntT), BoolT)
   }
   case class GT(l: Expr, r: Expr) extends ComparOps
   case class GTE(l: Expr, r: Expr) extends ComparOps
@@ -136,20 +159,13 @@ object Rules {
   case class LTE(l: Expr, r: Expr) extends ComparOps
 
   sealed trait EqOps extends BinOp {
-    override def getType(hMap: mutable.HashMap[Ident, Type]): Type = {
-      typeChecker(l.getType(hMap) == r.getType(hMap), BoolT)
-    }
+    override val expected: (List[Type], Type) = (List.empty, BoolT)
   }
   case class Equal(l: Expr, r: Expr) extends EqOps
   case class NotEqual(l: Expr, r: Expr) extends EqOps
 
   sealed trait LogicalOps extends BinOp {
-    override def getType(hMap: mutable.HashMap[Ident, Type]): Type = {
-      typeChecker(
-        (l.getType(hMap) == BoolT) && (r.getType(hMap) == BoolT),
-        BoolT
-      )
-    }
+    override val expected: (List[Type], Type) = (List(BoolT), BoolT)
   }
   case class And(l: Expr, r: Expr) extends LogicalOps
   case class Or(l: Expr, r: Expr) extends LogicalOps
@@ -158,9 +174,11 @@ object Rules {
       extends AssignLHS
       with AssignRHS
       with Expr {
+
     override def getType(hMap: mutable.HashMap[Ident, Type]): Type = {
       if (!hMap.contains(this)) {
-        return NA
+        println("Variable " + x + " undeclared/ not in scope")
+        return Err
       }
       hMap.apply(this)
     }
@@ -171,10 +189,10 @@ object Rules {
       extends AssignLHS
       with Expr {
     override def getType(hMap: mutable.HashMap[Ident, Type]): Type = {
-      //y.map(getType(hMap))
-      x.getType(hMap) match {
+      val actual = x.getType(hMap)
+      actual match {
         case ArrayT(inside) => inside
-        case _              => NA
+        case _              => typeErr(x, actual, List(ArrayT(null)))
       }
     }
   }
@@ -203,15 +221,15 @@ object Rules {
     override def getType(hMap: mutable.HashMap[Ident, Type]): Type = StringT
   }
 
-  sealed case class ArrayLiter(x: Option[List[Expr]]) extends AssignRHS {
+  sealed case class ArrayLiter(arr: Option[List[Expr]]) extends AssignRHS {
     override def getType(hMap: mutable.HashMap[Ident, Type]): Type = {
-      if (x.isEmpty) {
-        return ArrayT(NA)
+      if (arr.isEmpty)
+        return Err //typeErrGenerator(this, ArrayLiter, List(ArrayT(null)))
+      val arrLitTypes = arr.get.map(_.getType(hMap))
+      if (arrLitTypes.forall(_ == arrLitTypes.head)) {
+        return ArrayT(arrLitTypes.head)
       }
-      val arrayLiter = x.get
-      var types = arrayLiter.map(_.getType(hMap))
-      println(types)
-      typeChecker(types.forall(_ == types.head), ArrayT(types.head))
+      Err
     }
   }
 
