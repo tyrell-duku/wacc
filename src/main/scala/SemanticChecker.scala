@@ -7,7 +7,9 @@ import Parser._
 object SemanticChecker {
   private def convertToTable(f: Func): (Ident, Meta) = {
     val Func(t, i, ps, _) = f
-    (i, Meta(t, ps))
+    val ParamList(fromOption) = ps.getOrElse(ParamList(List()))
+    val res = fromOption.map((p: Param) => p.t)
+    (i, Meta(t, Some(res)))
   }
 
   def progAnalysis(p: Program): Unit = {
@@ -77,7 +79,7 @@ object SemanticChecker {
 
   def eqAssignIdent(id: Ident, rhs: AssignRHS, sTable: SymbolTable): Unit = {
     if (!sTable.contains(id)) {
-      return println("Variable " + id.s + "  is undeclared in current scope")
+      return println("Variable " + id.s + " is undeclared in current scope")
     }
     val lhsType = id.getType(sTable)
     val rhsType = rhs.getType(sTable)
@@ -85,6 +87,9 @@ object SemanticChecker {
       return println(
         "Type mismatch, expected type: " + lhsType + ", actual type: " + rhsType
       )
+    }
+    if (sTable.isFunc(id)) {
+      return println("Unable to assign to function")
     }
   }
 
@@ -216,4 +221,5 @@ object SemanticChecker {
     case Seq(x) => x.map(s => statAnalysis(s, sTable))
     case _      => // ignore Skip
   }
+
 }
