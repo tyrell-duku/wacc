@@ -1,22 +1,48 @@
 import scala.collection.mutable.HashMap
 import Rules._
 import Parser._
+import SymbolTable._
 
 object SemanticChecker {
-  // var symbolTable = new HashMap[Ident, Meta]
-  // sealed class Meta(t: Type, value: Any)
-
   var funcTable = new HashMap[Ident, Type]
 
   var identTable = new HashMap[Ident, Type]
 
-  def analysis(p: Program): Unit = {}
-
-  def funcAnalysis(f: Func) = {
-    // analyse each statement in the function up to return/exit
+  def convertToTable(f: Func): (Ident, Meta) = {
+    var Func(t, i, ps, _) = f
+    (i, Meta(t, ps))
   }
 
-  def statAnalysis(s: Stat) = s match {
+  def progAnalysis(p: Program) = {
+    var Program(funcs, s) = p
+    var globalTable = SymbolTable(null, new HashMap[Ident, Meta])
+    var globalFuncs = funcs.map(convertToTable)
+    globalTable.dict.addAll(globalFuncs)
+
+    for (f <- funcs) {
+      funcAnalysis(f, SymbolTable(globalTable, new HashMap[Ident, Meta]))
+    }
+
+    statAnalysis(s, globalTable)
+
+  }
+
+  def getParam(p: Param): (Ident, Type) = {
+    val Param(t, i) = p
+    (i, t)
+  }
+
+  def funcAnalysis(f: Func, table: SymbolTable) = {
+    val Func(t, i, ps, s) = f
+    if (!ps.isEmpty) {
+      val ParamList(pList) = ps.getOrElse()
+
+      table.addAll(pList.map(p => getParam(p)))
+    }
+    statAnalysis(s, table)
+  }
+
+  def statAnalysis(s: Stat, table: SymbolTable): Unit = s match {
     case EqIdent(t, i, r) =>
       if (t == r.getType(identTable) && !identTable.contains(i))
         identTable.addOne(i, t)
@@ -78,6 +104,7 @@ object SemanticChecker {
     case If(x, s1, s2) =>
       if (x.getType(identTable) != BoolT) { println("ERROR") }
     case While(x, s) => if (x.getType(identTable) != BoolT) { println("ERROR") }
+    case Seq(x)      => x.map(s => statAnalysis(s, table))
     case _           => // ignore Skip
   }
 
