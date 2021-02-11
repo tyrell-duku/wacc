@@ -35,9 +35,15 @@ case class SymbolTable(
     dict.contains(id)
   }
 
-  def addAll(entries: List[(Ident, Type)]) {
-    val toMeta = entries.map((x: (Ident, Type)) => (x._1, Meta(x._2, None)))
-    dict.addAll(toMeta)
+  // Add all function declarations to dictionary
+  def addAll(entries: List[(Ident, Meta)]) {
+    for (m <- entries) {
+      if (dict.contains(m._1)) {
+        println("Conflicting function declarations at " + m._1.s)
+      } else {
+        dict.addOne(m)
+      }
+    }
   }
 
   def getFuncRetType: Type = {

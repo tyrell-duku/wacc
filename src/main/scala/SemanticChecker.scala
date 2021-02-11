@@ -3,6 +3,7 @@ import Rules._
 import parsley.combinator.eof
 import java.io.File
 import Parser._
+import parsley.Parsley
 
 object SemanticChecker {
   private def convertToTable(f: Func): (Ident, Meta) = {
@@ -16,7 +17,7 @@ object SemanticChecker {
     val Program(funcs, s) = p
     val globalTable = SymbolTable(null, null)
     val globalFuncs = funcs.map(convertToTable)
-    globalTable.dict.addAll(globalFuncs)
+    globalTable.addAll(globalFuncs)
 
     for (f <- funcs) {
       funcAnalysis(f, SymbolTable(globalTable, f.id))
@@ -35,7 +36,9 @@ object SemanticChecker {
     val Func(_, _, ps, s) = f
     if (ps.isDefined) {
       val Some(ParamList(pList)) = ps
-      sTable.addAll(pList.map(getParam))
+      val toMeta =
+        pList.map(getParam).map((x: (Ident, Type)) => (x._1, Meta(x._2, None)))
+      sTable.addAll(toMeta)
     }
     statAnalysis(s, sTable)
   }
@@ -220,6 +223,23 @@ object SemanticChecker {
       statAnalysis(s, beginScope)
     case Seq(x) => x.map(s => statAnalysis(s, sTable))
     case _      => // ignore Skip
+  }
+
+  private def listAllFiles(dir: File): Array[File] = {
+    val curFiles = dir.listFiles
+    curFiles ++ curFiles.filter(_.isDirectory).flatMap(listAllFiles)
+  }
+
+  def test() = {
+    val programWhitespace: Parsley[Program] = lexer.whiteSpace *> program <* eof
+
+    for (file <- listAllFiles(new File("wacc_examples/invalid/semanticErr"))) {
+      if (file.isFile) {
+        println(file.getName)
+        progAnalysis(programWhitespace.parseFromFile(file).get)
+        println()
+      }
+    }
   }
 
 }
