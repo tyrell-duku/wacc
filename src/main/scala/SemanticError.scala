@@ -11,6 +11,7 @@ sealed trait SemanticError {
     case elementAccessDenied(id) =>
       "Element access of " + id + " is not permitted"
     case invalidReturn(e) => "Invalid return statement from main: return " + e
+    case functionIllegaAssignment(id) => "Illegal assignment to function " + id
   }
 }
 
@@ -21,3 +22,4 @@ case class variableDeclared(id: Ident) extends SemanticError
 case class arrayOutOfBounds(id: Ident) extends SemanticError
 case class elementAccessDenied(id: Ident) extends SemanticError
 case class invalidReturn(e: Expr) extends SemanticError
+case class functionInvalidAssignment(id: Ident) extends SemanticError
