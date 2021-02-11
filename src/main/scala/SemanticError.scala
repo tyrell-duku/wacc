@@ -8,6 +8,8 @@ sealed trait SemanticError {
       "Variable" + id + "not declared in current scope"
     case variableDeclared(id) => "Conflicting definitions for variable " + id
     case arrayOutOfBounds(id) => "Array index out of bounds for array " + id
+    case elementAccessDenied(id) =>
+      "Element access of " + id + " is not permitted"
   }
 }
 
@@ -16,3 +18,4 @@ case class typeMismatch(invalid: AssignRHS, actualT: Type, expected: Type)
 case class variableNotDeclared(id: Ident) extends SemanticError
 case class variableDeclared(id: Ident) extends SemanticError
 case class arrayOutOfBounds(id: Ident) extends SemanticError
+case class elementAccessDenied(id: Ident) extends SemanticError
