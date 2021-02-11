@@ -1,11 +1,10 @@
 import scala.collection.mutable.HashMap
 import Rules._
+import parsley.combinator.eof
+import java.io.File
+import Parser._
 
 object SemanticChecker {
-  var funcTable = new HashMap[Ident, Type]
-
-  var identTable = new HashMap[Ident, Type]
-
   private def convertToTable(f: Func): (Ident, Meta) = {
     val Func(t, i, ps, _) = f
     (i, Meta(t, ps))
@@ -51,12 +50,12 @@ object SemanticChecker {
       )
     }
     val rhsType = aRHS.getType(sTable)
+    sTable.add(id, lhsType)
     if (lhsType != rhsType) {
       return println(
         "Type mismatch, expected type: " + lhsType + ", actual type: " + rhsType
       )
     }
-    identTable.addOne(id, lhsType)
   }
 
   def eqAssignAnalysis(
@@ -69,6 +68,10 @@ object SemanticChecker {
     case Ident(s) =>
       eqAssignIdent(Ident(s), rhs, sTable)
     case ArrayElem(id, _) =>
+      val lhsType = id.getType(sTable)
+      if (lhsType == StringT) {
+        return println("Element access is not permitted for strings")
+      }
       eqAssignIdent(id, rhs, sTable)
   }
 
@@ -165,7 +168,12 @@ object SemanticChecker {
       }
     case Return(e) =>
       val t = e.getType(sTable)
-      if (t != sTable.getFuncRetType) { println("ERROR") }
+      val ft = sTable.getFuncRetType
+      if (t != ft) {
+        println(
+          "Return type: " + t + " does not match function return type: " + ft
+        )
+      }
     case Exit(e) =>
       val t = e.getType(sTable)
       if (t != IntT) {
@@ -205,4 +213,33 @@ object SemanticChecker {
     case Seq(x) => x.map(s => statAnalysis(s, sTable))
     case _      => // ignore Skip
   }
+
+  private def listAllFiles(dir: File): Array[File] = {
+    val curFiles = dir.listFiles
+    curFiles ++ curFiles.filter(_.isDirectory).flatMap(listAllFiles)
+  }
+
+  def test() = {
+
+    val programWhitespace = lexer.whiteSpace *> program <* eof
+
+    for (file <- listAllFiles(new File("wacc_examples/invalid/semanticErr"))) {
+      if (file.isFile) {
+        println("Checking file: " + file.getName)
+        println(progAnalysis(programWhitespace.parseFromFile(file).get))
+        println()
+      }
+    }
+
+//     val str = """begin
+//   string str = "hello world!" ;
+//   println str ;
+//   str[0] = 'H' ;
+//   println str
+// end"""
+//     val cfg = programWhitespace.runParser(str)
+//     // println(cfg)
+//     progAnalysis(cfg.get)
+  }
+
 }
