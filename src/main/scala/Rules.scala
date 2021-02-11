@@ -60,6 +60,7 @@ object Rules {
 
   sealed case class ArgList(args: List[Expr])
 
+  // TODO: type for fst and snd
   sealed trait PairElem extends AssignLHS with AssignRHS
   case class Fst(e: Expr) extends PairElem
   case class Snd(e: Expr) extends PairElem
@@ -227,7 +228,7 @@ object Rules {
   case object Neg extends IntSign
 
   sealed case class BoolLiter(b: Boolean) extends Expr {
-    override def getType(sTable: SymbolTable): Type = StringT
+    override def getType(sTable: SymbolTable): Type = BoolT
   }
 
   sealed case class CharLiter(c: Character) extends Expr {
