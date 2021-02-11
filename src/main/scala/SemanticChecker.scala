@@ -64,9 +64,12 @@ object SemanticChecker {
       rhs: AssignRHS,
       sTable: SymbolTable
   ): Unit = lhs match {
-    case elem: PairElem   => eqAssignPairElem(elem, rhs, sTable)
-    case Ident(s)         => eqAssignIdent(Ident(s), rhs, sTable)
-    case ArrayElem(id, _) => eqAssignIdent(id, rhs, sTable)
+    case elem: PairElem =>
+      eqAssignPairElem(elem, rhs, sTable)
+    case Ident(s) =>
+      eqAssignIdent(Ident(s), rhs, sTable)
+    case ArrayElem(id, _) =>
+      eqAssignIdent(id, rhs, sTable)
   }
 
   def eqAssignIdent(id: Ident, rhs: AssignRHS, sTable: SymbolTable): Unit = {
@@ -123,12 +126,12 @@ object SemanticChecker {
             case Pair(_, _) =>
             case _ =>
               println(
-                "Type mismatch, expected type: Pair" + ", actual type: " + rhsType
+                "Type mismatch, expected type: Pair, actual type: " + rhsType
               )
           }
         case _ =>
           println(
-            "Invalid type in snd, expected type: Pair" + ", actual type: " + typeInSnd
+            "Invalid type in snd, expected type: Pair, actual type: " + typeInSnd
           )
       }
     case _ => println("Invalid type within pair-elem, expected type: Pair")
@@ -137,34 +140,63 @@ object SemanticChecker {
   def statAnalysis(s: Stat, sTable: SymbolTable): Unit = s match {
     case EqIdent(t, i, r) => eqIdentAnalysis(t, i, r, sTable)
     case EqAssign(l, r)   => eqAssignAnalysis(l, r, sTable)
-    case Read(lhs)        =>
-    // lhs match {
-    //   case Ident(v) =>
-    //     val lhsType = Ident(v).getType(sTable)
-    //     lhsType match {
-    //       case Pair(_, _) | ArrayT(_) =>
-    //       case _                      => println("ERROR")
-    //     }
-    //   case _ => println("ERROR")
-    // }
+    case Read(lhs) =>
+      lhs match {
+        case Ident(v) =>
+          val lhsType = Ident(v).getType(sTable)
+          lhsType match {
+            case Pair(_, _) | ArrayT(_) =>
+            case _ =>
+              println(
+                "Read statement expecting PairElem or Array Actual: " + lhsType
+              )
+          }
+        case _ => println("Read statement expecting an Ident Actual: " + lhs)
+      }
     case Free(e) =>
       e.getType(sTable) match {
         case Pair(_, _) | ArrayT(_) =>
-        case _                      => println("ERROR")
+        case _ =>
+          println(
+            "free statement expecting: Pair or Array, Acutal: " + e.getType(
+              sTable
+            )
+          )
       }
     case Return(e) =>
-      if (e.getType(sTable) != sTable.getFuncRetType) { println("ERROR") }
-    case Exit(e)    => if (e.getType(sTable) != IntT) { println("ERROR") }
-    case Print(e)   => if (e.getType(sTable) == Err) { println("ERROR") }
-    case PrintLn(e) => if (e.getType(sTable) == Err) { println("ERROR") }
+      val t = e.getType(sTable)
+      if (t != sTable.getFuncRetType) { println("ERROR") }
+    case Exit(e) =>
+      val t = e.getType(sTable)
+      if (t != IntT) {
+        println("exit statement expecting: Int, Actual: " + t)
+      }
+    case Print(e) =>
+      val t = e.getType(sTable)
+      if (t == Err) {
+        println("Unable to resolve expression " + t)
+      }
+    case PrintLn(e) =>
+      val t = e.getType(sTable)
+      if (t == Err) {
+        println("Unable to resolve expression " + t)
+      }
     case If(cond, s1, s2) =>
-      if (cond.getType(sTable) != BoolT) { println("ERROR") }
+      val condType = cond.getType(sTable)
+      if (condType != BoolT) {
+        println("If condition expecting: Bool, Actual: " + condType)
+      }
       val ifScope = SymbolTable(sTable, sTable.funcId)
       val elseScope = SymbolTable(sTable, sTable.funcId)
       statAnalysis(s1, ifScope)
       statAnalysis(s2, elseScope)
     case While(cond, s) =>
-      if (cond.getType(sTable) != BoolT) { println("ERROR") }
+      val condType = cond.getType(sTable)
+      if (condType != BoolT) {
+        println(
+          "While condition expecting: Bool, Actual: " + condType
+        )
+      }
       val whileScope = SymbolTable(sTable, sTable.funcId)
       statAnalysis(s, whileScope)
     case Begin(s) =>
@@ -173,5 +205,4 @@ object SemanticChecker {
     case Seq(x) => x.map(s => statAnalysis(s, sTable))
     case _      => // ignore Skip
   }
-
 }
