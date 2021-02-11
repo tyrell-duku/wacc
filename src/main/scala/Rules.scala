@@ -114,7 +114,14 @@ object Rules {
   }
 
   sealed trait PairType extends Type
-  case class Pair(x: PairElemType, y: PairElemType) extends PairType
+  case class Pair(x: PairElemType, y: PairElemType) extends PairType {
+    override def toString: String = {
+      if ((x == null) && (y == null)) {
+        return "Pair"
+      }
+      return "Pair(" + x + "," + y + ")"
+    }
+  }
 
   sealed trait PairElemType {
     def getType: Type
