@@ -10,15 +10,15 @@ case class SymbolTable(
     funcId: Ident
 ) {
   val dict = new HashMap[Ident, Meta]
+
   def lookupAll(id: Ident): Meta = {
     var curSymbol = this
-    var d = curSymbol.dict
-    while (d != null) {
+    while (curSymbol != null) {
+      var d = curSymbol.dict
       if (d.contains(id)) {
         return d.apply(id)
       }
-      curSymbol = this.parent
-      d = curSymbol.dict
+      curSymbol = curSymbol.parent
     }
     null
   }
@@ -41,7 +41,11 @@ case class SymbolTable(
   }
 
   def getFuncRetType: Type = {
-    lookupAll(funcId).t
+    if (funcId == null) {
+      return Err
+    }
+    val funcRet = lookupAll(funcId)
+    funcRet.t
   }
 
 }
