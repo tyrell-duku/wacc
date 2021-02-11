@@ -1,7 +1,5 @@
 import scala.collection.mutable.HashMap
 import Rules._
-import Parser._
-import SymbolTable._
 
 object SemanticChecker {
   var funcTable = new HashMap[Ident, Type]
@@ -42,26 +40,26 @@ object SemanticChecker {
     statAnalysis(s, table)
   }
 
-  def statAnalysis(s: Stat, table: SymbolTable): Unit = s match {
+  def statAnalysis(s: Stat, sTable: SymbolTable): Unit = s match {
     case EqIdent(t, i, r) =>
-      if (t == r.getType(identTable) && !identTable.contains(i))
+      if (t == r.getType(sTable) && !identTable.contains(i))
         identTable.addOne(i, t)
       else println("ERROR")
     case EqAssign(l, r) =>
       l match {
         case Ident(v) =>
           if (
-            !identTable.contains(Ident(v)) || Ident(v).getType(identTable) != r
-              .getType(identTable)
+            !identTable.contains(Ident(v)) || Ident(v).getType(sTable) != r
+              .getType(sTable)
           ) println("ERROR")
         case ArrayElem(Ident(x), y) =>
           if (
-            !identTable.contains(Ident(x)) || Ident(x).getType(identTable) != r
-              .getType(identTable)
+            !identTable.contains(Ident(x)) || Ident(x).getType(sTable) != r
+              .getType(sTable)
           ) println("ERROR")
         case Fst(Ident(x)) =>
-          val rT: Type = r.getType(identTable)
-          Ident(x).getType(identTable) match {
+          val rT: Type = r.getType(sTable)
+          Ident(x).getType(sTable) match {
             case Pair(PairElemT(t), _) => if (t != rT) println("ERROR")
             case Pair(PairElemPair, _) =>
               rT match {
@@ -71,8 +69,8 @@ object SemanticChecker {
             case _ => println("ERROR")
           }
         case Snd(Ident(x)) =>
-          val rT: Type = r.getType(identTable)
-          Ident(x).getType(identTable) match {
+          val rT: Type = r.getType(sTable)
+          Ident(x).getType(sTable) match {
             case Pair(_, PairElemT(t)) => if (t != rT) println("ERROR")
             case Pair(_, PairElemPair) =>
               rT match {
@@ -86,25 +84,25 @@ object SemanticChecker {
     case Read(x) =>
       x match {
         case Ident(v) =>
-          Ident(v).getType(identTable) match {
+          Ident(v).getType(sTable) match {
             case Pair(_, _) | ArrayT(_) =>
             case _                      => println("ERROR")
           }
         case _ => println("ERROR")
       }
     case Free(x) =>
-      x.getType(identTable) match {
+      x.getType(sTable) match {
         case Pair(_, _) | ArrayT(_) =>
         case _                      => println("ERROR")
       }
     // case Return(x)      => // TODO: type check x ?
-    case Exit(x)    => if (x.getType(identTable) != IntT) { println("ERROR") }
-    case Print(x)   => if (x.getType(identTable) == NA) { println("ERROR") }
-    case PrintLn(x) => if (x.getType(identTable) == NA) { println("ERROR") }
+    case Exit(x)    => if (x.getType(sTable) != IntT) { println("ERROR") }
+    case Print(x)   => if (x.getType(sTable) == Err) { println("ERROR") }
+    case PrintLn(x) => if (x.getType(sTable) == Err) { println("ERROR") }
     case If(x, s1, s2) =>
-      if (x.getType(identTable) != BoolT) { println("ERROR") }
-    case While(x, s) => if (x.getType(identTable) != BoolT) { println("ERROR") }
-    case Seq(x)      => x.map(s => statAnalysis(s, table))
+      if (x.getType(sTable) != BoolT) { println("ERROR") }
+    case While(x, s) => if (x.getType(sTable) != BoolT) { println("ERROR") }
+    case Seq(x)      => x.map(s => statAnalysis(s, sTable))
     case _           => // ignore Skip
   }
 
