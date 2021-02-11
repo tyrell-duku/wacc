@@ -46,8 +46,17 @@ object Rules {
     }
   }
   // TO DO: Newpair, Call, fst, snd correct types?
-  case class Newpair(fst: Expr, snd: Expr) extends AssignRHS
-  case class Call(id: Ident, args: Option[ArgList] = None) extends AssignRHS
+  case class Newpair(fst: Expr, snd: Expr) extends AssignRHS {
+    override def getType(sTable: SymbolTable): Type = {
+      Pair(PairElemT(fst.getType(sTable)), PairElemT(snd.getType(sTable)))
+    }
+  }
+  // check correct param list?
+  case class Call(id: Ident, args: Option[ArgList] = None) extends AssignRHS {
+    override def getType(sTable: SymbolTable): Type = {
+      id.getType(sTable)
+    }
+  }
 
   sealed case class ArgList(args: List[Expr])
 
@@ -60,19 +69,33 @@ object Rules {
   case object Err extends Type
 
   sealed trait BaseType extends Type
-  case object IntT extends BaseType
-  case object BoolT extends BaseType
-  case object CharT extends BaseType
-  case object StringT extends BaseType
+  case object IntT extends BaseType {
+    override def toString(): String = "int"
+  }
+  case object BoolT extends BaseType {
+    override def toString(): String = "bool"
+  }
+  case object CharT extends BaseType {
+    override def toString(): String = "char"
+  }
+  case object StringT extends BaseType {
+    override def toString(): String = "string"
+  }
 
-  sealed case class ArrayT(t: Type) extends Type
+  sealed case class ArrayT(t: Type) extends Type {
+    override def toString(): String = t + "[]"
+  }
 
   sealed trait PairType extends Type
   case class Pair(x: PairElemType, y: PairElemType) extends PairType
 
   sealed trait PairElemType
-  case object PairElemPair extends PairElemType
-  case class PairElemT(x: Type) extends PairElemType
+  case object PairElemPair extends PairElemType {
+    override def toString(): String = "pair"
+  }
+  case class PairElemT(t: Type) extends PairElemType {
+    override def toString(): String = t
+  }
 
   sealed trait Expr extends AssignRHS
   case class Parens(e: Expr) extends Expr {
@@ -172,7 +195,6 @@ object Rules {
       extends AssignLHS
       with AssignRHS
       with Expr {
-
     override def getType(sTable: SymbolTable): Type = {
       if (!sTable.contains(this)) {
         println("Variable " + s + " undeclared/ not in scope")
@@ -183,7 +205,7 @@ object Rules {
     }
   }
 
-  // TO DO: Check only ints in list y?, length of array (runtime error)
+  // TODO: Check only ints in list y?, length of array (runtime error)
   sealed case class ArrayElem(id: Ident, exprs: List[Expr])
       extends AssignLHS
       with Expr {
@@ -191,7 +213,7 @@ object Rules {
       val actual = id.getType(sTable)
       actual match {
         case ArrayT(inside) => inside
-        case _              => typeErr(id, actual, List(ArrayT(null)))
+        case _              => typeErr(id, actual, List(ArrayT(actual)))
       }
     }
   }
@@ -232,7 +254,7 @@ object Rules {
     }
   }
 
-  // To DO: confim correct type for pair liter
+  // TODO: pair liter check?
   sealed case class PairLiter() extends Expr {
     override def getType(sTable: SymbolTable): Type =
       Pair(null, null)
