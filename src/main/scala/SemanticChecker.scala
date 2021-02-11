@@ -13,12 +13,12 @@ object SemanticChecker {
 
   def progAnalysis(p: Program): Unit = {
     val Program(funcs, s) = p
-    val globalTable = SymbolTable(null, new HashMap[Ident, Meta])
+    val globalTable = SymbolTable(null, null)
     val globalFuncs = funcs.map(convertToTable)
     globalTable.dict.addAll(globalFuncs)
 
     for (f <- funcs) {
-      funcAnalysis(f, SymbolTable(globalTable, new HashMap[Ident, Meta]))
+      funcAnalysis(f, SymbolTable(globalTable, f.id))
     }
 
     statAnalysis(s, globalTable)
@@ -137,29 +137,41 @@ object SemanticChecker {
   def statAnalysis(s: Stat, sTable: SymbolTable): Unit = s match {
     case EqIdent(t, i, r) => eqIdentAnalysis(t, i, r, sTable)
     case EqAssign(l, r)   => eqAssignAnalysis(l, r, sTable)
-    case Read(x) =>
-      x match {
-        case Ident(v) =>
-          Ident(v).getType(sTable) match {
-            case Pair(_, _) | ArrayT(_) =>
-            case _                      => println("ERROR")
-          }
-        case _ => println("ERROR")
-      }
-    case Free(x) =>
-      x.getType(sTable) match {
+    case Read(lhs)        =>
+    // lhs match {
+    //   case Ident(v) =>
+    //     val lhsType = Ident(v).getType(sTable)
+    //     lhsType match {
+    //       case Pair(_, _) | ArrayT(_) =>
+    //       case _                      => println("ERROR")
+    //     }
+    //   case _ => println("ERROR")
+    // }
+    case Free(e) =>
+      e.getType(sTable) match {
         case Pair(_, _) | ArrayT(_) =>
         case _                      => println("ERROR")
       }
-    // case Return(x)      => // TODO: type check x ?
-    case Exit(x)    => if (x.getType(sTable) != IntT) { println("ERROR") }
-    case Print(x)   => if (x.getType(sTable) == Err) { println("ERROR") }
-    case PrintLn(x) => if (x.getType(sTable) == Err) { println("ERROR") }
-    case If(x, s1, s2) =>
-      if (x.getType(sTable) != BoolT) { println("ERROR") }
-    case While(x, s) => if (x.getType(sTable) != BoolT) { println("ERROR") }
-    case Seq(x)      => x.map(s => statAnalysis(s, sTable))
-    case _           => // ignore Skip
+    case Return(e) =>
+      if (e.getType(sTable) != sTable.getFuncRetType) { println("ERROR") }
+    case Exit(e)    => if (e.getType(sTable) != IntT) { println("ERROR") }
+    case Print(e)   => if (e.getType(sTable) == Err) { println("ERROR") }
+    case PrintLn(e) => if (e.getType(sTable) == Err) { println("ERROR") }
+    case If(cond, s1, s2) =>
+      if (cond.getType(sTable) != BoolT) { println("ERROR") }
+      val ifScope = SymbolTable(sTable, sTable.funcId)
+      val elseScope = SymbolTable(sTable, sTable.funcId)
+      statAnalysis(s1, ifScope)
+      statAnalysis(s2, elseScope)
+    case While(cond, s) =>
+      if (cond.getType(sTable) != BoolT) { println("ERROR") }
+      val whileScope = SymbolTable(sTable, sTable.funcId)
+      statAnalysis(s, whileScope)
+    case Begin(s) =>
+      val beginScope = SymbolTable(sTable, sTable.funcId)
+      statAnalysis(s, beginScope)
+    case Seq(x) => x.map(s => statAnalysis(s, sTable))
+    case _      => // ignore Skip
   }
 
 }
