@@ -39,7 +39,7 @@ object Rules {
         expect: List[Type]
     ): Type = {
       println(
-        "Incompatible type at " + aRHS + " (expected type: " + expect
+        "Incompatible type at " + aRHS.toString + " (expected type: " + expect
           .mkString(" or ") + ", actual type: " + actual
       )
       Err
@@ -71,16 +71,16 @@ object Rules {
 
   sealed trait BaseType extends Type
   case object IntT extends BaseType {
-    override def toString(): String = "int"
+    override def toString(): String = "Int"
   }
   case object BoolT extends BaseType {
-    override def toString: String = "bool"
+    override def toString: String = "Bool"
   }
   case object CharT extends BaseType {
-    override def toString: String = "char"
+    override def toString: String = "Char"
   }
   case object StringT extends BaseType {
-    override def toString: String = "string"
+    override def toString: String = "String"
   }
 
   sealed case class ArrayT(t: Type) extends Type {
