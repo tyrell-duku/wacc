@@ -47,7 +47,7 @@ case class SymbolTable(
 
   def getFuncRetType: Type = {
     if (funcId == null) {
-      return Err(List())
+      return null
     }
     val funcRet = lookupAll(funcId)
     funcRet.t
