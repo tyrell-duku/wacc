@@ -31,19 +31,7 @@ object Rules {
   sealed trait AssignLHS
 
   sealed trait AssignRHS {
-    def getType(sTable: SymbolTable): Type = Err
-
-    protected def typeErr(
-        aRHS: AssignRHS,
-        actual: Type,
-        expect: List[Type]
-    ): Type = {
-      println(
-        "Incompatible type at " + aRHS.toString + " (expected type: " + expect
-          .mkString(" or ") + ", actual type: " + actual
-      )
-      Err
-    }
+    def getType(sTable: SymbolTable): Type
   }
   // TODO: Newpair, Call, fst, snd correct types?
   case class Newpair(fst: Expr, snd: Expr) extends AssignRHS {
@@ -56,11 +44,11 @@ object Rules {
     override def getType(sTable: SymbolTable): Type = {
       val idType = id.getType(sTable)
       val paramCheck = sTable.funcParamMatch(id, args)
-      if (paramCheck) {
+      if (paramCheck.isEmpty) {
         return idType
       }
-      println("Param mismatch")
-      Err
+      //println("Param mismatch")
+      Err(paramCheck)
     }
   }
 
@@ -68,36 +56,44 @@ object Rules {
 
   // TODO: type for fst and snd
   // PairElemT(CharT) | PairElemT
-  sealed trait PairElem extends AssignLHS with AssignRHS
+  sealed trait PairElem extends AssignLHS with AssignRHS {
+    val e: Expr
+  }
   case class Fst(e: Expr) extends PairElem {
+    override def toString: String = "fst " + e
+
     override def getType(sTable: SymbolTable): Type = e match {
-      case Ident(v) =>
-        e.getType(sTable) match {
+      case Ident(_) =>
+        val eType = e.getType(sTable)
+        eType match {
           case Pair(fst, _) => fst.getType
-          case _            => Err
+          case _            => Err(List(invalidPairElem(e)))
         }
-      case _ => Err
+      case _ => Err(List(invalidPairElem(e)))
     }
   }
 
   case class Snd(e: Expr) extends PairElem {
+    override def toString: String = "snd " + e
+
     override def getType(sTable: SymbolTable): Type = e match {
-      case Ident(v) =>
-        e.getType(sTable) match {
+      case Ident(_) =>
+        val eType = e.getType(sTable)
+        eType match {
           case Pair(_, snd) => snd.getType
-          case _            => Err
+          case _            => Err(List(invalidPairElem(e)))
         }
-      case _ => Err
+      case _ => Err(List(invalidPairElem(e)))
     }
   }
 
   sealed trait Type
 
-  case object Err extends Type
+  case class Err(semErrs: List[SemanticError]) extends Type
 
   sealed trait BaseType extends Type
   case object IntT extends BaseType {
-    override def toString(): String = "Int"
+    override def toString: String = "Int"
   }
   case object BoolT extends BaseType {
     override def toString: String = "Bool"
@@ -110,7 +106,10 @@ object Rules {
   }
 
   sealed case class ArrayT(t: Type) extends Type {
-    override def toString: String = t + "[]"
+    override def toString: String = {
+      if (t == null) return "T[]"
+      t + "[]"
+    }
   }
 
   sealed trait PairType extends Type
@@ -150,7 +149,7 @@ object Rules {
     override def getType(sTable: SymbolTable): Type = {
       val actual = e.getType(sTable)
       if (actual == expected._1) return expected._2
-      typeErr(e, actual, List(expected._1))
+      Err(List(typeMismatch(e, actual, List(expected._1))))
     }
   }
 
@@ -167,7 +166,7 @@ object Rules {
       val actual = e.getType(sTable)
       actual match {
         case ArrayT(_) => expected._2
-        case _         => typeErr(e, actual, List(expected._1))
+        case _         => Err(List(typeMismatch(e, actual, List(expected._1))))
       }
     }
   }
@@ -192,13 +191,17 @@ object Rules {
         if (expected._1.isEmpty) return expected._2
       } else {
         if (expected._1.contains(actualL))
-          return typeErr(rExpr, actualR, List(actualL))
+          return Err(List(typeMismatch(rExpr, actualR, List(actualL))))
         if (expected._1.contains(actualR))
-          return typeErr(lExpr, actualL, List(actualR))
+          return Err(List(typeMismatch(lExpr, actualL, List(actualR))))
       }
       // neither types are correct
-      typeErr(lExpr, actualL, expected._1)
-      typeErr(rExpr, actualR, expected._1)
+      Err(
+        List(
+          typeMismatch(lExpr, actualL, expected._1),
+          typeMismatch(rExpr, actualR, expected._1)
+        )
+      )
     }
   }
 
@@ -237,8 +240,8 @@ object Rules {
       with Expr {
     override def getType(sTable: SymbolTable): Type = {
       if (!sTable.contains(this)) {
-        println("Variable " + s + " undeclared/ not in scope")
-        return Err
+        //println("Variable " + s + " undeclared/ not in scope")
+        return Err(List(variableNotDeclared(this)))
       }
       val Meta(typeOf, _) = sTable.lookupAll(this)
       typeOf
@@ -253,8 +256,9 @@ object Rules {
       val actual = id.getType(sTable)
       actual match {
         case ArrayT(inside) => inside
-        case _              => typeErr(id, actual, List(ArrayT(actual)))
+        case _              => Err(List(typeMismatch(id, actual, List(ArrayT(actual)))))
       }
+      actual
     }
   }
 
@@ -291,7 +295,9 @@ object Rules {
       if (arrLitTypes.forall(_ == arrLitTypes.head)) {
         return ArrayT(arrLitTypes.head)
       }
-      Err
+      //to do
+      // Err
+      ArrayT(null)
     }
   }
 
