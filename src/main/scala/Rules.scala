@@ -151,8 +151,12 @@ object Rules {
 
   sealed trait Expr extends AssignRHS
   case class Parens(e: Expr) extends Expr {
-    override def getType(sTable: SymbolTable): Type =
-      e.getType(sTable)
+    override def toString: String = "(" + e + ")"
+    override def getType(sTable: SymbolTable): Type = {
+      val retType = e.getType(sTable)
+      semErrs = e.semErrs
+      retType
+    }
   }
 
   sealed trait UnOp extends Expr {
@@ -162,6 +166,7 @@ object Rules {
 
     override def getType(sTable: SymbolTable): Type = {
       val actual = e.getType(sTable)
+      semErrs = e.semErrs
       if (actual != expected._1){
         semErrs ::= typeMismatch(e, actual, List(expected._1))
       }
@@ -185,6 +190,7 @@ object Rules {
 
     override def getType(sTable: SymbolTable): Type = {
       val actual = e.getType(sTable)
+      semErrs = e.semErrs
       if (!actual.isArray) {
         semErrs ::= typeMismatch(e, actual, List(expected._1))
       }
@@ -211,6 +217,7 @@ object Rules {
     override def getType(sTable: SymbolTable): Type = {
       val actualL = lExpr.getType(sTable)
       val actualR = rExpr.getType(sTable)
+      semErrs = lExpr.semErrs ::: rExpr.semErrs
       if (actualL == actualR) {
         if (expected._1.contains(actualL) && expected._1.contains(actualR))
           return expected._2
@@ -299,7 +306,6 @@ object Rules {
 
     override def getType(sTable: SymbolTable): Type = {
       if (!sTable.contains(this)) {
-        //println("Variable " + s + " undeclared/ not in scope")
         semErrs ::= variableNotDeclared(this)
         return Any
       }
@@ -314,6 +320,7 @@ object Rules {
       with Expr {
     override def getType(sTable: SymbolTable): Type = {
       val actual = id.getType(sTable)
+      semErrs = id.semErrs
       if (actual.isArray) {
         val ArrayT(innerT) = actual
         return innerT
@@ -338,14 +345,20 @@ object Rules {
   }
 
   sealed case class CharLiter(c: Character) extends Expr {
+    override def toString: String = "'" + c.toString + "'"
     override def getType(sTable: SymbolTable): Type = CharT
   }
 
   sealed trait Character
-  case class NormalChar(c: Char) extends Character
-  case class Escape(c: Char) extends Character
+  case class NormalChar(c: Char) extends Character {
+    override def toString: String = c.toString
+  }
+  case class Escape(c: Char) extends Character {
+    override def toString: String = s"\\$c"
+  }
 
   sealed case class StrLiter(str: List[Character]) extends Expr {
+    override def toString: String = "\"" + str.mkString("") + "\""
     override def getType(sTable: SymbolTable): Type = StringT
   }
 
