@@ -133,7 +133,7 @@ class SemanticChecker {
       semErrors ::= typeMismatch(rhs, rhsType, List(lhsType))
     }
   }
-
+  // Analyses a statement of the form <pair-elem> = <assign-rhs>
   def eqAssignPairElem(
       pe: PairElem,
       rhs: AssignRHS,
@@ -153,7 +153,7 @@ class SemanticChecker {
       semErrors ::= typeMismatch(rhs, rhsType, List(lhsType))
     }
   }
-
+  // Analyses a statement of the form read <assin-rhs>
   def readAnalysis(elem: AssignRHS, sTable: SymbolTable) {
     val t = elem.getType(sTable)
     if (elem.semErrs.nonEmpty) {
@@ -166,6 +166,7 @@ class SemanticChecker {
     }
   }
 
+  // Analyses a single statement
   def statAnalysis(s: Stat, sTable: SymbolTable): Unit = s match {
     case EqIdent(t, i, r) => eqIdentAnalysis(t, i, r, sTable)
     case EqAssign(l, r)   => eqAssignAnalysis(l, r, sTable)
@@ -179,7 +180,8 @@ class SemanticChecker {
       val eType = e.getType(sTable)
       eType match {
         case Pair(_, _) | ArrayT(_) =>
-        case _ =>
+        case _                      =>
+          // Error case: calling free only permitted for pairs/arrays
           semErrors ::= typeMismatch(
             e,
             eType,
@@ -199,7 +201,7 @@ class SemanticChecker {
         semErrors :::= e.semErrs
         return
       }
-      // Error case:
+      // Error case: type T doesnt match funcion return type RETURNTYPE
       if (t != returnType) {
         semErrors ::= typeMismatch(e, t, List(returnType))
       }
@@ -209,6 +211,7 @@ class SemanticChecker {
         semErrors :::= e.semErrs
         return
       }
+      // Error case: attempt to exit with non-integer code
       if (t != IntT) {
         semErrors ::= typeMismatch(e, t, List(IntT))
       }
@@ -225,12 +228,15 @@ class SemanticChecker {
     case If(cond, s1, s2) =>
       val condType = cond.getType(sTable)
       if (cond.semErrs.nonEmpty) {
+        // Add semantic errors from COND
         semErrors :::= cond.semErrs
       } else {
         if (condType != BoolT) {
+          // Error case: Condition COND for IF statement is not of type Boolean
           semErrors ::= typeMismatch(cond, condType, List(BoolT))
         }
       }
+      // New symbol tables for if-statements, with independent analysis of each branch
       val ifScope = SymbolTable(sTable, sTable.funcId)
       val elseScope = SymbolTable(sTable, sTable.funcId)
       statAnalysis(s1, ifScope)
@@ -239,17 +245,13 @@ class SemanticChecker {
       val condType = cond.getType(sTable)
       if (cond.semErrs.nonEmpty) {
         semErrors :::= cond.semErrs
-      } else {
-        if (condType != BoolT) {
-          semErrors ::= typeMismatch(cond, condType, List(BoolT))
-        }
+      } else if (condType != BoolT) {
+        semErrors ::= typeMismatch(cond, condType, List(BoolT))
       }
-      val whileScope = SymbolTable(sTable, sTable.funcId)
-      statAnalysis(s, whileScope)
-    case Begin(s) =>
-      val beginScope = SymbolTable(sTable, sTable.funcId)
-      statAnalysis(s, beginScope)
-    case Seq(x) => x.foreach(s => statAnalysis(s, sTable))
-    case _      => // ignore Skip
+      // New symbol table for while-loops, with independent scopes for each branch
+      statAnalysis(s, SymbolTable(sTable, sTable.funcId))
+    case Begin(s) => statAnalysis(s, SymbolTable(sTable, sTable.funcId))
+    case Seq(x)   => x.foreach(s => statAnalysis(s, sTable))
+    case _        => // ignore Skip
   }
 }
