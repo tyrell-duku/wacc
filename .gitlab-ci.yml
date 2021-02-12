@@ -3,7 +3,6 @@ image: openjdk:11
 stages:
   - compile
   - test
-  - clean
 
 before_script:
   - apt-get update -y
@@ -18,11 +17,14 @@ before_script:
 compile:
   stage: compile
   script: sbt compile
+  needs: []
 
 test:
   stage: test
   script: sbt test
-
-clean:
-  stage: clean
-  script: sbt clean  
+  needs: []
+  artifacts:
+    when: always
+    reports:
+      junit:
+        - target/test-reports/TEST-*.xml 
