@@ -3,6 +3,7 @@ import Rules._
 class SemanticChecker {
   private var semErrors: List[SemanticError] = List.empty[SemanticError]
 
+  // Translates a function F into a symbol table entry
   private def funcToSTable(f: Func): (Ident, Meta) = {
     val Func(typeOf, id, params, _) = f
     val ParamList(pList) = params.getOrElse(ParamList(List()))
@@ -10,6 +11,8 @@ class SemanticChecker {
     (id, Meta(typeOf, Some(paramTypes)))
   }
 
+  // Performs analysis on program P, returning a list of all semantic errors
+  // that have occured (if any).
   def progAnalysis(p: Program): List[SemanticError] = {
     val Program(funcs, stat) = p
     val globalTable = SymbolTable(null, null)
@@ -25,16 +28,18 @@ class SemanticChecker {
     semErrors.reverse
   }
 
+  // Analyses a single function F by adding its parameters to STABLE
   def funcAnalysis(f: Func, sTable: SymbolTable): Unit = {
     val Func(_, _, params, s) = f
-    if (params.isDefined) {
-      val Some(ParamList(pList)) = params
-      val sTableData = pList.map((p: Param) => (p.id, Meta(p.t, None)))
-      sTable.addAll(sTableData)
+    params match {
+      case Some(ParamList(pList)) =>
+        sTable.addAll(pList.map((p: Param) => (p.id, Meta(p.t, None))))
+      case _ =>
     }
     statAnalysis(s, sTable)
   }
 
+  // Analyses the statement LHSTYPE ID = RHS
   def eqIdentAnalysis(
       lhsType: Type,
       id: Ident,
@@ -42,19 +47,25 @@ class SemanticChecker {
       sTable: SymbolTable
   ): Unit = {
     if (sTable.contains(id)) {
+      // Error case: redeclaration of variable not allowed
       semErrors ::= variableDeclared(id)
       return
     }
+    // Checks for semantics errors for RHS
     val rhsType = rhs.getType(sTable)
     if (rhs.semErrs.nonEmpty) {
       semErrors :::= rhs.semErrs
+      sTable.add(id, lhsType)
+      return
     }
     sTable.add(id, lhsType)
     if (lhsType != rhsType) {
+      // Error case: type mismatch between LHS and RHS
       semErrors ::= typeMismatch(rhs, rhsType, List(lhsType))
     }
   }
 
+  // Analyses the statement ASSIGNLHS = ASSIGNRHS
   def eqAssignAnalysis(
       lhs: AssignLHS,
       rhs: AssignRHS,
@@ -64,13 +75,22 @@ class SemanticChecker {
       eqAssignPairElem(elem, rhs, sTable)
     case i @ Ident(s) =>
       eqAssignIdent(i, rhs, sTable)
-    case ArrayElem(id, _) =>
+    case ArrayElem(id, e) =>
+      // Checks for any semantic errors from id of array
       val lhsType = id.getType(sTable)
       if (id.semErrs.nonEmpty) {
         semErrors :::= id.semErrs
       }
+      // Ensuring all indexes are ints
+      for (index <- e) {
+        val indexT = index.getType(sTable)
+        if (indexT != IntT) {
+          semErrors ::= typeMismatch(index, indexT, List(IntT))
+        }
+      }
       lhsType match {
         case ArrayT(_) =>
+        // Error case: attempt to index a non-indxable type (e.g. strings)
         case _ =>
           semErrors ::= elementAccessDenied(id)
           return
@@ -79,17 +99,22 @@ class SemanticChecker {
       val rT = rhs.getType(sTable)
       if (rhs.semErrs.nonEmpty) {
         semErrors :::= rhs.semErrs
+        return
       }
       if (rT != t) {
         semErrors ::= typeMismatch(rhs, rT, List(t))
       }
+
   }
 
+  // Analyses the statement ID = RHS
   def eqAssignIdent(id: Ident, rhs: AssignRHS, sTable: SymbolTable): Unit = {
+    // Error case: identifier ID is used without being declared - (not found in) symbol table
     if (!sTable.contains(id)) {
       semErrors ::= variableNotDeclared(id)
       return
     }
+    // Error case: identifier ID is a declared function
     if (sTable.isFunc(id)) {
       semErrors ::= functionIllegalAssignment(id)
       return
@@ -101,9 +126,10 @@ class SemanticChecker {
     val rhsType = rhs.getType(sTable)
     if (rhs.semErrs.nonEmpty) {
       semErrors :::= rhs.semErrs
+      return
     }
-    // && !rhsType.isErr
     if (lhsType != rhsType) {
+      // Error case: LHS and RHS have different types
       semErrors ::= typeMismatch(rhs, rhsType, List(lhsType))
     }
   }
@@ -112,42 +138,32 @@ class SemanticChecker {
       pe: PairElem,
       rhs: AssignRHS,
       sTable: SymbolTable
-  ): Unit = pe match {
-    case Fst(Ident(s)) =>
-      val typeInFst = Ident(s).getType(sTable)
-      val rhsType = rhs.getType(sTable)
-      typeInFst match {
-        case Pair(PairElemT(t), _) =>
-          //&& !rhsType.isErr
-          if (t != rhsType)
-            semErrors ::= typeMismatch(rhs, rhsType, List(t))
-        case Pair(PairElemPair, _) =>
-          rhsType match {
-            case Pair(_, _) =>
-            case _ =>
-              semErrors ::= typeMismatch(rhs, rhsType, List(Pair(null, null)))
-          }
-        case _ => semErrors ::= typeMismatch(rhs, rhsType, List(Pair(null, null)))
-      }
-    case Snd(Ident(s)) =>
-      val typeInSnd = Ident(s).getType(sTable)
-      val rhsType = rhs.getType(sTable)
-      typeInSnd match {
-        case Pair(PairElemT(t), _) =>
-          //&& !rhsType.isErr
-          if (t != rhsType)
-            semErrors ::= typeMismatch(rhs, rhsType, List(t))
-        case Pair(PairElemPair, _) =>
-          rhsType match {
-            case Pair(_, _) =>
-            case _ =>
-              semErrors ::= typeMismatch(rhs, rhsType, List(Pair(null, null)))
-          }
-        case _ =>
-          semErrors ::= typeMismatch(rhs, typeInSnd, List(Pair(null, null)))
-      }
-    case _ =>
-      semErrors ::= typeMismatch(rhs, rhs.getType(sTable), List(Pair(null, null)))
+  ): Unit = {
+    val lhsType = pe.getType(sTable)
+    val rhsType = rhs.getType(sTable)
+    if (pe.semErrs.nonEmpty) {
+      semErrors :::= pe.semErrs
+      return
+    }
+    if (rhs.semErrs.nonEmpty) {
+      semErrors :::= rhs.semErrs
+      return
+    }
+    if (lhsType != rhsType) {
+      semErrors ::= typeMismatch(rhs, rhsType, List(lhsType))
+    }
+  }
+
+  def readAnalysis(elem: AssignRHS, sTable: SymbolTable) {
+    val t = elem.getType(sTable)
+    if (elem.semErrs.nonEmpty) {
+      semErrors :::= elem.semErrs
+    }
+    t match {
+      case CharT | IntT =>
+      case _ =>
+        semErrors ::= typeMismatch(elem, t, List(CharT, IntT))
+    }
   }
 
   def statAnalysis(s: Stat, sTable: SymbolTable): Unit = s match {
@@ -155,36 +171,9 @@ class SemanticChecker {
     case EqAssign(l, r)   => eqAssignAnalysis(l, r, sTable)
     case Read(lhs) =>
       lhs match {
-        case elem: Ident =>
-          val t = elem.getType(sTable)
-          if (elem.semErrs.nonEmpty) {
-            semErrors :::= elem.semErrs
-          }
-          t match {
-            case CharT | IntT =>
-            case _ =>
-              semErrors ::= typeMismatch(elem, t, List(CharT, IntT))
-          }
-        case elem: ArrayElem =>
-          val t = elem.getType(sTable)
-          if (elem.semErrs.nonEmpty) {
-            semErrors :::= elem.semErrs
-          }
-          t match {
-            case CharT | IntT =>
-            case _ =>
-              semErrors ::= typeMismatch(elem, t, List(CharT, IntT))
-          }
-        case elem: PairElem =>
-          val t = elem.getType(sTable)
-          if (elem.semErrs.nonEmpty) {
-            semErrors :::= elem.semErrs
-          }
-          t match {
-            case CharT | IntT =>
-            case _ =>
-              semErrors ::= typeMismatch(elem, t, List(CharT, IntT))
-          }
+        case elem: Ident     => readAnalysis(elem, sTable)
+        case elem: ArrayElem => readAnalysis(elem, sTable)
+        case elem: PairElem  => readAnalysis(elem, sTable)
       }
     case Free(e) =>
       val eType = e.getType(sTable)
@@ -199,19 +188,21 @@ class SemanticChecker {
       }
     case Return(e) =>
       val returnType = sTable.getFuncRetType
+      // null if in global scope or unable to return
       if (returnType == null) {
         semErrors ::= invalidReturn(e)
         return
       }
+      // getType generates semantic errors for E
       val t = e.getType(sTable)
       if (e.semErrs.nonEmpty) {
         semErrors :::= e.semErrs
         return
       }
+      // Error case:
       if (t != returnType) {
         semErrors ::= typeMismatch(e, t, List(returnType))
       }
-
     case Exit(e) =>
       val t = e.getType(sTable)
       if (e.semErrs.nonEmpty) {
