@@ -19,12 +19,12 @@ class ParamTest extends AnyFunSuite {
     assert(
       paramWhitespace
         .runParser("char[][] var")
-        .contains(Param(OfArrayType(OfArrayType(CharT)), Ident("var")))
+        .contains(Param(ArrayT(ArrayT(CharT)), Ident("var")))
     )
     assert(
       paramWhitespace
         .runParser("int[] var")
-        .contains(Param(OfArrayType(IntT), Ident("var")))
+        .contains(Param(ArrayT(IntT), Ident("var")))
     )
   }
 
@@ -38,7 +38,7 @@ class ParamTest extends AnyFunSuite {
       paramWhitespace
         .runParser("pair(pair,pair)[] var")
         .contains(
-          Param(OfArrayType(Pair(PairElemPair, PairElemPair)), Ident("var"))
+          Param(ArrayT(Pair(PairElemPair, PairElemPair)), Ident("var"))
         )
     )
   }
@@ -91,9 +91,9 @@ class ParamListTest extends AnyFunSuite {
         .contains(
           ParamList(
             List(
-              Param(OfArrayType(IntT), Ident("x")),
-              Param(OfArrayType(IntT), Ident("y")),
-              Param(OfArrayType(IntT), Ident("z"))
+              Param(ArrayT(IntT), Ident("x")),
+              Param(ArrayT(IntT), Ident("y")),
+              Param(ArrayT(IntT), Ident("z"))
             )
           )
         )

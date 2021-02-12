@@ -31,7 +31,7 @@ object Parser {
 
   val types: Parsley[Type] = precedence[Type](
     baseType ? "<base-type>" <|> pairType ? "<pair-type>",
-    Ops[Type](Postfix)(lexer.keyword("[]") #> OfArrayType ? "array-type")
+    Ops[Type](Postfix)(lexer.keyword("[]") #> ArrayT ? "array-type")
   )
 
   val pairElemType: Parsley[PairElemType] =

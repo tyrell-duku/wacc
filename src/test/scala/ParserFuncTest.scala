@@ -31,7 +31,7 @@ class FuncTest extends AnyFunSuite {
         .runParser("int[] foo () is y = x + 1 ; return y end")
         .contains(
           Func(
-            OfArrayType(IntT),
+            ArrayT(IntT),
             Ident("foo"),
             None,
             Seq(
@@ -81,7 +81,7 @@ class FuncTest extends AnyFunSuite {
           Func(
             StringT,
             Ident("foo"),
-            Some(ParamList(List(Param(OfArrayType(IntT), Ident("arg1"))))),
+            Some(ParamList(List(Param(ArrayT(IntT), Ident("arg1"))))),
             Exit(IntLiter(1))
           )
         )
