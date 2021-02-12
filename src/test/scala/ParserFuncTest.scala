@@ -1,6 +1,10 @@
 import org.scalatest.funsuite.AnyFunSuite
 import Parser._
 import Rules._
+import LiterParser._
+import StatParser._
+import ExprParser._
+import Lexer._
 
 class FuncTest extends AnyFunSuite {
   test("Successfully parses func with no param-list") {

@@ -4,6 +4,7 @@ import Rules._
 import parsley.combinator.eof
 import java.io.File
 import parsley.Parsley
+import Lexer._
 
 class ProgramTest extends AnyFunSuite {
   val programWhitespace: Parsley[Program] = lexer.whiteSpace *> program <* eof

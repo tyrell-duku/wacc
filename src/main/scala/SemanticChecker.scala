@@ -1,5 +1,7 @@
 import Rules._
 
+import scala.collection.mutable.HashMap
+
 class SemanticChecker {
   private var semErrors: List[SemanticError] = List.empty[SemanticError]
 
@@ -15,12 +17,13 @@ class SemanticChecker {
   // that have occured (if any).
   def progAnalysis(p: Program): List[SemanticError] = {
     val Program(funcs, stat) = p
-    val globalTable = SymbolTable(null, null)
+    val globalTable: SymbolTable =
+      SymbolTable(null, null, new HashMap[Ident, Meta])
     val globalFuncs = funcs.map(funcToSTable)
-    globalTable.addAll(globalFuncs)
+    semErrors :::= globalTable.addFuncs(globalFuncs)
 
     for (f <- funcs) {
-      funcAnalysis(f, SymbolTable(globalTable, f.id))
+      funcAnalysis(f, globalTable.nextScope(f.id))
     }
 
     statAnalysis(stat, globalTable)
@@ -33,7 +36,7 @@ class SemanticChecker {
     val Func(_, _, params, s) = f
     params match {
       case Some(ParamList(pList)) =>
-        sTable.addAll(pList.map((p: Param) => (p.id, Meta(p.t, None))))
+        sTable.addVars(pList.map((p: Param) => (p.id, p.t)))
       case _ =>
     }
     statAnalysis(s, sTable)
@@ -46,7 +49,7 @@ class SemanticChecker {
       rhs: AssignRHS,
       sTable: SymbolTable
   ): Unit = {
-    if (sTable.contains(id)) {
+    if (sTable.containScope(id)) {
       // Error case: redeclaration of variable not allowed
       semErrors ::= variableDeclared(id)
       return
@@ -153,7 +156,7 @@ class SemanticChecker {
       semErrors ::= typeMismatch(rhs, rhsType, List(lhsType))
     }
   }
-  // Analyses a statement of the form read <assin-rhs>
+  // Analyses a statement of the form read <assign-rhs>
   def readAnalysis(elem: AssignRHS, sTable: SymbolTable) {
     val t = elem.getType(sTable)
     if (elem.semErrs.nonEmpty) {
@@ -237,10 +240,8 @@ class SemanticChecker {
         }
       }
       // New symbol tables for if-statements, with independent analysis of each branch
-      val ifScope = SymbolTable(sTable, sTable.funcId)
-      val elseScope = SymbolTable(sTable, sTable.funcId)
-      statAnalysis(s1, ifScope)
-      statAnalysis(s2, elseScope)
+      statAnalysis(s1, sTable.nextScope)
+      statAnalysis(s2, sTable.nextScope)
     case While(cond, s) =>
       val condType = cond.getType(sTable)
       if (cond.semErrs.nonEmpty) {
@@ -249,8 +250,8 @@ class SemanticChecker {
         semErrors ::= typeMismatch(cond, condType, List(BoolT))
       }
       // New symbol table for while-loops, with independent scopes for each branch
-      statAnalysis(s, SymbolTable(sTable, sTable.funcId))
-    case Begin(s) => statAnalysis(s, SymbolTable(sTable, sTable.funcId))
+      statAnalysis(s, sTable.nextScope)
+    case Begin(s) => statAnalysis(s, sTable.nextScope)
     case Seq(x)   => x.foreach(s => statAnalysis(s, sTable))
     case _        => // ignore Skip
   }

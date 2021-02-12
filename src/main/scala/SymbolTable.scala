@@ -1,73 +1,101 @@
 import Rules.Ident
 import Rules._
+
 import scala.collection.mutable.HashMap
 
 case class Meta(t: Type, pList: Option[List[Type]])
 
 case class SymbolTable(
     parent: SymbolTable,
-    funcId: Ident
-) {
-  val dict = new HashMap[Ident, Meta]
+    funcId: Ident,
+    funcMap: HashMap[Ident, Meta])
+ {
+  val varMap = new HashMap[Ident, Type]
 
-  def lookupAll(id: Ident): Meta = {
+  def nextScope(nextFunc: Ident): SymbolTable ={
+    SymbolTable(this, nextFunc, funcMap)
+  }
+
+  def nextScope: SymbolTable = {
+    SymbolTable(this, funcId, funcMap)
+  }
+
+  def lookupAll(id: Ident): Type = {
     var curSymbol = this
     while (curSymbol != null) {
-      var d = curSymbol.dict
+      val d = curSymbol.varMap
       if (d.contains(id)) {
         return d.apply(id)
       }
       curSymbol = curSymbol.parent
     }
-    null
+    val t = funcMap.get(id)
+    if (t.isEmpty){
+      return null
+    }
+    t.get.t
   }
-
+//
   def add(id: Ident, t: Type): Unit = {
-    dict.addOne(id, Meta(t, None))
+    varMap.addOne(id, t)
   }
-
+//
   def contains(id: Ident): Boolean = {
     lookupAll(id) != null
   }
-
+//
   def containScope(id: Ident): Boolean = {
-    dict.contains(id)
+    varMap.contains(id)
   }
-
-  // Add all function declarations to dictionary
-  def addAll(entries: List[(Ident, Meta)]) {
-    for (m <- entries) {
-      if (dict.contains(m._1)) {
-        println("Conflicting function declarations at " + m._1.s)
+//
+//  // Add all function declarations to dictionary
+  def addVars(vars: List[(Ident, Type)]): List[SemanticError] = {
+    var semErrors: List[SemanticError] = List.empty[SemanticError]
+    for (v <- vars) {
+      if (varMap.contains(v._1)) {
+        semErrors ::= variableDeclared(v._1)
       } else {
-        dict.addOne(m)
+        varMap.addOne(v)
       }
     }
+    semErrors
   }
-
+//
+  def addFuncs(funcs: List[(Ident, Meta)]): List[SemanticError] = {
+    var semErrors: List[SemanticError] = List.empty[SemanticError]
+    for (f <- funcs) {
+      if (funcMap.contains(f._1)) {
+        semErrors ::= functionDeclared(f._1)
+      } else {
+        funcMap.addOne(f)
+      }
+    }
+    semErrors
+  }
+//  }
+//
   def getFuncRetType: Type = {
     if (funcId == null) {
       return null
     }
-    val funcRet = lookupAll(funcId)
-    funcRet.t
-  }
-
-  def isFunc(id: Ident): Boolean = {
-    val meta = lookupAll(id)
-    if (meta == null) {
-      return false
+    val funcRet = funcMap.get(funcId)
+    if (funcRet.isEmpty){
+      return null
     }
-    val Meta(_, pList) = meta
-    pList.isDefined
+    funcRet.get.t
   }
-
+//
+  def isFunc(id: Ident): Boolean = {
+    val meta = funcMap.get(id)
+    meta.isDefined
+  }
+//
   def funcParamMatch(id: Ident, args: Option[ArgList]): List[SemanticError] = {
-    val meta = lookupAll(id)
-    if (meta == null) {
+    val meta = funcMap.get(id)
+    if (meta.isEmpty) {
       return List[SemanticError](functionNotDeclared(id: Ident))
     }
-    val Meta(_, value) = meta
+    val Some(Meta(_, value)) = meta
     if (args.isEmpty) {
       if (value.exists(_.isEmpty)) {
         return List[SemanticError]()

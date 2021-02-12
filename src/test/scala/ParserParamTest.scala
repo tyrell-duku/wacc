@@ -2,6 +2,7 @@ import org.scalatest.funsuite.AnyFunSuite
 import Parser._
 import Rules._
 import parsley.combinator.eof
+import Lexer._
 
 class ParamTest extends AnyFunSuite {
   val paramWhitespace = lexer.whiteSpace *> param <* eof
