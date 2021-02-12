@@ -7,9 +7,8 @@
 
 all: rules
 
-# runs the antlr build script then attempts to compile all .java files within src
 rules:
-	sbt compile
+	sbt assembly
 
 clean:
 	sbt clean
