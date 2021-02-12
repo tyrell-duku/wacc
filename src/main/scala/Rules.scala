@@ -36,19 +36,25 @@ object Rules {
   // TODO: Newpair, Call, fst, snd correct types?
   case class Newpair(fst: Expr, snd: Expr) extends AssignRHS {
     override def getType(sTable: SymbolTable): Type = {
+      // val fstType = fst.getType(sTable)
+      // val secType = snd.getType(sTable)
+      // if (fstType.isErr) {
+      //   if (sndType.isErr) {}
+      // }
       Pair(PairElemT(fst.getType(sTable)), PairElemT(snd.getType(sTable)))
     }
   }
   // check correct param list?
   case class Call(id: Ident, args: Option[ArgList] = None) extends AssignRHS {
     override def getType(sTable: SymbolTable): Type = {
-      val idType = id.getType(sTable)
-      val paramCheck = sTable.funcParamMatch(id, args)
-      if (paramCheck.isEmpty) {
-        return idType
-      }
-      //println("Param mismatch")
-      Err(paramCheck)
+      id.getType(sTable)
+      // val paramCheck = sTable.funcParamMatch(id, args)
+      // if (paramCheck.isEmpty) {
+      //   return idType
+      // }
+      // //println("Param mismatch")
+      // Err(paramCheck)
+
     }
   }
 
@@ -87,7 +93,12 @@ object Rules {
     }
   }
 
-  sealed trait Type
+  sealed trait Type {
+    def isErr: Boolean = this match {
+      case Err(_) => true
+      case _      => false
+    }
+  }
 
   case class Err(semErrs: List[SemanticError]) extends Type
 
@@ -151,16 +162,21 @@ object Rules {
       if (actual == expected._1) return expected._2
       Err(List(typeMismatch(e, actual, List(expected._1))))
     }
+
+    def unOpstring(op: String): String = op + e.toString()
   }
 
   case class Not(e: Expr) extends UnOp {
     override val expected: (Type, Type) = (BoolT, BoolT)
+    override def toString(): String = this.unOpstring("!")
   }
   case class Negation(e: Expr) extends UnOp {
     override val expected: (Type, Type) = (IntT, IntT)
+    override def toString(): String = this.unOpstring("-")
   }
   case class Len(e: Expr) extends UnOp {
     override val expected: (Type, Type) = (ArrayT(null), IntT)
+    override def toString(): String = this.unOpstring("len ")
 
     override def getType(sTable: SymbolTable): Type = {
       val actual = e.getType(sTable)
@@ -172,9 +188,11 @@ object Rules {
   }
   case class Ord(e: Expr) extends UnOp {
     override val expected: (Type, Type) = (CharT, IntT)
+    override def toString(): String = this.unOpstring("ord ")
   }
   case class Chr(e: Expr) extends UnOp {
     override val expected: (Type, Type) = (IntT, CharT)
+    override def toString(): String = this.unOpstring("chr ")
   }
 
   sealed trait BinOp extends Expr {
@@ -182,13 +200,17 @@ object Rules {
     val rExpr: Expr
     val expected: (List[Type], Type)
 
+    def binOpString(op: String): String = lExpr + " " + op + " " + rExpr
+
     override def getType(sTable: SymbolTable): Type = {
       val actualL = lExpr.getType(sTable)
       val actualR = rExpr.getType(sTable)
       if (actualL == actualR) {
         if (expected._1.contains(actualL) && expected._1.contains(actualR))
           return expected._2
-        if (expected._1.isEmpty) return expected._2
+        if (expected._1.isEmpty) {
+          return expected._2
+        }
       } else {
         if (expected._1.contains(actualL))
           return Err(List(typeMismatch(rExpr, actualR, List(actualL))))
@@ -208,36 +230,63 @@ object Rules {
   sealed trait ArithOps extends BinOp {
     override val expected: (List[Type], Type) = (List(IntT), IntT)
   }
-  case class Mul(lExpr: Expr, rExpr: Expr) extends ArithOps
-  case class Div(lExpr: Expr, rExpr: Expr) extends ArithOps
-  case class Mod(lExpr: Expr, rExpr: Expr) extends ArithOps
-  case class Plus(lExpr: Expr, rExpr: Expr) extends ArithOps
-  case class Sub(lExpr: Expr, rExpr: Expr) extends ArithOps
+  case class Mul(lExpr: Expr, rExpr: Expr) extends ArithOps {
+    override def toString(): String = this.binOpString("*")
+  }
+  case class Div(lExpr: Expr, rExpr: Expr) extends ArithOps {
+    override def toString(): String = this.binOpString("/")
+  }
+  case class Mod(lExpr: Expr, rExpr: Expr) extends ArithOps {
+    override def toString(): String = this.binOpString("%")
+  }
+  case class Plus(lExpr: Expr, rExpr: Expr) extends ArithOps {
+    override def toString(): String = this.binOpString("+")
+  }
+  case class Sub(lExpr: Expr, rExpr: Expr) extends ArithOps {
+    override def toString(): String = this.binOpString("-")
+  }
 
   sealed trait ComparOps extends BinOp {
     override val expected: (List[Type], Type) = (List(CharT, IntT), BoolT)
   }
-  case class GT(lExpr: Expr, rExpr: Expr) extends ComparOps
-  case class GTE(lExpr: Expr, rExpr: Expr) extends ComparOps
-  case class LT(lExpr: Expr, rExpr: Expr) extends ComparOps
-  case class LTE(lExpr: Expr, rExpr: Expr) extends ComparOps
+  case class GT(lExpr: Expr, rExpr: Expr) extends ComparOps {
+    override def toString(): String = this.binOpString(">")
+  }
+  case class GTE(lExpr: Expr, rExpr: Expr) extends ComparOps {
+    override def toString(): String = this.binOpString(">=")
+  }
+  case class LT(lExpr: Expr, rExpr: Expr) extends ComparOps {
+    override def toString(): String = this.binOpString("<")
+  }
+  case class LTE(lExpr: Expr, rExpr: Expr) extends ComparOps {
+    override def toString(): String = this.binOpString("<=")
+  }
 
   sealed trait EqOps extends BinOp {
     override val expected: (List[Type], Type) = (List.empty, BoolT)
   }
-  case class Equal(lExpr: Expr, rExpr: Expr) extends EqOps
-  case class NotEqual(lExpr: Expr, rExpr: Expr) extends EqOps
+  case class Equal(lExpr: Expr, rExpr: Expr) extends EqOps {
+    override def toString(): String = this.binOpString("==")
+  }
+  case class NotEqual(lExpr: Expr, rExpr: Expr) extends EqOps {
+    override def toString(): String = this.binOpString("!=")
+  }
 
   sealed trait LogicalOps extends BinOp {
     override val expected: (List[Type], Type) = (List(BoolT), BoolT)
   }
-  case class And(lExpr: Expr, rExpr: Expr) extends LogicalOps
-  case class Or(lExpr: Expr, rExpr: Expr) extends LogicalOps
+  case class And(lExpr: Expr, rExpr: Expr) extends LogicalOps {
+    override def toString(): String = this.binOpString("&&")
+  }
+  case class Or(lExpr: Expr, rExpr: Expr) extends LogicalOps {
+    override def toString(): String = this.binOpString("||")
+  }
 
   sealed case class Ident(s: String)
       extends AssignLHS
       with AssignRHS
       with Expr {
+
     override def getType(sTable: SymbolTable): Type = {
       if (!sTable.contains(this)) {
         //println("Variable " + s + " undeclared/ not in scope")
