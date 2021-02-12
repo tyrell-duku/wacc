@@ -2,6 +2,10 @@ import org.scalatest.funsuite.AnyFunSuite
 import Parser._
 import Rules._
 import parsley.combinator.eof
+import LiterParser._
+import StatParser._
+import ExprParser._
+import Lexer._
 
 class IntLiterTest extends AnyFunSuite {
   test("Successfully parses digit without sign") {

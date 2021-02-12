@@ -1,7 +1,8 @@
 import org.scalatest.funsuite.AnyFunSuite
 import Parser._
-import Rules._
+import ExprParser._
 
+import Rules._
 class ArgListTest extends AnyFunSuite {
   test("Successfully parses arguments") {
     assert(

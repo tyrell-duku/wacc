@@ -15,6 +15,7 @@ sealed trait SemanticError {
     case invalidReturn(e) => "Invalid return statement from main: return " + e
     case functionIllegalAssignment(id) =>
       "Illegal assignment to function " + id.s
+    case functionDeclared(id)    => "Conflicting definitions for function " + id
     case functionNotDeclared(id) => "Function " + id.s + " not declared"
     case invalidParams(id, actual, expected) =>
       "Invalid params for function " + id.s + " Expected number of params: " + expected + ". Actual: " + actual
@@ -31,6 +32,7 @@ case class arrayOutOfBounds(id: Ident) extends SemanticError
 case class elementAccessDenied(id: Ident) extends SemanticError
 case class invalidReturn(e: Expr) extends SemanticError
 case class functionIllegalAssignment(id: Ident) extends SemanticError
+case class functionDeclared(id: Ident) extends SemanticError
 case class functionNotDeclared(id: Ident) extends SemanticError
 case class invalidParams(id: Ident, actual: Int, expected: Int)
     extends SemanticError

@@ -1,6 +1,10 @@
 import org.scalatest.funsuite.AnyFunSuite
 import Parser._
 import Rules._
+import LiterParser._
+import ExprParser._
+import StatParser._
+import Lexer._
 
 class BaseTypeTest extends AnyFunSuite {
   test("Successfully parses int type") {

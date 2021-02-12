@@ -152,10 +152,19 @@ object Rules {
       if (t == null) return "T[]"
       t + "[]"
     }
+    override def equals(x: Any): Boolean = x match {
+      case ArrayT(null)  => true
+      case ArrayT(inner) => inner == t
+      case _             => false
+    }
   }
 
   sealed trait PairType extends Type
   case class Pair(x: PairElemType, y: PairElemType) extends PairType {
+    override def equals(x: Any): Boolean = x match {
+      case Pair(_, _) => true
+      case _          => false
+    }
     override def toString: String = {
       if ((x == null) && (y == null)) {
         return "Pair"
@@ -341,8 +350,7 @@ object Rules {
         semErrs ::= variableNotDeclared(this)
         return Any
       }
-      val Meta(typeOf, _) = sTable.lookupAll(this)
-      typeOf
+      sTable.lookupAll(this)
     }
   }
 
