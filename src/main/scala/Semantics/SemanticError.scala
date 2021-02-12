@@ -6,21 +6,23 @@ sealed trait SemanticError {
       "Type mismatch at " + invalid + " expected type " + expected.mkString(
         " or "
       ) + " but actual type " + actualT
-    case variableNotDeclared(id) =>
-      "Variable " + id + " not declared in current scope"
-    case variableDeclared(id) => "Conflicting definitions for variable " + id
     case arrayOutOfBounds(id) => "Array index out of bounds for array " + id
     case elementAccessDenied(id) =>
       "Element access of " + id + " is not permitted"
     case invalidReturn(e) => "Invalid return statement from main: return " + e
     case functionIllegalAssignment(id) =>
       "Illegal assignment to function " + id.s
-    case functionDeclared(id)    => "Conflicting definitions for function " + id
-    case functionNotDeclared(id) => "Function " + id.s + " not declared"
     case invalidParams(id, actual, expected) =>
       "Invalid params for function " + id.s + " Expected number of params: " + expected + ". Actual: " + actual
     case invalidPairElem(pe) =>
       "Invalid input, expected: Pair, unable to perform " + pe
+    case functionDeclared(id)    => identDeclared(id).toString()
+    case functionNotDeclared(id) => identNotDeclared("Function", id).toString
+    case variableNotDeclared(id) => identNotDeclared("Variable", id).toString()
+    case variableDeclared(id)    => identDeclared(id).toString()
+    case identNotDeclared(t, id) =>
+      t + " " + id + " not declared in current scope"
+    case identDeclared(id) => "Conflicting definitions for variable " + id
   }
 }
 
@@ -37,3 +39,5 @@ case class functionNotDeclared(id: Ident) extends SemanticError
 case class invalidParams(id: Ident, actual: Int, expected: Int)
     extends SemanticError
 case class invalidPairElem(pe: PairElem) extends SemanticError
+case class identDeclared(id: Ident) extends SemanticError
+case class identNotDeclared(t: String, id: Ident) extends SemanticError
