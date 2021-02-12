@@ -19,7 +19,7 @@ sealed trait SemanticError {
     case invalidParams(id, actual, expected) =>
       "Invalid params for function " + id.s + " Expected number of params: " + expected + ". Actual: " + actual
     case invalidPairElem(pe) =>
-      "Invalid input, expected: pair, unable to perform " + pe
+      "Invalid input, expected: Pair, unable to perform " + pe
   }
 }
 
@@ -34,4 +34,4 @@ case class functionIllegalAssignment(id: Ident) extends SemanticError
 case class functionNotDeclared(id: Ident) extends SemanticError
 case class invalidParams(id: Ident, actual: Int, expected: Int)
     extends SemanticError
-case class invalidPairElem(e: Expr) extends SemanticError
+case class invalidPairElem(pe: PairElem) extends SemanticError
