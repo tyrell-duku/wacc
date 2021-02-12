@@ -1,3 +1,9 @@
+import Rules.IntT
+import Rules.BoolT
+import Rules.CharT
+import Rules.StringT
+import Rules.ArrayT
+import Rules.Pair
 object Rules {
 
   sealed case class Program(fs: List[Func], s: Stat)
@@ -32,77 +38,100 @@ object Rules {
 
   sealed trait AssignRHS {
     def getType(sTable: SymbolTable): Type
-    var semErrs : List[SemanticError] = List.empty[SemanticError]
+    var semErrs: List[SemanticError] = List.empty[SemanticError]
   }
-  // TODO: Newpair, Call, fst, snd correct types?
+
   case class Newpair(fst: Expr, snd: Expr) extends AssignRHS {
     override def getType(sTable: SymbolTable): Type = {
-      // val fstType = fst.getType(sTable)
-      // val secType = snd.getType(sTable)
-      // if (fstType.isErr) {
-      //   if (sndType.isErr) {}
-      // }
-      Pair(PairElemT(fst.getType(sTable)), PairElemT(snd.getType(sTable)))
+      val fstType = fst.getType(sTable)
+      val sndType = snd.getType(sTable)
+      semErrs = fst.semErrs ::: snd.semErrs
+      var fstPairElem: PairElemType = PairElemPair
+      if (!fstType.isPair) {
+        fstPairElem = PairElemT(fstType)
+      }
+      var sndPairElem: PairElemType = PairElemPair
+      if (!sndType.isPair) {
+        sndPairElem = PairElemT(sndType)
+      }
+
+      Pair(fstPairElem, sndPairElem)
     }
   }
-  // check correct param list?
+
   case class Call(id: Ident, args: Option[ArgList] = None) extends AssignRHS {
     override def getType(sTable: SymbolTable): Type = {
       val idType = id.getType(sTable)
       semErrs :::= sTable.funcParamMatch(id, args)
       idType
     }
+    override def toString: String =
+      id + "(" + args.getOrElse(ArgList(List())) + ")"
   }
 
-  sealed case class ArgList(args: List[Expr])
+  sealed case class ArgList(args: List[Expr]) {
+    override def toString(): String = {
+      args.mkString(", ")
+    }
+  }
 
-  // TODO: type for fst and snd
-  // PairElemT(CharT) | PairElemT
   sealed trait PairElem extends AssignLHS with AssignRHS {
     val e: Expr
   }
   case class Fst(e: Expr) extends PairElem {
     override def toString: String = "fst " + e
 
-    override def getType(sTable: SymbolTable): Type = e match {
-      case Ident(_) =>
-        val eType = e.getType(sTable)
-        eType match {
-          case Pair(fst, _) => fst.getType
-          case _            =>
-            semErrs ::= invalidPairElem(e)
-            Any
-        }
-      case _ => semErrs ::= invalidPairElem(e)
-        Any
+    override def getType(sTable: SymbolTable): Type = {
+      e match {
+        case Ident(_) =>
+          val eType = e.getType(sTable)
+          eType match {
+            case Pair(fst, snd) => return fst.getType
+            case _              =>
+          }
+        case _ =>
+      }
+      semErrs ::= invalidPairElem(this)
+      Any
     }
   }
 
   case class Snd(e: Expr) extends PairElem {
     override def toString: String = "snd " + e
 
-    override def getType(sTable: SymbolTable): Type = e match {
-      case Ident(_) =>
-        val eType = e.getType(sTable)
-        eType match {
-          case Pair(_, snd) => snd.getType
-          case _            =>
-            semErrs ::= invalidPairElem(e)
-            Any
-        }
-      case _ => semErrs ::= invalidPairElem(e)
-        Any
+    override def getType(sTable: SymbolTable): Type = {
+      e match {
+        case Ident(_) =>
+          val eType = e.getType(sTable)
+          eType match {
+            case Pair(_, snd) => return snd.getType
+            case _            =>
+          }
+        case _ =>
+      }
+      semErrs ::= invalidPairElem(this)
+      Any
     }
   }
 
   sealed trait Type {
     def isArray: Boolean = this match {
       case ArrayT(_) => true
-      case _ => false
+      case _         => false
+    }
+    def isPair: Boolean = this match {
+      case Pair(_, _) => true
+      case _          => false
     }
   }
 
-  case object Any extends Type
+  case object Any extends Type {
+    override def equals(x: Any): Boolean =
+      x match {
+        case t: Type => true
+        case _       => false
+      }
+  }
 
   sealed trait BaseType extends Type
   case object IntT extends BaseType {
@@ -167,7 +196,7 @@ object Rules {
     override def getType(sTable: SymbolTable): Type = {
       val actual = e.getType(sTable)
       semErrs = e.semErrs
-      if (actual != expected._1){
+      if (actual != expected._1) {
         semErrs ::= typeMismatch(e, actual, List(expected._1))
       }
       expected._2
@@ -218,6 +247,9 @@ object Rules {
       val actualL = lExpr.getType(sTable)
       val actualR = rExpr.getType(sTable)
       semErrs = lExpr.semErrs ::: rExpr.semErrs
+      if (actualL == Any || actualR == Any) {
+        return expected._2
+      }
       if (actualL == actualR) {
         if (expected._1.contains(actualL) && expected._1.contains(actualR))
           return expected._2
@@ -302,7 +334,7 @@ object Rules {
       with AssignRHS
       with Expr {
 
-    override def toString: String  =  s
+    override def toString: String = s
 
     override def getType(sTable: SymbolTable): Type = {
       if (!sTable.contains(this)) {
@@ -314,10 +346,10 @@ object Rules {
     }
   }
 
-  // TODO: Check only ints in list y?, length of array (runtime error)
   sealed case class ArrayElem(id: Ident, exprs: List[Expr])
       extends AssignLHS
       with Expr {
+
     override def getType(sTable: SymbolTable): Type = {
       val actual = id.getType(sTable)
       semErrs = id.semErrs
@@ -371,16 +403,13 @@ object Rules {
       if (arrLitTypes.forall(_ == arrLitTypes.head)) {
         return ArrayT(arrLitTypes.head)
       }
-      //to do
-      // Err
       ArrayT(null)
     }
   }
 
-  // TODO: pair liter check?
   sealed case class PairLiter() extends Expr {
+    override def toString: String = "null"
     override def getType(sTable: SymbolTable): Type =
       Pair(null, null)
   }
-
 }
