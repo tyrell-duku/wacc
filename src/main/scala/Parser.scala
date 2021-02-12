@@ -1,23 +1,21 @@
 import parsley.Parsley
 import parsley.Parsley._
-import parsley.character.{char, digit, letter, noneOf, oneOf, upper, whitespace}
-import parsley.combinator.{between, many, manyN, option, sepBy1}
+import parsley.character.{char, digit, isWhitespace, letter, noneOf, oneOf, upper}
+import parsley.combinator.{between, eof, many, manyN, option, sepBy1}
 import parsley.implicits.charLift
 import parsley.lift.{lift2, lift3, lift4}
 import Rules._
 import parsley.expr.{InfixL, Ops, Postfix, Prefix, precedence}
-import parsley.token.{LanguageDef, Lexer}
+import parsley.token.{LanguageDef, Lexer, Predicate}
 
 object Parser {
   val lexer = new Lexer(
     LanguageDef.plain.copy(
       commentLine = "#",
-      commentStart = "*/",
-      commentEnd = "/*",
       identStart = parsley.token.Parser(char('_') <|> letter <|> upper),
       identLetter =
         parsley.token.Parser(char('_') <|> letter <|> upper <|> digit),
-      space = parsley.token.Parser(whitespace.hide)
+      space = Predicate(isWhitespace)
     )
   )
 
@@ -222,4 +220,6 @@ object Parser {
       "end",
       lift2(Program, many(attempt(func)), stat)
     ) ? "begin <func>* <stat> end"
+
+  val waccParser: Parsley[Program] = lexer.whiteSpace *> program <* eof
 }
