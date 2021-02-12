@@ -19,6 +19,7 @@ object Rules {
 
   sealed case class Param(t: Type, id: Ident)
 
+  // Trait for all possible variations of a statement
   sealed trait Stat
   case object Skip extends Stat
   case class EqIdent(t: Type, id: Ident, aRHS: AssignRHS) extends Stat
@@ -36,8 +37,11 @@ object Rules {
 
   sealed trait AssignLHS
 
+  // Trait for all possible variations of a RHS Assignment
   sealed trait AssignRHS {
+    // Abstract function to get type of the RHS
     def getType(sTable: SymbolTable): Type
+    // Field to store it's semantic errors
     var semErrs: List[SemanticError] = List.empty[SemanticError]
   }
 
@@ -78,6 +82,7 @@ object Rules {
   sealed trait PairElem extends AssignLHS with AssignRHS {
     val e: Expr
   }
+
   case class Fst(e: Expr) extends PairElem {
     override def toString: String = "fst " + e
 
@@ -86,8 +91,8 @@ object Rules {
         case Ident(_) =>
           val eType = e.getType(sTable)
           eType match {
-            case Pair(fst, snd) => return fst.getType
-            case _              =>
+            case Pair(fst, _) => return fst.getType
+            case _            =>
           }
         case _ =>
       }
@@ -133,6 +138,7 @@ object Rules {
       }
   }
 
+  // All possible Base Types
   sealed trait BaseType extends Type
   case object IntT extends BaseType {
     override def toString: String = "Int"
@@ -173,6 +179,7 @@ object Rules {
     }
   }
 
+  // Trait for all possible variations of a Pair Elem
   sealed trait PairElemType {
     def getType: Type
   }
@@ -187,6 +194,7 @@ object Rules {
     override def getType: Type = t
   }
 
+  // Trait for all possible variations of an expression
   sealed trait Expr extends AssignRHS
   case class Parens(e: Expr) extends Expr {
     override def toString: String = "(" + e + ")"
@@ -197,6 +205,7 @@ object Rules {
     }
   }
 
+  // Trait for all possible variations of an unary operation
   sealed trait UnOp extends Expr {
     val e: Expr
     val expected: (Type, Type)
@@ -244,6 +253,7 @@ object Rules {
     val unOperatorStr = "chr "
   }
 
+  // Trait for all possible variations of an binary operation
   sealed trait BinOp extends Expr {
     val lExpr: Expr
     val rExpr: Expr
@@ -260,9 +270,10 @@ object Rules {
         return expected._2
       }
       if (actualL == actualR) {
-        if (expected._1.contains(actualL) && expected._1.contains(actualR))
-          return expected._2
-        if (expected._1.isEmpty) {
+        if (
+          (expected._1.contains(actualL) && expected._1.contains(actualR))
+          || (expected._1.isEmpty)
+        ) {
           return expected._2
         }
       } else {
@@ -279,10 +290,10 @@ object Rules {
       semErrs ::= typeMismatch(lExpr, actualL, expected._1)
       semErrs ::= typeMismatch(rExpr, actualR, expected._1)
       expected._2
-
     }
   }
 
+  // Traits for all possible types of an binary operation
   sealed trait ArithOps extends BinOp {
     override val expected: (List[Type], Type) = (List(IntT), IntT)
   }
@@ -301,7 +312,7 @@ object Rules {
   case class Sub(lExpr: Expr, rExpr: Expr) extends ArithOps {
     val operatorStr = "-"
   }
-
+  // Traits for comparison operators
   sealed trait ComparOps extends BinOp {
     override val expected: (List[Type], Type) = (List(CharT, IntT), BoolT)
   }
@@ -360,12 +371,11 @@ object Rules {
 
     override def getType(sTable: SymbolTable): Type = {
       val actual = id.getType(sTable)
-      semErrs = id.semErrs
       if (actual.isArray) {
         val ArrayT(innerT) = actual
         return innerT
       }
-      semErrs ::= typeMismatch(id, actual, List(ArrayT(actual)))
+      id.semErrs ::= typeMismatch(id, actual, List(ArrayT(actual)))
       actual
     }
   }
@@ -375,6 +385,7 @@ object Rules {
     override def getType(sTable: SymbolTable): Type = IntT
   }
 
+  // Trait for an sign checking for interger representation
   sealed trait IntSign
   case object Pos extends IntSign
   case object Neg extends IntSign
@@ -389,6 +400,7 @@ object Rules {
     override def getType(sTable: SymbolTable): Type = CharT
   }
 
+  // Trait for different types of characters
   sealed trait Character
   case class NormalChar(c: Char) extends Character {
     override def toString: String = c.toString
