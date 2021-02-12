@@ -96,11 +96,6 @@ object Rules {
   }
 
   sealed trait Type {
-    def isErr: Boolean = this match {
-      case Err(_) => true
-      case _      => false
-    }
-
     def isArray: Boolean = this match {
       case ArrayT(_) => true
       case _ => false
@@ -108,8 +103,6 @@ object Rules {
   }
 
   case object Any extends Type
-
-  case class Err(semErrs: List[SemanticError]) extends Type
 
   sealed trait BaseType extends Type
   case object IntT extends BaseType {

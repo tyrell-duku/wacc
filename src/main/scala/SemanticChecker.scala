@@ -88,9 +88,6 @@ class SemanticChecker {
       }
       lhsType match {
         case ArrayT(_) =>
-        case Err(e) =>
-          semErrs ++= e
-          return
         case _ =>
           semErrs ::= elementAccessDenied(id)
           return
@@ -100,7 +97,7 @@ class SemanticChecker {
       if (rhs.semErrs.nonEmpty) {
         semErrs :::= rhs.semErrs
       }
-      if ((rT != t) && !rT.isErr) {
+      if (rT != t) {
         semErrs ::= typeMismatch(rhs, rT, List(t))
       }
   }
@@ -122,8 +119,8 @@ class SemanticChecker {
     if (rhs.semErrs.nonEmpty) {
       semErrs :::= rhs.semErrs
     }
-
-    if ((lhsType != rhsType) && !rhsType.isErr) {
+    // && !rhsType.isErr
+    if (lhsType != rhsType) {
       semErrs ::= typeMismatch(rhs, rhsType, List(lhsType))
     }
   }
@@ -138,7 +135,8 @@ class SemanticChecker {
       val rhsType = rhs.getType(sTable)
       typeInFst match {
         case Pair(PairElemT(t), _) =>
-          if ((t != rhsType) && !rhsType.isErr)
+          //&& !rhsType.isErr
+          if (t != rhsType)
             semErrs ::= typeMismatch(rhs, rhsType, List(t))
         case Pair(PairElemPair, _) =>
           rhsType match {
@@ -153,7 +151,8 @@ class SemanticChecker {
       val rhsType = rhs.getType(sTable)
       typeInSnd match {
         case Pair(PairElemT(t), _) =>
-          if ((t != rhsType) && !rhsType.isErr)
+          //&& !rhsType.isErr
+          if (t != rhsType)
             semErrs ::= typeMismatch(rhs, rhsType, List(t))
         case Pair(PairElemPair, _) =>
           rhsType match {
@@ -175,31 +174,31 @@ class SemanticChecker {
       lhs match {
         case elem: Ident =>
           val t = elem.getType(sTable)
+          if (elem.semErrs.nonEmpty) {
+            semErrs :::= elem.semErrs
+          }
           t match {
             case CharT | IntT =>
-            case Err(e) =>
-              semErrs ++= e
-              semErrs ::= typeMismatch(elem, t, List(CharT, IntT))
             case _ =>
               semErrs ::= typeMismatch(elem, t, List(CharT, IntT))
           }
         case elem: ArrayElem =>
           val t = elem.getType(sTable)
+          if (elem.semErrs.nonEmpty) {
+            semErrs :::= elem.semErrs
+          }
           t match {
             case CharT | IntT =>
-            case Err(e) =>
-              semErrs ++= e
-              semErrs ::= typeMismatch(elem, t, List(CharT, IntT))
             case _ =>
               semErrs ::= typeMismatch(elem, t, List(CharT, IntT))
           }
         case elem: PairElem =>
           val t = elem.getType(sTable)
+          if (elem.semErrs.nonEmpty) {
+            semErrs :::= elem.semErrs
+          }
           t match {
             case CharT | IntT =>
-            case Err(e) =>
-              semErrs ++= e
-              semErrs ::= typeMismatch(elem, t, List(CharT, IntT))
             case _ =>
               semErrs ::= typeMismatch(elem, t, List(CharT, IntT))
           }
