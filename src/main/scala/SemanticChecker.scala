@@ -168,22 +168,22 @@ class SemanticChecker {
         case elem: ArrayElem =>
           val t = elem.getType(sTable)
           if (elem.semErrs.nonEmpty) {
-            semErrs :::= elem.semErrs
+            semErrors :::= elem.semErrs
           }
           t match {
             case CharT | IntT =>
             case _ =>
-              semErrs ::= typeMismatch(elem, t, List(CharT, IntT))
+              semErrors ::= typeMismatch(elem, t, List(CharT, IntT))
           }
         case elem: PairElem =>
           val t = elem.getType(sTable)
           if (elem.semErrs.nonEmpty) {
-            semErrs :::= elem.semErrs
+            semErrors :::= elem.semErrs
           }
           t match {
             case CharT | IntT =>
             case _ =>
-              semErrs ::= typeMismatch(elem, t, List(CharT, IntT))
+              semErrors ::= typeMismatch(elem, t, List(CharT, IntT))
           }
       }
     case Free(e) =>
@@ -191,7 +191,7 @@ class SemanticChecker {
       eType match {
         case Pair(_, _) | ArrayT(_) =>
         case _ =>
-          semErrs ::= typeMismatch(
+          semErrors ::= typeMismatch(
             e,
             eType,
             List(Pair(null, null), ArrayT(null))
@@ -200,44 +200,44 @@ class SemanticChecker {
     case Return(e) =>
       val returnType = sTable.getFuncRetType
       if (returnType == null) {
-        semErrs ::= invalidReturn(e)
+        semErrors ::= invalidReturn(e)
         return
       }
       val t = e.getType(sTable)
       if (e.semErrs.nonEmpty) {
-        semErrs :::= e.semErrs
+        semErrors :::= e.semErrs
         return
       }
       if (t != returnType) {
-        semErrs ::= typeMismatch(e, t, List(returnType))
+        semErrors ::= typeMismatch(e, t, List(returnType))
       }
 
     case Exit(e) =>
       val t = e.getType(sTable)
       if (e.semErrs.nonEmpty) {
-        semErrs :::= e.semErrs
+        semErrors :::= e.semErrs
         return
       }
       if (t != IntT) {
-        semErrs ::= typeMismatch(e, t, List(IntT))
+        semErrors ::= typeMismatch(e, t, List(IntT))
       }
     case Print(e) =>
       e.getType(sTable)
       if (e.semErrs.nonEmpty) {
-        semErrs :::= e.semErrs
+        semErrors :::= e.semErrs
       }
     case PrintLn(e) =>
       e.getType(sTable)
       if (e.semErrs.nonEmpty) {
-        semErrs :::= e.semErrs
+        semErrors :::= e.semErrs
       }
     case If(cond, s1, s2) =>
       val condType = cond.getType(sTable)
       if (cond.semErrs.nonEmpty) {
-        semErrs :::= cond.semErrs
+        semErrors :::= cond.semErrs
       } else {
         if (condType != BoolT) {
-          semErrs ::= typeMismatch(cond, condType, List(BoolT))
+          semErrors ::= typeMismatch(cond, condType, List(BoolT))
         }
       }
       val ifScope = SymbolTable(sTable, sTable.funcId)
@@ -247,10 +247,10 @@ class SemanticChecker {
     case While(cond, s) =>
       val condType = cond.getType(sTable)
       if (cond.semErrs.nonEmpty) {
-        semErrs :::= cond.semErrs
+        semErrors :::= cond.semErrs
       } else {
         if (condType != BoolT) {
-          semErrs ::= typeMismatch(cond, condType, List(BoolT))
+          semErrors ::= typeMismatch(cond, condType, List(BoolT))
         }
       }
       val whileScope = SymbolTable(sTable, sTable.funcId)
