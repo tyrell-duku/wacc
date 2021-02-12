@@ -14,11 +14,6 @@ class SemanticChecker {
     (i, Meta(t, Some(res)))
   }
 
-  implicit def addToErrors(t: Type) = t match {
-    case Err(e) => semErrs ++= e
-    case _      =>
-  }
-
   def progAnalysis(p: Program): List[SemanticError] = {
     val Program(funcs, s) = p
     val globalTable = SymbolTable(null, null)
@@ -61,10 +56,14 @@ class SemanticChecker {
       return
     }
     val rhsType = rhs.getType(sTable)
+    if (rhs.semErrs.nonEmpty) {
+      semErrs :::= rhs.semErrs
+      return
+    }
     rhs match {
       case Call(id: Ident, args: Option[ArgList]) =>
         val paramCheck = sTable.funcParamMatch(id, args)
-        semErrs ++= paramCheck
+        semErrs :::= paramCheck
       case _ =>
     }
     sTable.add(id, lhsType)
@@ -84,6 +83,9 @@ class SemanticChecker {
       eqAssignIdent(i, rhs, sTable)
     case ArrayElem(id, _) =>
       val lhsType = id.getType(sTable)
+      if (id.semErrs.nonEmpty) {
+        semErrs :::= id.semErrs
+      }
       lhsType match {
         case ArrayT(_) =>
         case Err(e) =>
@@ -95,6 +97,9 @@ class SemanticChecker {
       }
       val ArrayT(t) = lhsType
       val rT = rhs.getType(sTable)
+      if (rhs.semErrs.nonEmpty) {
+        semErrs :::= rhs.semErrs
+      }
       if ((rT != t) && !rT.isErr) {
         semErrs ::= typeMismatch(rhs, rT, List(t))
       }
@@ -110,12 +115,12 @@ class SemanticChecker {
       return
     }
     val lhsType = id.getType(sTable)
+    if (id.semErrs.nonEmpty) {
+      semErrs :::= id.semErrs
+    }
     val rhsType = rhs.getType(sTable)
-
-    if (rhsType.isErr) {
-      val err = rhsType.asInstanceOf[Err]
-      semErrs ++= err.semErrs
-      return
+    if (rhs.semErrs.nonEmpty) {
+      semErrs :::= rhs.semErrs
     }
 
     if ((lhsType != rhsType) && !rhsType.isErr) {
@@ -211,52 +216,43 @@ class SemanticChecker {
           )
       }
     case Return(e) =>
-      val ft = sTable.getFuncRetType
-      ft match {
-        case Err(_) =>
-          // return declared in main
-          semErrs ::= invalidReturn(e)
-        case _ =>
-          val t = e.getType(sTable)
-          if (t.isErr) {
-            val err = t.asInstanceOf[Err]
-            semErrs ++= err.semErrs
-            return
-          }
-          if (t != ft) {
-            semErrs ::= typeMismatch(e, t, List(ft))
-          }
+      val returnType = sTable.getFuncRetType
+      if (returnType == null) {
+        semErrs ::= invalidReturn(e)
+        return
+      }
+      val t = e.getType(sTable)
+      if (e.semErrs.nonEmpty) {
+        semErrs :::= e.semErrs
+        return
+      }
+      if (t != returnType) {
+        semErrs ::= typeMismatch(e, t, List(returnType))
       }
 
     case Exit(e) =>
       val t = e.getType(sTable)
-      if (t.isErr) {
-        val err = t.asInstanceOf[Err]
-        semErrs ++= err.semErrs
+      if (e.semErrs.nonEmpty) {
+        semErrs :::= e.semErrs
         return
       }
       if (t != IntT) {
         semErrs ::= typeMismatch(e, t, List(IntT))
       }
     case Print(e) =>
-      val t = e.getType(sTable)
-      if (t.isErr) {
-        val err = t.asInstanceOf[Err]
-        semErrs ++= err.semErrs
-        return
+      e.getType(sTable)
+      if (e.semErrs.nonEmpty) {
+        semErrs :::= e.semErrs
       }
     case PrintLn(e) =>
-      val t = e.getType(sTable)
-      if (t.isErr) {
-        val err = t.asInstanceOf[Err]
-        semErrs ++= err.semErrs
-        return
+      e.getType(sTable)
+      if (e.semErrs.nonEmpty) {
+        semErrs :::= e.semErrs
       }
     case If(cond, s1, s2) =>
       val condType = cond.getType(sTable)
-      if (condType.isErr) {
-        val err = condType.asInstanceOf[Err]
-        semErrs ++= err.semErrs
+      if (cond.semErrs.nonEmpty) {
+        semErrs :::= cond.semErrs
       } else {
         if (condType != BoolT) {
           semErrs ::= typeMismatch(cond, condType, List(BoolT))
@@ -268,9 +264,8 @@ class SemanticChecker {
       statAnalysis(s2, elseScope)
     case While(cond, s) =>
       val condType = cond.getType(sTable)
-      if (condType.isErr) {
-        val err = condType.asInstanceOf[Err]
-        semErrs ++= err.semErrs
+      if (cond.semErrs.nonEmpty) {
+        semErrs :::= cond.semErrs
       } else {
         if (condType != BoolT) {
           semErrs ::= typeMismatch(cond, condType, List(BoolT))
@@ -283,5 +278,9 @@ class SemanticChecker {
       statAnalysis(s, beginScope)
     case Seq(x) => x.foreach(s => statAnalysis(s, sTable))
     case _      => // ignore Skip
+  }
+
+  def getAllSemErrors(): Unit ={
+
   }
 }
