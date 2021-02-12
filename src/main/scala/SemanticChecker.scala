@@ -4,7 +4,7 @@ import java.io.File
 import Parser._
 import parsley.Parsley
 
-object SemanticChecker {
+class SemanticChecker {
   private var semErrs: List[SemanticError] = List()
 
   private def convertToTable(f: Func): (Ident, Meta) = {
@@ -12,6 +12,11 @@ object SemanticChecker {
     val ParamList(fromOption) = ps.getOrElse(ParamList(List()))
     val res = fromOption.map((p: Param) => p.t)
     (i, Meta(t, Some(res)))
+  }
+
+  implicit def addToErrors(t: Type) = t match {
+    case Err(e) => semErrs ++= e
+    case _      =>
   }
 
   def progAnalysis(p: Program): List[SemanticError] = {
@@ -51,7 +56,7 @@ object SemanticChecker {
       rhs: AssignRHS,
       sTable: SymbolTable
   ): Unit = {
-    if (sTable.containScope(id)) {
+    if (sTable.contains(id)) {
       semErrs ::= variableDeclared(id)
       return
     }
@@ -73,11 +78,18 @@ object SemanticChecker {
       eqAssignIdent(i, rhs, sTable)
     case ArrayElem(id, _) =>
       val lhsType = id.getType(sTable)
-      if (lhsType == StringT) {
-        semErrs ::= elementAccessDenied(id)
-        return
+      lhsType match {
+        case ArrayT(_) =>
+        case Err(e)    => semErrs ++= e
+        case _ =>
+          semErrs ::= elementAccessDenied(id)
+          return
       }
-      eqAssignIdent(id, rhs, sTable)
+      val ArrayT(t) = lhsType
+      val rT = rhs.getType(sTable)
+      if (rT != t) {
+        semErrs ::= typeMismatch(rhs, rT, List(t))
+      }
   }
 
   def eqAssignIdent(id: Ident, rhs: AssignRHS, sTable: SymbolTable): Unit = {
@@ -107,7 +119,7 @@ object SemanticChecker {
       val rhsType = rhs.getType(sTable)
       typeInFst match {
         case Pair(PairElemT(t), _) =>
-          if (t != rhsType)
+          if (t != rhsType && rhsType != Err)
             semErrs ::= typeMismatch(rhs, rhsType, List(t))
         case Pair(PairElemPair, _) =>
           rhsType match {
@@ -122,7 +134,7 @@ object SemanticChecker {
       val rhsType = rhs.getType(sTable)
       typeInSnd match {
         case Pair(PairElemT(t), _) =>
-          if (t != rhsType)
+          if (t != rhsType && rhsType != Err)
             semErrs ::= typeMismatch(rhs, rhsType, List(t))
         case Pair(PairElemPair, _) =>
           rhsType match {
@@ -145,21 +157,14 @@ object SemanticChecker {
         case Ident(v) =>
           val lhsType = Ident(v).getType(sTable)
           lhsType match {
-            case Pair(_, _) | ArrayT(_) =>
+            case CharT | IntT =>
             case _ =>
-              semErrs ::= typeMismatch(
-                Ident(v),
-                lhsType,
-                List(Pair(null, null), ArrayT(null))
-              )
-
+              semErrs ::= typeMismatch(Ident(v), lhsType, List(CharT, IntT))
           }
         case _ =>
-        //   semErrs ::= typeMismatch(
-        //     lhs,
-        //     lhs.getType(sTable),
-        //     List(Pair(null, null), ArrayT(null))
-        //   )
+          // TODO : CORRECT ACTUALTYPE
+          // semErrs ::= typeMismatch(lhs,  ,List(CharT, IntT))
+          println("Read statement expecting Char or Int actual type: " + lhs)
       }
     case Free(e) =>
       val eType = e.getType(sTable)
@@ -173,7 +178,6 @@ object SemanticChecker {
           )
       }
     case Return(e) =>
-      val t = e.getType(sTable)
       val ft = sTable.getFuncRetType
 
       // return declared in main
@@ -182,6 +186,7 @@ object SemanticChecker {
         return
       }
 
+      val t = e.getType(sTable)
       if (t != ft) {
         semErrs ::= typeMismatch(e, t, List(ft))
       }
@@ -191,8 +196,8 @@ object SemanticChecker {
       if (t != IntT) {
         semErrs ::= typeMismatch(e, t, List(IntT))
       }
-    case Print(e)   => // skip
-    case PrintLn(e) => // skip
+    case Print(e)   => val t = e.getType(sTable)
+    case PrintLn(e) => val t = e.getType(sTable)
     case If(cond, s1, s2) =>
       val condType = cond.getType(sTable)
       if (condType != BoolT) {
@@ -212,7 +217,7 @@ object SemanticChecker {
     case Begin(s) =>
       val beginScope = SymbolTable(sTable, sTable.funcId)
       statAnalysis(s, beginScope)
-    case Seq(x) => x.map(s => statAnalysis(s, sTable))
+    case Seq(x) => x.foreach(s => statAnalysis(s, sTable))
     case _      => // ignore Skip
   }
 }
