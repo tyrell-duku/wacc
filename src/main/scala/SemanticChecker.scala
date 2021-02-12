@@ -1,46 +1,36 @@
 import Rules._
-import parsley.combinator.eof
-import java.io.File
-import Parser._
-import parsley.Parsley
 
 class SemanticChecker {
-  private var semErrs: List[SemanticError] = List()
+  private var semErrors: List[SemanticError] = List.empty[SemanticError]
 
-  private def convertToTable(f: Func): (Ident, Meta) = {
-    val Func(t, i, ps, _) = f
-    val ParamList(fromOption) = ps.getOrElse(ParamList(List()))
-    val res = fromOption.map((p: Param) => p.t)
-    (i, Meta(t, Some(res)))
+  private def funcToSTable(f: Func): (Ident, Meta) = {
+    val Func(typeOf, id, params, _) = f
+    val ParamList(pList) = params.getOrElse(ParamList(List()))
+    val paramTypes = pList.map(_.t)
+    (id, Meta(typeOf, Some(paramTypes)))
   }
 
   def progAnalysis(p: Program): List[SemanticError] = {
-    val Program(funcs, s) = p
+    val Program(funcs, stat) = p
     val globalTable = SymbolTable(null, null)
-    val globalFuncs = funcs.map(convertToTable)
+    val globalFuncs = funcs.map(funcToSTable)
     globalTable.addAll(globalFuncs)
 
     for (f <- funcs) {
       funcAnalysis(f, SymbolTable(globalTable, f.id))
     }
 
-    statAnalysis(s, globalTable)
+    statAnalysis(stat, globalTable)
 
-    semErrs.reverse
-  }
-
-  def getParam(p: Param): (Ident, Type) = {
-    val Param(t, i) = p
-    (i, t)
+    semErrors.reverse
   }
 
   def funcAnalysis(f: Func, sTable: SymbolTable): Unit = {
-    val Func(_, _, ps, s) = f
-    if (ps.isDefined) {
-      val Some(ParamList(pList)) = ps
-      val toMeta =
-        pList.map(getParam).map((x: (Ident, Type)) => (x._1, Meta(x._2, None)))
-      sTable.addAll(toMeta)
+    val Func(_, _, params, s) = f
+    if (params.isDefined) {
+      val Some(ParamList(pList)) = params
+      val sTableData = pList.map((p: Param) => (p.id, Meta(p.t, None)))
+      sTable.addAll(sTableData)
     }
     statAnalysis(s, sTable)
   }
@@ -52,23 +42,16 @@ class SemanticChecker {
       sTable: SymbolTable
   ): Unit = {
     if (sTable.contains(id)) {
-      semErrs ::= variableDeclared(id)
+      semErrors ::= variableDeclared(id)
       return
     }
     val rhsType = rhs.getType(sTable)
     if (rhs.semErrs.nonEmpty) {
-      semErrs :::= rhs.semErrs
-      return
-    }
-    rhs match {
-      case Call(id: Ident, args: Option[ArgList]) =>
-        val paramCheck = sTable.funcParamMatch(id, args)
-        semErrs :::= paramCheck
-      case _ =>
+      semErrors :::= rhs.semErrs
     }
     sTable.add(id, lhsType)
     if (lhsType != rhsType) {
-      semErrs ::= typeMismatch(rhs, rhsType, List(lhsType))
+      semErrors ::= typeMismatch(rhs, rhsType, List(lhsType))
     }
   }
 
@@ -84,44 +67,44 @@ class SemanticChecker {
     case ArrayElem(id, _) =>
       val lhsType = id.getType(sTable)
       if (id.semErrs.nonEmpty) {
-        semErrs :::= id.semErrs
+        semErrors :::= id.semErrs
       }
       lhsType match {
         case ArrayT(_) =>
         case _ =>
-          semErrs ::= elementAccessDenied(id)
+          semErrors ::= elementAccessDenied(id)
           return
       }
       val ArrayT(t) = lhsType
       val rT = rhs.getType(sTable)
       if (rhs.semErrs.nonEmpty) {
-        semErrs :::= rhs.semErrs
+        semErrors :::= rhs.semErrs
       }
       if (rT != t) {
-        semErrs ::= typeMismatch(rhs, rT, List(t))
+        semErrors ::= typeMismatch(rhs, rT, List(t))
       }
   }
 
   def eqAssignIdent(id: Ident, rhs: AssignRHS, sTable: SymbolTable): Unit = {
     if (!sTable.contains(id)) {
-      semErrs ::= variableNotDeclared(id)
+      semErrors ::= variableNotDeclared(id)
       return
     }
     if (sTable.isFunc(id)) {
-      semErrs ::= functionIllegalAssignment(id)
+      semErrors ::= functionIllegalAssignment(id)
       return
     }
     val lhsType = id.getType(sTable)
     if (id.semErrs.nonEmpty) {
-      semErrs :::= id.semErrs
+      semErrors :::= id.semErrs
     }
     val rhsType = rhs.getType(sTable)
     if (rhs.semErrs.nonEmpty) {
-      semErrs :::= rhs.semErrs
+      semErrors :::= rhs.semErrs
     }
     // && !rhsType.isErr
     if (lhsType != rhsType) {
-      semErrs ::= typeMismatch(rhs, rhsType, List(lhsType))
+      semErrors ::= typeMismatch(rhs, rhsType, List(lhsType))
     }
   }
 
@@ -137,14 +120,14 @@ class SemanticChecker {
         case Pair(PairElemT(t), _) =>
           //&& !rhsType.isErr
           if (t != rhsType)
-            semErrs ::= typeMismatch(rhs, rhsType, List(t))
+            semErrors ::= typeMismatch(rhs, rhsType, List(t))
         case Pair(PairElemPair, _) =>
           rhsType match {
             case Pair(_, _) =>
             case _ =>
-              semErrs ::= typeMismatch(rhs, rhsType, List(Pair(null, null)))
+              semErrors ::= typeMismatch(rhs, rhsType, List(Pair(null, null)))
           }
-        case _ => semErrs ::= typeMismatch(rhs, rhsType, List(Pair(null, null)))
+        case _ => semErrors ::= typeMismatch(rhs, rhsType, List(Pair(null, null)))
       }
     case Snd(Ident(s)) =>
       val typeInSnd = Ident(s).getType(sTable)
@@ -153,18 +136,18 @@ class SemanticChecker {
         case Pair(PairElemT(t), _) =>
           //&& !rhsType.isErr
           if (t != rhsType)
-            semErrs ::= typeMismatch(rhs, rhsType, List(t))
+            semErrors ::= typeMismatch(rhs, rhsType, List(t))
         case Pair(PairElemPair, _) =>
           rhsType match {
             case Pair(_, _) =>
             case _ =>
-              semErrs ::= typeMismatch(rhs, rhsType, List(Pair(null, null)))
+              semErrors ::= typeMismatch(rhs, rhsType, List(Pair(null, null)))
           }
         case _ =>
-          semErrs ::= typeMismatch(rhs, typeInSnd, List(Pair(null, null)))
+          semErrors ::= typeMismatch(rhs, typeInSnd, List(Pair(null, null)))
       }
     case _ =>
-      semErrs ::= typeMismatch(rhs, rhs.getType(sTable), List(Pair(null, null)))
+      semErrors ::= typeMismatch(rhs, rhs.getType(sTable), List(Pair(null, null)))
   }
 
   def statAnalysis(s: Stat, sTable: SymbolTable): Unit = s match {
@@ -175,12 +158,12 @@ class SemanticChecker {
         case elem: Ident =>
           val t = elem.getType(sTable)
           if (elem.semErrs.nonEmpty) {
-            semErrs :::= elem.semErrs
+            semErrors :::= elem.semErrs
           }
           t match {
             case CharT | IntT =>
             case _ =>
-              semErrs ::= typeMismatch(elem, t, List(CharT, IntT))
+              semErrors ::= typeMismatch(elem, t, List(CharT, IntT))
           }
         case elem: ArrayElem =>
           val t = elem.getType(sTable)
@@ -277,9 +260,5 @@ class SemanticChecker {
       statAnalysis(s, beginScope)
     case Seq(x) => x.foreach(s => statAnalysis(s, sTable))
     case _      => // ignore Skip
-  }
-
-  def getAllSemErrors(): Unit ={
-
   }
 }
