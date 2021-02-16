@@ -15,7 +15,7 @@ class SemanticErrorTest extends AnyFunSuite {
   val programWhitespace: Parsley[Program] = lexer.whiteSpace *> program <* eof
   for (file <- listAllFiles(new File("wacc_examples/invalid/semanticErr"))) {
     if (file.isFile) {
-      test("Successfully fails semantics of " + file.getName) {
+      test("Semantically checks invalid file " + file.getName) {
         var checker = new SemanticChecker
         var errors =
           checker.progAnalysis(
@@ -28,7 +28,7 @@ class SemanticErrorTest extends AnyFunSuite {
 
   for (file <- listAllFiles(new File("wacc_examples/valid"))) {
     if (file.isFile) {
-      test("Successfully semantically checks " + file.getName) {
+      test("Semantically checks valid file " + file.getName) {
         var checker = new SemanticChecker
         var errors =
           checker.progAnalysis(

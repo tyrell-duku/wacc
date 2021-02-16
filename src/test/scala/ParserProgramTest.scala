@@ -16,7 +16,7 @@ class ProgramTest extends AnyFunSuite {
 
   for (file <- listAllFiles(new File("wacc_examples/valid"))) {
     if (file.isFile) {
-      test("Successfully parses " + file.getName) {
+      test("Successfully parses file " + file.getName) {
         assert(programWhitespace.parseFromFile(file).isSuccess)
       }
     }
@@ -24,7 +24,7 @@ class ProgramTest extends AnyFunSuite {
 
   for (file <- listAllFiles(new File("wacc_examples/invalid/syntaxErr"))) {
     if (file.isFile) {
-      test("Successfully fails to parses " + file.getName) {
+      test("Successfully fails to parse file " + file.getName) {
         if (programWhitespace.parseFromFile(file).isSuccess) {
           assert(programWhitespace.parseFromFile(file).contains())
         }
