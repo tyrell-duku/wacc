@@ -10,11 +10,11 @@ import StatParser._
 
 object Parser {
   // <type> <ident>
-  val param: Parsley[Param] = lift2(Param, types, identifier) ? "<type> <ident>"
+  val param: Parsley[Param] = lift2(Param, types, identifier) ? "param"
 
   // <param> (, <param>)*
   val paramList: Parsley[ParamList] =
-    ParamList <#> sepBy1(param, ",") ? "<param> (, <param>)*"
+    ParamList <#> sepBy1(param, ",") ? "param-list"
 
   // Checks whether a function is ended with a return/exit statement
   private def statTerminates(stat: Stat): Boolean = stat match {
@@ -42,16 +42,16 @@ object Parser {
       "is",
       "end",
       stat
-    ) ? "<type> <ident> (<param-list>?) is <stat> end"
+    ) ? "function"
   ).guard((x: Func) => statTerminates(x.s), (x: Func) => funcMsg(x))
 
   // "begin" <func>* <stat> "end"
   val program: Parsley[Program] =
     between(
-      "begin",
-      "end",
+      "begin".explain("every progam must start with \"begin\""),
+      "end".explain("every program must terminate with \"end\""),
       lift2(Program, many(attempt(func)), stat)
-    ) ? "begin <func>* <stat> end"
+    ) ? "program"
 
   // WACC file parser
   val waccParser: Parsley[Program] = lexer.whiteSpace *> program <* eof

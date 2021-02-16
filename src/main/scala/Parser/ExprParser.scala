@@ -9,23 +9,23 @@ import LiterParser._
 object ExprParser {
   // <expr> (',' <expr>)*
   val argList: Parsley[ArgList] =
-    ArgList <#> sepBy1(expr, ",") ? "<expr> (',' <expr>)*"
+    ArgList <#> sepBy1(expr, ",") ? "arg-list"
 
   // '[' (<expr> (',' <expr>)*)? ']'
   val arrayLiter: Parsley[ArrayLiter] = ArrayLiter <#> lexer.brackets(
     option(sepBy1(expr, ","))
-  ) ? "[(<expr> (',' <expr>)*)?]"
+  ) ? "array-liter"
 
   // <ident> ('['<expr>']')+
   lazy val arrayElem: Parsley[ArrayElem] = lift2(
     ArrayElem,
     identifier,
     manyN(1, lexer.brackets(expr))
-  ) ? "<ident> ([<expr>])+"
+  ) ? "array-elem"
 
   // "fst" <expr> | "snd" <expr>
   val pairElem: Parsley[PairElem] =
-    (Fst <#> "fst" *> expr ? "fst <expr>") <|> (Snd <#> "snd" *> expr ? "snd <expr>")
+    ((Fst <#> "fst" *> expr) <|> (Snd <#> "snd" *> expr)) ? "pair-elem"
 
   // <int-liter> | <bool-liter> | <char-liter> | <str-liter> | <pair-liter> |
   // <ident> | <array-elem> | <unary-oper><expr> | <expr> <binary-oper> <expr>

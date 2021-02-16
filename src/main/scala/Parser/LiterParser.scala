@@ -25,19 +25,19 @@ object LiterParser {
 
   // <base-type> | <array-type> | <pair-type>
   val types: Parsley[Type] = precedence[Type](
-    baseType ? "<base-type>" <|> pairType ? "<pair-type>",
+    baseType ? "base-type" <|> pairType,
     Ops[Type](Postfix)(lexer.keyword("[]") #> ArrayT ? "array-type")
   )
 
   // <base-type> | <array-type> | 'pair'
   val pairElemType: Parsley[PairElemType] =
-    "pair" #> PairElemPair <|> (PairElemT <#> types) ? "<base-type> or <array-type>"
+    ("pair" #> PairElemPair <|> (PairElemT <#> types)) ? "pair-elem-type"
 
   // "pair" '('<pair-elem-type> ',' <pair-elem-type>')'
   lazy val pairType: Parsley[PairType] =
     ("pair" *> lexer.parens(
       lift2(Pair, pairElemType, "," *> pairElemType)
-    )) ? "pair(<pair-elem-type>, <pair-elem-type>)"
+    )) ? "pair-type"
 
   // ('_' | 'a' - 'z' | 'A' - 'Z') ('_' | 'a' - 'z' | 'A' - 'Z' | '0' - 9)*
   lazy val identifier: Parsley[Ident] = Ident <#> lexer.identifier
@@ -54,13 +54,8 @@ object LiterParser {
   // Determines whether the integer X is within the acceptable range for integers
   def notOverflow(x: (Option[IntSign], Int)): Boolean = {
     val (sign, n) = x
-    if (
-      ((sign.isEmpty || (sign contains Pos)) && (n < 0)) ||
-      ((sign contains Neg) && (n > 0))
-    ) {
-      return false
-    }
-    true
+    !(((sign.isEmpty || (sign contains Pos)) && (n < 0)) ||
+      ((sign contains Neg) && (n > 0)))
   }
 
   // "true" | "false"
@@ -76,16 +71,16 @@ object LiterParser {
 
   // any-ASCII-character-except-'\'-'''-'"' | '\' <escaped-char>
   val character: Parsley[Character] =
-    (Escape <#> "\\" *> escapedChar) ? "escaped character" <|>
+    (Escape <#> "\\" *> escapedChar ? "escaped character") <|>
       (NormalChar <#> noneOf('\\', '\'', '"')) ? "ASCII character"
 
   // ''' <character> '''
   val charLiteral: Parsley[CharLiter] =
-    (CharLiter <#> '\'' *> character <* "\'") ? "'<character>'"
+    (CharLiter <#> '\'' *> character <* "\'") ? "'character'"
 
   // '"' <character>* '"'
   val strLiteral: Parsley[StrLiter] =
-    (StrLiter <#> '\"' *> many(character) <* "\"") ? "\"" ? "\"<character>*\""
+    (StrLiter <#> '\"' *> many(character) <* "\"") ? "\"characters\""
 
   // "null"
   val pairLiteral: Parsley[PairLiter] = "null" #> PairLiter()
