@@ -1,8 +1,30 @@
 import java.io.File
+import parsley.Failure
+import parsley.Success
 
 object Main {
   val syntaxError = 100
   val semanticError = 200
+
+  def syntaxExit(errorMessage: String) = {
+    println("Syntax Error")
+    println(errorMessage)
+    sys.exit(syntaxError)
+  }
+
+  def semanticExit(errorMessages: List[SemanticError]) = {
+    println("Semantic Error")
+    errorMessages.foreach((semErr: SemanticError) => println(semErr))
+    sys.exit(semanticError)
+  }
+
+  def semanticAnalysis(result: Rules.Program) = {
+    val semanticChecker = new SemanticChecker
+    val semanticResult = semanticChecker.progAnalysis(result)
+    if (semanticResult.nonEmpty) {
+      semanticExit(semanticResult)
+    }
+  }
 
   def main(args: Array[String]) = {
     if (args.length == 0) {
@@ -16,19 +38,9 @@ object Main {
 
     val parserResult = Parser.waccParser.parseFromFile(file)
 
-    if (parserResult.isFailure) {
-      println("Syntax Error")
-      println(parserResult)
-      sys.exit(syntaxError)
-    }
-
-    val semanticChecker = new SemanticChecker
-    val semanticResult = semanticChecker.progAnalysis(parserResult.get)
-
-    if (semanticResult.nonEmpty) {
-      println("Semantic Error")
-      semanticResult.foreach((semErr: SemanticError) => println(semErr))
-      sys.exit(semanticError)
+    parserResult match {
+      case Failure(msg) => syntaxExit(msg)
+      case Success(x)   => semanticAnalysis(x)
     }
   }
 }
