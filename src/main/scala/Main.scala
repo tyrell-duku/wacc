@@ -1,6 +1,7 @@
 import java.io.File
 import parsley.Failure
 import parsley.Success
+import scala.collection.mutable.ListBuffer
 
 object Main {
   val syntaxError = 100
@@ -12,7 +13,7 @@ object Main {
     sys.exit(syntaxError)
   }
 
-  def semanticExit(errorMessages: List[SemanticError]) = {
+  def semanticExit(errorMessages: ListBuffer[SemanticError]) = {
     println("Semantic Error")
     errorMessages.foreach((semErr: SemanticError) => println(semErr))
     sys.exit(semanticError)
