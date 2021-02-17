@@ -3,6 +3,7 @@
 import sys
 import os
 import filecmp
+from colorama import Fore, Back, Style
 
 
 def getAllFiles(dirName):
@@ -19,6 +20,10 @@ def getAllFiles(dirName):
     return allFiles
 
 
+def test_report(msg, colour, num, total):
+    print(colour + Style.BRIGHT + msg + " " + str(num) + "/" + str(total))
+
+
 def main():
     print("--- Running back-end tests ---")
     failed_tests = []
@@ -29,12 +34,19 @@ def main():
         os.system("./compile " + waccToTest + "> output.txt")
         passedTest = filecmp.cmp("output.txt", file, False)
         if passedTest:
-            print("PASSED: " + waccToTest)
+            print(Fore.GREEN + Style.BRIGHT + "PASSED: " + waccToTest)
         else:
-            print("FAILED: " + waccToTest)
+            print(Fore.RED + Style.BRIGHT + "FAILED: " + waccToTest)
             failed_tests.append(waccToTest)
-    print("-------------------------------")
-    sys.exit(0)
+    print(Style.RESET_ALL + "-------------------------------")
+    numTotal = len(files)
+    numFailed = len(failed_tests)
+    numPassed = numTotal - numFailed
+
+    test_report("PASSED", Fore.GREEN, numPassed, numTotal)
+
+    if numFailed > 0:
+        test_report("FAILURE", Fore.RED, numFailed, numTotal)
 
 
 if __name__ == "__main__":
