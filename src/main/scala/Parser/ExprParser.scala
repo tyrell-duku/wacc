@@ -16,36 +16,36 @@ object ExprParser {
       arrayElem <\> identifier <|> (Parens <#> lexer.parens(expr)),
     // unary operators
     Ops[Expr](Prefix)(
-      "!" #> Not ? "unary operator",
-      notFollowedBy(intLiter) *> "-" #> Negation ? "unary operator",
-      lexer.keyword("len") #> Len ? "unary operator",
-      lexer.keyword("ord") #> Ord ? "unary operator",
-      lexer.keyword("chr") #> Chr ? "unary operator"
+      Not("!") ? "unary operator",
+      notFollowedBy(intLiter) *> Negation("-") ? "unary operator",
+      Len(lexer.keyword("len")) ? "unary operator",
+      Ord(lexer.keyword("ord")) ? "unary operator",
+      Chr(lexer.keyword("chr")) ? "unary operator"
     ),
     // arithmetic binary operators
     Ops[Expr](InfixL)(
-      "*" #> Mul ? "arithmetic operator",
-      "/" #> Div ? "arithmetic operator",
-      "%" #> Mod ? "arithmetic operator"
+      Mul("*") ? "arithmetic operator",
+      Div("/") ? "arithmetic operator",
+      Mod("%") ? "arithmetic operator"
     ),
     // arithmetic binary operators
     Ops[Expr](InfixL)(
-      "+" #> Plus ? "arithmetic operator",
-      "-" #> Sub ? "arithmetic operator"
+      Plus("+") ? "arithmetic operator",
+      Sub("-") ? "arithmetic operator"
     ),
     // comparison binary operators
     Ops[Expr](InfixL)(
-      (">=" #> GTE ? "comparison operator") <\> (">" #> GT ? "comparison operator"),
-      ("<=" #> LTE ? "comparison operator") <\> ("<" #> LT ? "comparison operator")
+      (GTE(">=") ? "comparison operator") <\> (GT(">") ? "comparison operator"),
+      (LTE("<=") ? "comparison operator") <\> (LT("<") ? "comparison operator")
     ),
     // comparison binary operators
     Ops[Expr](InfixL)(
-      "==" #> Equal ? "comparison operator",
-      "!=" #> NotEqual ? "comparison operator"
+      Equal("==") ? "comparison operator",
+      NotEqual("!=") ? "comparison operator"
     ),
     // boolean binary operators
-    Ops[Expr](InfixL)("&&" #> And ? "boolean operator"),
-    Ops[Expr](InfixL)("||" #> Or ? "boolean operator")
+    Ops[Expr](InfixL)(And("&&") ? "boolean operator"),
+    Ops[Expr](InfixL)(Or("||") ? "boolean operator")
   )
 
   // <expr> (',' <expr>)*

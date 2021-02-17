@@ -1,3 +1,6 @@
+import parsley.Parsley
+import parsley.Parsley.pos
+
 import scala.collection.mutable
 
 object Rules {
@@ -35,6 +38,8 @@ object Rules {
 
   // Trait for all possible variations of a RHS Assignment
   sealed trait AssignRHS {
+    var pos: (Int, Int) = this.pos
+
     // Abstract function to get type of the RHS
     def getType(sTable: SymbolTable): Type
     // Field to store it's semantic errors
@@ -191,7 +196,12 @@ object Rules {
   }
 
   // Trait for all possible variations of an expression
-  sealed trait Expr extends AssignRHS
+  sealed trait Expr extends AssignRHS {
+    def addPos(p: (Int, Int)): Expr = {
+      this.pos = p
+      this
+    }
+  }
   case class Parens(e: Expr) extends Expr {
     override def toString: String = "(" + e + ")"
     override def getType(sTable: SymbolTable): Type = {
@@ -223,9 +233,17 @@ object Rules {
     override val expected: (Type, Type) = (BoolT, BoolT)
     val unOperatorStr = "!"
   }
+  object Not {
+    def apply(op: Parsley[_]): Parsley[Expr => Expr] =
+      pos.map((p: (Int, Int)) => (e: Expr) => Not(e).addPos(p)) <* op
+  }
   case class Negation(e: Expr) extends UnOp {
     override val expected: (Type, Type) = (IntT, IntT)
     val unOperatorStr = "-"
+  }
+  object Negation {
+    def apply(op: Parsley[_]): Parsley[Expr => Expr] =
+      pos.map((p: (Int, Int)) => (e: Expr) => Negation(e).addPos(p)) <* op
   }
   case class Len(e: Expr) extends UnOp {
     override val expected: (Type, Type) = (ArrayT(null), IntT)
@@ -240,13 +258,25 @@ object Rules {
       expected._2
     }
   }
+  object Len {
+    def apply(op: Parsley[_]): Parsley[Expr => Expr] =
+      pos.map((p: (Int, Int)) => (e: Expr) => Len(e).addPos(p)) <* op
+  }
   case class Ord(e: Expr) extends UnOp {
     override val expected: (Type, Type) = (CharT, IntT)
     val unOperatorStr = "ord "
   }
+  object Ord {
+    def apply(op: Parsley[_]): Parsley[Expr => Expr] =
+      pos.map((p: (Int, Int)) => (e: Expr) => Ord(e).addPos(p)) <* op
+  }
   case class Chr(e: Expr) extends UnOp {
     override val expected: (Type, Type) = (IntT, CharT)
     val unOperatorStr = "chr "
+  }
+  object Chr {
+    def apply(op: Parsley[_]): Parsley[Expr => Expr] =
+      pos.map((p: (Int, Int)) => (e: Expr) => Chr(e).addPos(p)) <* op
   }
 
   // Trait for all possible variations of an binary operation
@@ -296,17 +326,37 @@ object Rules {
   case class Mul(lExpr: Expr, rExpr: Expr) extends ArithOps {
     val operatorStr = "*"
   }
+  object Mul {
+    def apply(op: Parsley[_]): Parsley[(Expr, Expr) => Expr] =
+      pos.map((p: (Int, Int)) => (l: Expr, r: Expr) => Mul(l, r).addPos(p)) <* op
+  }
   case class Div(lExpr: Expr, rExpr: Expr) extends ArithOps {
     val operatorStr = "/"
+  }
+  object Div {
+    def apply(op: Parsley[_]): Parsley[(Expr, Expr) => Expr] =
+      pos.map((p: (Int, Int)) => (l: Expr, r: Expr) => Div(l, r).addPos(p)) <* op
   }
   case class Mod(lExpr: Expr, rExpr: Expr) extends ArithOps {
     val operatorStr = "%"
   }
+  object Mod {
+    def apply(op: Parsley[_]): Parsley[(Expr, Expr) => Expr] =
+      pos.map((p: (Int, Int)) => (l: Expr, r: Expr) => Mod(l, r).addPos(p)) <* op
+  }
   case class Plus(lExpr: Expr, rExpr: Expr) extends ArithOps {
     val operatorStr = "+"
   }
+  object Plus {
+    def apply(op: Parsley[_]): Parsley[(Expr, Expr) => Expr] =
+      pos.map((p: (Int, Int)) => (l: Expr, r: Expr) => Plus(l, r).addPos(p)) <* op
+  }
   case class Sub(lExpr: Expr, rExpr: Expr) extends ArithOps {
     val operatorStr = "-"
+  }
+  object Sub {
+    def apply(op: Parsley[_]): Parsley[(Expr, Expr) => Expr] =
+      pos.map((p: (Int, Int)) => (l: Expr, r: Expr) => Sub(l, r).addPos(p)) <* op
   }
   // Traits for comparison operators
   sealed trait ComparOps extends BinOp {
@@ -315,14 +365,30 @@ object Rules {
   case class GT(lExpr: Expr, rExpr: Expr) extends ComparOps {
     val operatorStr = ">"
   }
+  object GT {
+    def apply(op: Parsley[_]): Parsley[(Expr, Expr) => Expr] =
+      pos.map((p: (Int, Int)) => (l: Expr, r: Expr) => GT(l, r).addPos(p)) <* op
+  }
   case class GTE(lExpr: Expr, rExpr: Expr) extends ComparOps {
     val operatorStr = ">="
+  }
+  object GTE {
+    def apply(op: Parsley[_]): Parsley[(Expr, Expr) => Expr] =
+      pos.map((p: (Int, Int)) => (l: Expr, r: Expr) => GTE(l, r).addPos(p)) <* op
   }
   case class LT(lExpr: Expr, rExpr: Expr) extends ComparOps {
     val operatorStr = "<"
   }
+  object LT {
+    def apply(op: Parsley[_]): Parsley[(Expr, Expr) => Expr] =
+      pos.map((p: (Int, Int)) => (l: Expr, r: Expr) => LT(l, r).addPos(p)) <* op
+  }
   case class LTE(lExpr: Expr, rExpr: Expr) extends ComparOps {
     val operatorStr = "<="
+  }
+  object LTE {
+    def apply(op: Parsley[_]): Parsley[(Expr, Expr) => Expr] =
+      pos.map((p: (Int, Int)) => (l: Expr, r: Expr) => LTE(l, r).addPos(p)) <* op
   }
 
   sealed trait EqOps extends BinOp {
@@ -331,8 +397,16 @@ object Rules {
   case class Equal(lExpr: Expr, rExpr: Expr) extends EqOps {
     val operatorStr = "=="
   }
+  object Equal {
+    def apply(op: Parsley[_]): Parsley[(Expr, Expr) => Expr] =
+      pos.map((p: (Int, Int)) => (l: Expr, r: Expr) => Equal(l, r).addPos(p)) <* op
+  }
   case class NotEqual(lExpr: Expr, rExpr: Expr) extends EqOps {
     val operatorStr = "!="
+  }
+  object NotEqual {
+    def apply(op: Parsley[_]): Parsley[(Expr, Expr) => Expr] =
+      pos.map((p: (Int, Int)) => (l: Expr, r: Expr) => NotEqual(l, r).addPos(p)) <* op
   }
 
   sealed trait LogicalOps extends BinOp {
@@ -341,8 +415,16 @@ object Rules {
   case class And(lExpr: Expr, rExpr: Expr) extends LogicalOps {
     val operatorStr = "&&"
   }
+  object And {
+    def apply(op: Parsley[_]): Parsley[(Expr, Expr) => Expr] =
+      pos.map((p: (Int, Int)) => (l: Expr, r: Expr) => And(l, r).addPos(p)) <* op
+  }
   case class Or(lExpr: Expr, rExpr: Expr) extends LogicalOps {
     val operatorStr = "||"
+  }
+  object Or {
+    def apply(op: Parsley[_]): Parsley[(Expr, Expr) => Expr] =
+      pos.map((p: (Int, Int)) => (l: Expr, r: Expr) => Or(l, r).addPos(p)) <* op
   }
 
   sealed case class Ident(s: String)
@@ -381,7 +463,7 @@ object Rules {
     override def getType(sTable: SymbolTable): Type = IntT
   }
 
-  // Trait for an sign checking for interger representation
+  // Trait for an sign checking for integer representation
   sealed trait IntSign
   case object Pos extends IntSign
   case object Neg extends IntSign
