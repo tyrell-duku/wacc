@@ -1,10 +1,10 @@
 import Rules._
 
 import scala.collection.mutable.HashMap
-import scala.collection.mutable.ListBuffer
+import scala.collection.mutable
 
 class SemanticChecker {
-  private var semErrors = new ListBuffer[SemanticError]()
+  private var semErrors = mutable.ListBuffer.empty[SemanticError]
 
   // Evaluate the type of rhs, appending to semErrors if semantic errors
   // occur whilst checking typ
@@ -27,7 +27,7 @@ class SemanticChecker {
 
   // Performs analysis on program P, returning a list of all semantic errors
   // that have occured (if any).
-  def progAnalysis(p: Program): ListBuffer[SemanticError] = {
+  def progAnalysis(p: Program): mutable.ListBuffer[SemanticError] = {
     val Program(funcs, stat) = p
     val globalTable: SymbolTable =
       SymbolTable(null, null, new HashMap[Ident, Meta])
@@ -88,9 +88,9 @@ class SemanticChecker {
   ): Unit = lhs match {
     case elem: PairElem =>
       checkAssignmentType(checkType(elem, sTable), rhs, sTable)
-    case i @ Ident(s) =>
-      eqAssignIdent(i, rhs, sTable)
-    case arrayElem @ ArrayElem(id, e) =>
+    case ident: Ident =>
+      eqAssignIdent(ident, rhs, sTable)
+    case arrayElem: ArrayElem =>
       checkAssignmentType(checkType(arrayElem, sTable), rhs, sTable)
   }
 

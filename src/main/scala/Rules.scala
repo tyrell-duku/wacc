@@ -1,9 +1,5 @@
-import Rules.IntT
-import Rules.BoolT
-import Rules.CharT
-import Rules.StringT
-import Rules.ArrayT
-import Rules.Pair
+import scala.collection.mutable
+
 object Rules {
 
   sealed case class Program(fs: List[Func], s: Stat)
@@ -42,14 +38,14 @@ object Rules {
     // Abstract function to get type of the RHS
     def getType(sTable: SymbolTable): Type
     // Field to store it's semantic errors
-    var semErrs: List[SemanticError] = List.empty[SemanticError]
+    var semErrs: mutable.ListBuffer[SemanticError] = mutable.ListBuffer.empty[SemanticError]
   }
 
   case class Newpair(fst: Expr, snd: Expr) extends AssignRHS {
     override def getType(sTable: SymbolTable): Type = {
       val fstType = fst.getType(sTable)
       val sndType = snd.getType(sTable)
-      semErrs = fst.semErrs ::: snd.semErrs
+      semErrs = fst.semErrs ++ snd.semErrs
       var fstPairElem: PairElemType = PairElemPair
       if (!fstType.isPair) {
         fstPairElem = PairElemT(fstType)
@@ -66,7 +62,7 @@ object Rules {
   case class Call(id: Ident, args: Option[ArgList] = None) extends AssignRHS {
     override def getType(sTable: SymbolTable): Type = {
       val idType = id.getType(sTable)
-      semErrs :::= sTable.funcParamMatch(id, args)
+      semErrs ++= sTable.funcParamMatch(id, args)
       idType
     }
     override def toString: String =
@@ -74,7 +70,7 @@ object Rules {
   }
 
   sealed case class ArgList(args: List[Expr]) {
-    override def toString(): String = {
+    override def toString: String = {
       args.mkString(", ")
     }
   }
@@ -96,7 +92,7 @@ object Rules {
           }
         case _ =>
       }
-      semErrs ::= invalidPairElem(this)
+      semErrs += invalidPairElem(this)
       Any
     }
   }
@@ -114,7 +110,7 @@ object Rules {
           }
         case _ =>
       }
-      semErrs ::= invalidPairElem(this)
+      semErrs += invalidPairElem(this)
       Any
     }
   }
@@ -215,7 +211,7 @@ object Rules {
       val actual = e.getType(sTable)
       semErrs = e.semErrs
       if (actual != expected._1) {
-        semErrs ::= typeMismatch(e, actual, List(expected._1))
+        semErrs += typeMismatch(e, actual, List(expected._1))
       }
       expected._2
     }
@@ -239,7 +235,7 @@ object Rules {
       val actual = e.getType(sTable)
       semErrs = e.semErrs
       if (!actual.isArray) {
-        semErrs ::= typeMismatch(e, actual, List(expected._1))
+        semErrs += typeMismatch(e, actual, List(expected._1))
       }
       expected._2
     }
@@ -265,7 +261,7 @@ object Rules {
     override def getType(sTable: SymbolTable): Type = {
       val actualL = lExpr.getType(sTable)
       val actualR = rExpr.getType(sTable)
-      semErrs = lExpr.semErrs ::: rExpr.semErrs
+      semErrs = lExpr.semErrs ++ rExpr.semErrs
       if (actualL == Any || actualR == Any) {
         return expected._2
       }
@@ -278,17 +274,17 @@ object Rules {
         }
       } else {
         if (expected._1.contains(actualL)) {
-          semErrs ::= typeMismatch(rExpr, actualR, List(actualL))
+          semErrs += typeMismatch(rExpr, actualR, List(actualL))
           return expected._2
         }
         if (expected._1.contains(actualR)) {
-          semErrs ::= typeMismatch(lExpr, actualL, List(actualR))
+          semErrs += typeMismatch(lExpr, actualL, List(actualR))
           return expected._2
         }
       }
       // neither types are correct
-      semErrs ::= typeMismatch(lExpr, actualL, expected._1)
-      semErrs ::= typeMismatch(rExpr, actualR, expected._1)
+      semErrs += typeMismatch(lExpr, actualL, expected._1)
+      semErrs += typeMismatch(rExpr, actualR, expected._1)
       expected._2
     }
   }
@@ -358,7 +354,7 @@ object Rules {
 
     override def getType(sTable: SymbolTable): Type = {
       if (!sTable.contains(this)) {
-        semErrs ::= variableNotDeclared(this)
+        semErrs += variableNotDeclared(this)
         return Any
       }
       sTable.lookupAll(this)
@@ -375,7 +371,7 @@ object Rules {
         val ArrayT(innerT) = actual
         return innerT
       }
-      id.semErrs ::= typeMismatch(id, actual, List(ArrayT(actual)))
+      id.semErrs += typeMismatch(id, actual, List(ArrayT(actual)))
       actual
     }
   }
