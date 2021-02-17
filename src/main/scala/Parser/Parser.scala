@@ -1,11 +1,10 @@
 import parsley.Parsley
 import parsley.Parsley._
-import parsley.combinator.{between, eof, option, sepBy1}
-import parsley.lift.{lift2, lift3, lift4}
+import parsley.combinator.{between, eof, option, sepBy1, many}
+import parsley.lift.{lift2, lift4}
 import Rules._
 import Lexer._
 import LiterParser._
-import ExprParser._
 import StatParser._
 
 object Parser {

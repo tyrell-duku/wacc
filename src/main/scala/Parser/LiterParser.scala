@@ -1,17 +1,10 @@
 import parsley.Parsley
 import parsley.Parsley._
-import parsley.combinator.{option}
+import parsley.combinator.{option, many}
 import parsley.implicits.charLift
 import parsley.expr.{Ops, Postfix, precedence}
-import parsley.character.{
-  char,
-  digit,
-  isWhitespace,
-  letter,
-  noneOf,
-  oneOf,
-  upper
-}
+import parsley.character.{noneOf, oneOf}
+import parsley.lift.lift2
 import Rules._
 import Lexer._
 

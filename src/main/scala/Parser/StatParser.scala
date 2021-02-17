@@ -1,6 +1,7 @@
 import parsley.Parsley
 import parsley.Parsley._
 import parsley.combinator.{between, option, sepBy}
+import parsley.lift.{lift2, lift3}
 import Rules._
 import Lexer._
 import LiterParser._
@@ -8,7 +9,7 @@ import ExprParser._
 
 object StatParser {
 
-  // <ident> | <arrary-elem> | <pair-elem>
+  // <ident> | <array-elem> | <pair-elem>
   val assignLHS: Parsley[AssignLHS] = pairElem <|> arrayElem <\> identifier
 
   // <expr> | <array-liter> | newpair(<expr>, <expr>) | <pair-elem> | call <ident> (<arg-list>?)
