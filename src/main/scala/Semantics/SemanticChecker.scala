@@ -121,7 +121,7 @@ class SemanticChecker {
   }
 
   // Analyses a statement of the form read <assign-rhs>
-  def readAnalysis(elem: AssignRHS, sTable: SymbolTable) {
+  def readAnalysis(elem: AssignRHS, sTable: SymbolTable): Unit = {
     val rhsType = checkType(elem, sTable)
     rhsType match {
       case CharT | IntT =>

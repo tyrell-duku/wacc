@@ -76,11 +76,12 @@ object Rules {
       idType
     }
     override def toString: String =
-      id + "(" + args.getOrElse(ArgList(List())) + ")"
+      id.toString + "(" + args.getOrElse(ArgList(List())) + ")"
   }
   object Call {
     def apply(id: Parsley[Ident], args: Parsley[Option[ArgList]]): Parsley[Call] =
-      pos <**> (id, args).map((id: Ident, args: Option[ArgList]) => (p: (Int, Int)) => Call(id, args, p))
+      pos <**> (id, args).map((id: Ident, args: Option[ArgList]) => (p: (Int, Int)) =>
+        Call(id, args, p))
   }
 
   sealed case class ArgList(args: List[Expr]) {
@@ -159,22 +160,22 @@ object Rules {
   // All possible Base Types
   sealed trait BaseType extends Type
   case object IntT extends BaseType {
-    override def toString: String = "Int"
+    override def toString: String = "int"
   }
   case object BoolT extends BaseType {
-    override def toString: String = "Bool"
+    override def toString: String = "bool"
   }
   case object CharT extends BaseType {
-    override def toString: String = "Char"
+    override def toString: String = "char"
   }
   case object StringT extends BaseType {
-    override def toString: String = "String"
+    override def toString: String = "string"
   }
 
   sealed case class ArrayT(t: Type) extends Type {
     override def toString: String = {
       if (t == null) return "T[]"
-      t + "[]"
+      t.toString + "[]"
     }
     override def equals(x: Any): Boolean = x match {
       case ArrayT(null)  => true
@@ -193,7 +194,7 @@ object Rules {
       if ((x == null) && (y == null)) {
         return "Pair"
       }
-      "Pair(" + x + "," + y + ")"
+      "pair(" + x + "," + y + ")"
     }
   }
 
@@ -290,7 +291,7 @@ object Rules {
     val expected: (List[Type], Type)
     val operatorStr: String
 
-    override def toString: String = lExpr + " " + operatorStr + " " + rExpr
+    override def toString: String = lExpr.toString + " " + operatorStr + " " + rExpr
 
     override def getType(sTable: SymbolTable): Type = {
       val actualL = lExpr.getType(sTable)
