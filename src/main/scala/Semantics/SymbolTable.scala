@@ -51,11 +51,11 @@ case class SymbolTable(
   }
 
   // Add all variable declarations to dictionary
-  def addVars(vars: List[(Ident, Type)]): List[SemanticError] = {
-    var semErrors: List[SemanticError] = List.empty[SemanticError]
+  def addVars(vars: List[(Ident, Type)]): mutable.ListBuffer[SemanticError] = {
+    var semErrors = mutable.ListBuffer.empty[SemanticError]
     for (v <- vars) {
       if (varMap.contains(v._1)) {
-        semErrors ::= variableDeclared(v._1)
+        semErrors += variableDeclared(v._1)
       } else {
         varMap.addOne(v)
       }
@@ -64,11 +64,11 @@ case class SymbolTable(
   }
 
   // Add all function declarations to funcMap
-  def addFuncs(funcs: List[(Ident, Meta)]): List[SemanticError] = {
-    var semErrors: List[SemanticError] = List.empty[SemanticError]
+  def addFuncs(funcs: List[(Ident, Meta)]): mutable.ListBuffer[SemanticError] = {
+    var semErrors = mutable.ListBuffer.empty[SemanticError]
     for (f <- funcs) {
       if (funcMap.contains(f._1)) {
-        semErrors ::= functionDeclared(f._1)
+        semErrors += functionDeclared(f._1)
       } else {
         funcMap.addOne(f)
       }
