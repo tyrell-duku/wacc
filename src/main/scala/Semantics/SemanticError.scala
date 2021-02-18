@@ -3,7 +3,7 @@ import Rules._
 sealed trait SemanticError {
   override def toString: String = this match {
     case typeMismatch(invalid, actualT, expected) =>
-      "Type mismatch at " + invalid + " expected type " + expected.mkString(
+      "Type mismatch at " + invalid.pos + " " + invalid + " expected type " + expected.mkString(
         " or "
       ) + " but actual type " + actualT
     case arrayOutOfBounds(id) => "Array index out of bounds for array " + id
