@@ -106,7 +106,7 @@ object Rules {
           }
         case _ =>
       }
-      semErrs += invalidPairElem(this)
+      semErrs += InvalidPairElem(this)
       Any
     }
   }
@@ -128,7 +128,7 @@ object Rules {
           }
         case _ =>
       }
-      semErrs += invalidPairElem(this)
+      semErrs += InvalidPairElem(this)
       Any
     }
   }
@@ -225,7 +225,7 @@ object Rules {
       val actual = e.getType(sTable)
       semErrs = e.semErrs
       if (actual != expected._1) {
-        semErrs += typeMismatch(e, actual, List(expected._1))
+        semErrs += TypeMismatch(e, actual, List(expected._1))
       }
       expected._2
     }
@@ -257,7 +257,7 @@ object Rules {
       val actual = e.getType(sTable)
       semErrs = e.semErrs
       if (!actual.isArray) {
-        semErrs += typeMismatch(e, actual, List(expected._1))
+        semErrs += TypeMismatch(e, actual, List(expected._1))
       }
       expected._2
     }
@@ -308,17 +308,17 @@ object Rules {
         }
       } else {
         if (expected._1.contains(actualL)) {
-          semErrs += typeMismatch(rExpr, actualR, List(actualL))
+          semErrs += TypeMismatch(rExpr, actualR, List(actualL))
           return expected._2
         }
         if (expected._1.contains(actualR)) {
-          semErrs += typeMismatch(lExpr, actualL, List(actualR))
+          semErrs += TypeMismatch(lExpr, actualL, List(actualR))
           return expected._2
         }
       }
       // neither types are correct
-      semErrs += typeMismatch(lExpr, actualL, expected._1)
-      semErrs += typeMismatch(rExpr, actualR, expected._1)
+      semErrs += TypeMismatch(lExpr, actualL, expected._1)
+      semErrs += TypeMismatch(rExpr, actualR, expected._1)
       expected._2
     }
   }
@@ -440,7 +440,7 @@ object Rules {
 
     override def getType(sTable: SymbolTable): Type = {
       if (!sTable.contains(this)) {
-        semErrs += variableNotDeclared(this)
+        semErrs += VariableNotDeclared(this)
         return Any
       }
       sTable.lookupAll(this)
@@ -469,7 +469,8 @@ object Rules {
         val ArrayT(innerT) = actual
         return innerT
       }
-      id.semErrs += typeMismatch(id, actual, List(ArrayT(actual)))
+      id.semErrs += TypeMismatch(id, actual, List(ArrayT(actual)))
+      id.semErrs += ElementAccessDenied(id)
       actual
     }
   }

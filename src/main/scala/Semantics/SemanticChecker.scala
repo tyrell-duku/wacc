@@ -1,6 +1,5 @@
 import Rules._
 
-import scala.collection.mutable.HashMap
 import scala.collection.mutable
 
 class SemanticChecker {
@@ -30,7 +29,7 @@ class SemanticChecker {
   def progAnalysis(p: Program): mutable.ListBuffer[SemanticError] = {
     val Program(funcs, stat) = p
     val globalTable: SymbolTable =
-      SymbolTable(null, null, new HashMap[Ident, Meta])
+      SymbolTable(null, null, new mutable.HashMap[Ident, Meta])
     val globalFuncs = funcs.map(funcToSTable)
     semErrors ++= globalTable.addFuncs(globalFuncs)
 
@@ -63,7 +62,7 @@ class SemanticChecker {
   ): Unit = {
     if (sTable.containScope(id)) {
       // Error case: redeclaration of variable not allowed
-      semErrors += variableDeclared(id)
+      semErrors += VariableDeclared(id)
       return
     }
     // Checks for semantics errors for RHS
@@ -76,7 +75,7 @@ class SemanticChecker {
     sTable.add(id, lhsType)
     if (lhsType != rhsType) {
       // Error case: type mismatch between LHS and RHS
-      semErrors += typeMismatch(rhs, rhsType, List(lhsType))
+      semErrors += TypeMismatch(rhs, rhsType, List(lhsType))
     }
   }
 
@@ -98,12 +97,12 @@ class SemanticChecker {
   def eqAssignIdent(id: Ident, rhs: AssignRHS, sTable: SymbolTable): Unit = {
     // Error case: identifier ID is used without being declared - (not found in) symbol table
     if (!sTable.contains(id)) {
-      semErrors += variableNotDeclared(id)
+      semErrors += VariableNotDeclared(id)
       return
     }
     // Error case: identifier ID is a declared function
     if (sTable.isFunc(id)) {
-      semErrors += functionIllegalAssignment(id)
+      semErrors += FunctionIllegalAssignment(id)
       return
     }
     checkAssignmentType(checkType(id, sTable), rhs, sTable)
@@ -117,7 +116,7 @@ class SemanticChecker {
     val rhsType = checkType(rhs, sTable)
     // Add semantic error if types mismatch and both are invalid once evaluated
     if ((lhsType != null) && (rhsType != null) && (lhsType != rhsType)) {
-      semErrors += typeMismatch(rhs, rhsType, List(lhsType))
+      semErrors += TypeMismatch(rhs, rhsType, List(lhsType))
     }
   }
 
@@ -127,7 +126,7 @@ class SemanticChecker {
     rhsType match {
       case CharT | IntT =>
       case _ =>
-        semErrors += typeMismatch(elem, rhsType, List(CharT, IntT))
+        semErrors += TypeMismatch(elem, rhsType, List(CharT, IntT))
     }
   }
 
@@ -145,7 +144,7 @@ class SemanticChecker {
       return
     }
     // Error case: calling free only permitted for pairs/arrays
-    semErrors += typeMismatch(
+    semErrors += TypeMismatch(
       e,
       actualType,
       List(Pair(null, null), ArrayT(null))
@@ -156,7 +155,7 @@ class SemanticChecker {
     val expectedType = sTable.getFuncRetType
     // null if in global scope or unable to return
     if (expectedType == null) {
-      semErrors += invalidReturn(e)
+      semErrors += InvalidReturn(e)
       return
     }
     // getType generates semantic errors for E
@@ -164,7 +163,7 @@ class SemanticChecker {
 
     // Error case: type T doesnt match funcion return type RETURNTYPE
     if (actualType != expectedType) {
-      semErrors += typeMismatch(e, actualType, List(expectedType))
+      semErrors += TypeMismatch(e, actualType, List(expectedType))
     }
   }
 
@@ -172,7 +171,7 @@ class SemanticChecker {
     val actualType = checkType(e, sTable)
     // Error case: attempt to exit with non-integer code
     if ((actualType != null) && (actualType != IntT)) {
-      semErrors += typeMismatch(e, actualType, List(IntT))
+      semErrors += TypeMismatch(e, actualType, List(IntT))
     }
   }
 
@@ -180,7 +179,7 @@ class SemanticChecker {
     val condType = checkType(cond, sTable)
     if ((condType != null) && (condType != BoolT)) {
       // Error case: Condition COND for IF statement is not of type Boolean
-      semErrors += typeMismatch(cond, condType, List(BoolT))
+      semErrors += TypeMismatch(cond, condType, List(BoolT))
     }
     // New symbol tables for conditional-statements, with independent analysis of each branch
     stat.foreach(s => statAnalysis(s, sTable.nextScope))

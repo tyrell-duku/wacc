@@ -55,7 +55,7 @@ case class SymbolTable(
     var semErrors = mutable.ListBuffer.empty[SemanticError]
     for (v <- vars) {
       if (varMap.contains(v._1)) {
-        semErrors += variableDeclared(v._1)
+        semErrors += VariableDeclared(v._1)
       } else {
         varMap.addOne(v)
       }
@@ -68,7 +68,7 @@ case class SymbolTable(
     var semErrors = mutable.ListBuffer.empty[SemanticError]
     for (f <- funcs) {
       if (funcMap.contains(f._1)) {
-        semErrors += functionDeclared(f._1)
+        semErrors += FunctionDeclared(f._1)
       } else {
         funcMap.addOne(f)
       }
@@ -96,14 +96,14 @@ case class SymbolTable(
   def funcParamMatch(id: Ident, args: Option[ArgList]): mutable.ListBuffer[SemanticError] = {
     val meta = funcMap.get(id)
     if (meta.isEmpty) {
-      return mutable.ListBuffer[SemanticError](functionNotDeclared(id: Ident))
+      return mutable.ListBuffer[SemanticError](FunctionNotDeclared(id: Ident))
     }
     val Some(Meta(_, value)) = meta
     if (args.isEmpty) {
       if (value.exists(_.isEmpty)) {
         return mutable.ListBuffer[SemanticError]()
       }
-      return mutable.ListBuffer[SemanticError](invalidParams(id, 0, value.get.length))
+      return mutable.ListBuffer[SemanticError](InvalidParams(id, 0, value.get.length))
     }
     val argList = args.get.args
     val pList = value.get
@@ -111,14 +111,14 @@ case class SymbolTable(
     val argLen = argList.length
     // false if number of arguments > number of parameters
     if (argLen != paramLen) {
-      return mutable.ListBuffer[SemanticError](invalidParams(id, argLen, paramLen))
+      return mutable.ListBuffer[SemanticError](InvalidParams(id, argLen, paramLen))
     }
     var result = mutable.ListBuffer.empty[SemanticError]
     for (i <- 0 until argLen) {
       val argType = argList(i).getType(this)
       val paramType = pList(i)
       if (argType != paramType) {
-        result += typeMismatch(argList(i), argType, List(paramType))
+        result += TypeMismatch(argList(i), argType, List(paramType))
       }
     }
     result
