@@ -1,5 +1,6 @@
 import parsley.Parsley
 import parsley.Parsley.pos
+import parsley.implicits.Map2
 
 import scala.collection.mutable
 
@@ -63,6 +64,10 @@ object Rules {
       Pair(fstPairElem, sndPairElem)
     }
   }
+  object Newpair {
+    def apply(fst: Parsley[Expr], snd: Parsley[Expr]): Parsley[Newpair] =
+      pos <**> (fst, snd).map((fst: Expr, snd: Expr) => (p: (Int, Int)) => Newpair(fst, snd, p))
+  }
 
   case class Call(id: Ident, args: Option[ArgList] = None, pos: (Int, Int)) extends AssignRHS {
     override def getType(sTable: SymbolTable): Type = {
@@ -72,6 +77,10 @@ object Rules {
     }
     override def toString: String =
       id + "(" + args.getOrElse(ArgList(List())) + ")"
+  }
+  object Call {
+    def apply(id: Parsley[Ident], args: Parsley[Option[ArgList]]): Parsley[Call] =
+      pos <**> (id, args).map((id: Ident, args: Option[ArgList]) => (p: (Int, Int)) => Call(id, args, p))
   }
 
   sealed case class ArgList(args: List[Expr]) {
@@ -101,6 +110,10 @@ object Rules {
       Any
     }
   }
+  object Fst {
+    def apply(e: Parsley[Expr]): Parsley[Fst] =
+      pos <**> e.map((e: Expr) => (p: (Int, Int)) => Fst(e, p))
+  }
 
   case class Snd(e: Expr, pos: (Int, Int)) extends PairElem {
     override def toString: String = "snd " + e
@@ -118,6 +131,10 @@ object Rules {
       semErrs += invalidPairElem(this)
       Any
     }
+  }
+  object Snd {
+    def apply(e: Parsley[Expr]): Parsley[Snd] =
+      pos <**> e.map((e: Expr) => (p: (Int, Int)) => Snd(e, p))
   }
 
   sealed trait Type {
@@ -448,6 +465,10 @@ object Rules {
       actual
     }
   }
+  object ArrayElem {
+    def apply(id: Parsley[Ident], es: Parsley[List[Expr]]): Parsley[ArrayElem] =
+      pos <**> (id, es).map((id: Ident, es: List[Expr]) => (p: (Int, Int)) => ArrayElem(id, es, p))
+  }
 
   sealed case class IntLiter(n: Int, pos: (Int, Int)) extends Expr {
     override def toString: String = n.toString
@@ -468,7 +489,7 @@ object Rules {
     override def getType(sTable: SymbolTable): Type = BoolT
   }
   object BoolLiter {
-    def apply(op: Parsley[_], b: Boolean): Parsley[BoolLiter] =
+    def apply(b: Boolean): Parsley[BoolLiter] =
       pos.map((p: (Int, Int)) => BoolLiter(b, p))
   }
 
@@ -522,7 +543,7 @@ object Rules {
       Pair(null, null)
   }
   object PairLiter {
-    def apply(liter: Parsley[String]): Parsley[PairLiter] =
+    def apply(): Parsley[PairLiter] =
       pos.map((p: (Int, Int)) => PairLiter(p))
   }
 }

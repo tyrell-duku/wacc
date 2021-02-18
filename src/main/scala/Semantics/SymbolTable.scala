@@ -1,4 +1,3 @@
-import Rules.Ident
 import Rules._
 
 import scala.collection.mutable.HashMap

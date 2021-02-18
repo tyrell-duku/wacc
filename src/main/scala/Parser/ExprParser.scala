@@ -13,7 +13,7 @@ object ExprParser {
   // '(' <expr> ')'
   val expr: Parsley[Expr] = precedence[Expr](
     intLiter <|> boolLiteral <|> charLiteral <|> strLiteral <|> pairLiteral <|>
-      arrayElem <\> identifier <|> (Parens <#> lexer.parens(expr)),
+      arrayElem <\> identifier <|> lexer.parens(expr),
     // unary operators
     Ops[Expr](Prefix)(
       Not("!") ? "unary operator",
@@ -53,18 +53,15 @@ object ExprParser {
     ArgList <#> sepBy1(expr, ",") ? "arg-list"
 
   // '[' (<expr> (',' <expr>)*)? ']'
-  val arrayLiter: Parsley[ArrayLiter] = ArrayLiter <#> lexer.brackets(
+  val arrayLiter: Parsley[ArrayLiter] = ArrayLiter(lexer.brackets(
     option(sepBy1(expr, ","))
-  ) ? "array-liter"
+  )) ? "array-liter"
 
   // <ident> ('['<expr>']')+
-  lazy val arrayElem: Parsley[ArrayElem] = lift2(
-    ArrayElem,
-    identifier,
-    manyN(1, lexer.brackets(expr))
+  lazy val arrayElem: Parsley[ArrayElem] = ArrayElem(identifier, manyN(1, lexer.brackets(expr))
   ) ? "array-elem"
 
   // "fst" <expr> | "snd" <expr>
   val pairElem: Parsley[PairElem] =
-    ((Fst <#> "fst" *> expr) <|> (Snd <#> "snd" *> expr)) ? "pair-elem"
+    (("fst" *> Fst (expr)) <|> ("snd" *> Snd(expr))) ? "pair-elem"
 }

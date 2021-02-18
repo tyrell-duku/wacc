@@ -27,7 +27,7 @@ object Parser {
 
   // Error message if function not ended with a return/exit statement
   private def funcMsg(f: Func): String = f match {
-    case Func(_, Ident(s), _, _) =>
+    case Func(_, Ident(s, _), _, _) =>
       "Function " + s + " is not ended with return or exit statement"
   }
 
@@ -47,7 +47,7 @@ object Parser {
   // "begin" <func>* <stat> "end"
   val program: Parsley[Program] =
     between(
-      "begin".explain("every progam must start with \"begin\""),
+      "begin".explain("every program must start with \"begin\""),
       "end".explain("every program must terminate with \"end\""),
       lift2(Program, many(attempt(func)), stat)
     ) ? "program"

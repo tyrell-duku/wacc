@@ -26,7 +26,7 @@ sealed trait SemanticError {
   }
 }
 
-case class typeMismatch(invalid: Any, actualT: Type, expected: List[Type])
+case class typeMismatch(invalid: AssignRHS, actualT: Type, expected: List[Type])
     extends SemanticError
 case class variableNotDeclared(id: Ident) extends SemanticError
 case class variableDeclared(id: Ident) extends SemanticError

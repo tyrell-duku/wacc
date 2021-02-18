@@ -16,13 +16,13 @@ object StatParser {
   val assignRHS: Parsley[AssignRHS] =
     ("newpair" *> lexer
       .parens(
-        lift2(Newpair, expr, "," *> expr)
+        Newpair(expr, "," *> expr)
       )) <|>
-      ("call" *> lift2(
-        Call,
+      ("call" *>
+        Call(
         identifier,
-        lexer.parens(option(argList))
-      )) <|> pairElem <|> expr <|> arrayLiter
+        lexer.parens(option(argList)))
+      ) <|> pairElem <|> expr <|> arrayLiter
 
   // "skip"
   private val skipStat: Parsley[Stat] = "skip" #> Skip
