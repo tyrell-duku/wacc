@@ -33,16 +33,16 @@ object LiterParser {
     )) ? "pair-type"
 
   // ('_' | 'a' - 'z' | 'A' - 'Z') ('_' | 'a' - 'z' | 'A' - 'Z' | '0' - 9)*
-  lazy val identifier: Parsley[Ident] = Ident <#> lexer.identifier
+  lazy val identifier: Parsley[Ident] = Ident(lexer.identifier)
 
   // '+' | '-'
   val intSign: Parsley[IntSign] = ("+" #> Pos) <|> ("-" #> Neg)
 
   //  <int-sign>? <digit>+  Range[-2^31 < x < 2^31 - 1]
   val intLiter: Parsley[IntLiter] =
-    IntLiter <#> (option(lookAhead(intSign)) <~> lexer.integer)
+    IntLiter((option(lookAhead(intSign)) <~> lexer.integer)
       .guard(notOverflow, "Integer is not between -2^31 and 2^31 - 1")
-      .map((x: (Option[IntSign], Int)) => x._2) ? "number"
+      .map((x: (Option[IntSign], Int)) => x._2)) ? "number"
 
   // Determines whether the integer X is within the acceptable range for integers
   def notOverflow(x: (Option[IntSign], Int)): Boolean = {
@@ -53,9 +53,7 @@ object LiterParser {
 
   // "true" | "false"
   val boolLiteral: Parsley[BoolLiter] =
-    (("true" #> BoolLiter(true)) <|> ("false" #> BoolLiter(
-      false
-    ))) ? "boolean atom"
+    (BoolLiter("true", b = true) <|> BoolLiter("false", b = false)) ? "boolean atom"
 
   // '0' | 'b' | 't' |'n' | 'f' | 'r' |'"' | ''' | '\'
   val escapedChar: Parsley[Char] = oneOf(
@@ -69,12 +67,12 @@ object LiterParser {
 
   // ''' <character> '''
   val charLiteral: Parsley[CharLiter] =
-    (CharLiter <#> '\'' *> character <* "\'") ? "'character'"
+    CharLiter ('\'' *> character <* "\'") ? "'character'"
 
   // '"' <character>* '"'
   val strLiteral: Parsley[StrLiter] =
-    (StrLiter <#> '\"' *> many(character) <* "\"") ? "\"characters\""
+    StrLiter('\"' *> many(character) <* "\"") ? "\"characters\""
 
   // "null"
-  val pairLiteral: Parsley[PairLiter] = "null" #> PairLiter()
+  val pairLiteral: Parsley[PairLiter] = PairLiter("null")
 }
