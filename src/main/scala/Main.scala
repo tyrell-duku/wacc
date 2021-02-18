@@ -1,25 +1,28 @@
 import java.io.File
+
+import Rules.Program
 import parsley.Failure
 import parsley.Success
+
 import scala.collection.mutable.ListBuffer
 
 object Main {
   val syntaxError = 100
   val semanticError = 200
 
-  def syntaxExit(errorMessage: String) = {
+  def syntaxExit(errorMessage: String): Nothing = {
     println("Syntax Error")
     println(errorMessage)
     sys.exit(syntaxError)
   }
 
-  def semanticExit(errorMessages: ListBuffer[SemanticError]) = {
+  def semanticExit(errorMessages: ListBuffer[SemanticError]): Nothing = {
     println("Semantic Error")
     errorMessages.foreach((semErr: SemanticError) => println(semErr))
     sys.exit(semanticError)
   }
 
-  def semanticAnalysis(result: Rules.Program) = {
+  def semanticAnalysis(result: Program): Unit = {
     val semanticChecker = new SemanticChecker
     val semanticResult = semanticChecker.progAnalysis(result)
     if (semanticResult.nonEmpty) {
@@ -27,7 +30,7 @@ object Main {
     }
   }
 
-  def main(args: Array[String]) = {
+  def main(args: Array[String]): Unit = {
     if (args.length == 0) {
       throw new Exception("Invalid number of arguments, please enter a file.")
     }
