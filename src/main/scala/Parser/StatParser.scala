@@ -1,6 +1,6 @@
 import parsley.Parsley
 import parsley.Parsley._
-import parsley.combinator.{between, option, sepBy}
+import parsley.combinator.{between, option, sepBy1}
 import parsley.lift.{lift2, lift3}
 import Rules._
 import Lexer._
@@ -91,7 +91,7 @@ object StatParser {
 
   // statement | statement ; statement
   lazy val stat: Parsley[Stat] =
-    (statement <* notFollowedBy(";")) ? "statement" <\> (Seq <#> sepBy(
+    (statement <* notFollowedBy(";")) ? "statement" <\> (Seq <#> sepBy1(
       statement ? "sequential statement",
       ";"
     )) //? "sequential statement")
