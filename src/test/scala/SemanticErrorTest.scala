@@ -16,12 +16,12 @@ class SemanticErrorTest extends AnyFunSuite {
   for (file <- listAllFiles(new File("wacc_examples/invalid/semanticErr"))) {
     if (file.isFile) {
       test("Semantically checks invalid file " + file.getName) {
-        var checker = new SemanticChecker
-        var errors =
+        val checker = new SemanticChecker
+        val errors =
           checker.progAnalysis(
             programWhitespace.parseFromFile(file).get
           )
-        assert(!errors.isEmpty)
+        assert(errors.nonEmpty)
       }
     }
   }
@@ -29,8 +29,8 @@ class SemanticErrorTest extends AnyFunSuite {
   for (file <- listAllFiles(new File("wacc_examples/valid"))) {
     if (file.isFile) {
       test("Semantically checks valid file " + file.getName) {
-        var checker = new SemanticChecker
-        var errors =
+        val checker = new SemanticChecker
+        val errors =
           checker.progAnalysis(
             programWhitespace.parseFromFile(file).get
           )

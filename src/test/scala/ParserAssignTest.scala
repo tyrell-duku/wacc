@@ -1,8 +1,5 @@
 import org.scalatest.funsuite.AnyFunSuite
-import Parser._
 import Rules._
-import LiterParser._
-import ExprParser._
 import StatParser._
 import Lexer._
 import parsley.combinator.eof
@@ -11,20 +8,20 @@ class AssignLHSTest extends AnyFunSuite {
   val assignLHSWhitespace = lexer.whiteSpace *> assignLHS <* eof
 
   test("Successfully parses ident") {
-    assert(assignLHSWhitespace.runParser(" example").contains(Ident("example")))
+    assert(assignLHSWhitespace.runParser(" example").contains(Ident("example",(1,2))))
   }
 
   test("Successfully parses an array-elem") {
     assert(
       assignLHSWhitespace
         .runParser("list[21][2]")
-        .contains(ArrayElem(Ident("list"), List(IntLiter(21), IntLiter(2))))
+        .contains(ArrayElem(Ident("list",(1,1)), List(IntLiter(21,(1,6)), IntLiter(2,(1,10))),(1,1)))
     )
   }
 
   test("Successfully parses a pair-elem") {
-    assert(assignLHSWhitespace.runParser("fst 10").contains(Fst(IntLiter(10))))
-    assert(assignLHSWhitespace.runParser("snd x").contains(Snd(Ident("x"))))
+    assert(assignLHSWhitespace.runParser("fst 10").contains(Fst(IntLiter(10,(1,5)),(1,1))))
+    assert(assignLHSWhitespace.runParser("snd x").contains(Snd(Ident("x",(1,5)),(1,1))))
   }
 }
 
@@ -32,11 +29,11 @@ class AssignRHSTest extends AnyFunSuite {
   val assignRHSWhitespace = lexer.whiteSpace *> assignRHS <* eof
 
   test("Successfully parses call with no arguments") {
-    assert(assignRHS.runParser("call_p()").contains(Call(Ident("_p"), None)))
+    assert(assignRHS.runParser("call_p()").contains(Call(Ident("_p",(1,5)), None,(1,1))))
     assert(
       assignRHSWhitespace
         .runParser("call _p()")
-        .contains(Call(Ident("_p"), None))
+        .contains(Call(Ident("_p",(1,6)), None,(1,1)))
     )
   }
 
@@ -44,12 +41,12 @@ class AssignRHSTest extends AnyFunSuite {
     assert(
       assignRHS
         .runParser("call_var(q)")
-        .contains(Call(Ident("_var"), Some(ArgList(List(Ident("q"))))))
+        .contains(Call(Ident("_var",(1,5)), Some(ArgList(List(Ident("q",(1,10))))),(1,1)))
     )
     assert(
       assignRHSWhitespace
         .runParser(" call   _p (65)")
-        .contains(Call(Ident("_p"), Some(ArgList(List(IntLiter(65))))))
+        .contains(Call(Ident("_p",(1,9)), Some(ArgList(List(IntLiter(65,(1,13))))),(1,2)))
     )
 
   }
@@ -60,8 +57,9 @@ class AssignRHSTest extends AnyFunSuite {
         .runParser("call_var(q,r,s)")
         .contains(
           Call(
-            Ident("_var"),
-            Some(ArgList(List(Ident("q"), Ident("r"), Ident("s"))))
+            Ident("_var", (1,5)),
+            Some(ArgList(List(Ident("q",(1,10)), Ident("r",(1,12)), Ident("s",(1,14))))),
+            (1,1)
           )
         )
     )

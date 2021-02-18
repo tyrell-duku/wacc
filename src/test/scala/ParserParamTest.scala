@@ -9,10 +9,10 @@ class ParamTest extends AnyFunSuite {
 
   test("Successfully parses param with base-type") {
     assert(
-      paramWhitespace.runParser("int var").contains(Param(IntT, Ident("var")))
+      paramWhitespace.runParser("int var").contains(Param(IntT, Ident("var",(1,5))))
     )
     assert(
-      paramWhitespace.runParser("bool var").contains(Param(BoolT, Ident("var")))
+      paramWhitespace.runParser("bool var").contains(Param(BoolT, Ident("var",(1,6))))
     )
   }
 
@@ -20,12 +20,12 @@ class ParamTest extends AnyFunSuite {
     assert(
       paramWhitespace
         .runParser("char[][] var")
-        .contains(Param(ArrayT(ArrayT(CharT)), Ident("var")))
+        .contains(Param(ArrayT(ArrayT(CharT)), Ident("var",(1,10))))
     )
     assert(
       paramWhitespace
         .runParser("int[] var")
-        .contains(Param(ArrayT(IntT), Ident("var")))
+        .contains(Param(ArrayT(IntT), Ident("var",(1,7))))
     )
   }
 
@@ -33,13 +33,13 @@ class ParamTest extends AnyFunSuite {
     assert(
       paramWhitespace
         .runParser("pair(int,char) var")
-        .contains(Param(Pair(PairElemT(IntT), PairElemT(CharT)), Ident("var")))
+        .contains(Param(Pair(PairElemT(IntT), PairElemT(CharT)), Ident("var",(1,16))))
     )
     assert(
       paramWhitespace
         .runParser("pair(pair,pair)[] var")
         .contains(
-          Param(ArrayT(Pair(PairElemPair, PairElemPair)), Ident("var"))
+          Param(ArrayT(Pair(PairElemPair, PairElemPair)), Ident("var",(1,19)))
         )
     )
   }
@@ -60,7 +60,7 @@ class ParamListTest extends AnyFunSuite {
         .contains(
           ParamList(
             List(
-              Param(Pair(PairElemT(IntT), PairElemT(CharT)), Ident("var"))
+              Param(Pair(PairElemT(IntT), PairElemT(CharT)), Ident("var",(1,16)))
             )
           )
         )
@@ -68,7 +68,7 @@ class ParamListTest extends AnyFunSuite {
     assert(
       paramWhitespace
         .runParser("bool var")
-        .contains(ParamList(List(Param(BoolT, Ident("var")))))
+        .contains(ParamList(List(Param(BoolT, Ident("var",(1,6))))))
     )
   }
 
@@ -79,9 +79,9 @@ class ParamListTest extends AnyFunSuite {
         .contains(
           ParamList(
             List(
-              Param(IntT, Ident("var1")),
-              Param(CharT, Ident("var2")),
-              Param(BoolT, Ident("var3"))
+              Param(IntT, Ident("var1",(1,5))),
+              Param(CharT, Ident("var2",(1,16))),
+              Param(BoolT, Ident("var3",(1,27)))
             )
           )
         )
@@ -92,9 +92,9 @@ class ParamListTest extends AnyFunSuite {
         .contains(
           ParamList(
             List(
-              Param(ArrayT(IntT), Ident("x")),
-              Param(ArrayT(IntT), Ident("y")),
-              Param(ArrayT(IntT), Ident("z"))
+              Param(ArrayT(IntT), Ident("x",(1,7))),
+              Param(ArrayT(IntT), Ident("y",(1,16))),
+              Param(ArrayT(IntT), Ident("z",(1,25)))
             )
           )
         )
