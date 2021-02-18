@@ -299,26 +299,17 @@ object Rules {
       if (actualL == Any || actualR == Any) {
         return expected._2
       }
-      if (actualL == actualR) {
-        if (
-          (expected._1.contains(actualL) && expected._1.contains(actualR))
-          || (expected._1.isEmpty)
-        ) {
-          return expected._2
+      if (actualL != actualR) {
+        if (!expected._1.contains(actualL)) {
+          semErrs += TypeMismatch(lExpr, actualL, expected._1)
         }
-      } else {
-        if (expected._1.contains(actualL)) {
-          semErrs += TypeMismatch(rExpr, actualR, List(actualL))
-          return expected._2
+        if (!expected._1.contains(actualR)) {
+          semErrs += TypeMismatch(rExpr, actualR, expected._1)
         }
-        if (expected._1.contains(actualR)) {
-          semErrs += TypeMismatch(lExpr, actualL, List(actualR))
-          return expected._2
-        }
+      } else if (!expected._1.contains(actualL) && expected._1.nonEmpty){
+        semErrs += TypeMismatch(lExpr, actualL, expected._1)
+        semErrs += TypeMismatch(rExpr, actualR, expected._1)
       }
-      // neither types are correct
-      semErrs += TypeMismatch(lExpr, actualL, expected._1)
-      semErrs += TypeMismatch(rExpr, actualR, expected._1)
       expected._2
     }
   }
