@@ -445,6 +445,14 @@ object Rules {
       }
       sTable.lookupAll(this)
     }
+
+    override def equals(x: Any): Boolean =
+      x match {
+        case Ident(s, _) => this.s == s
+        case _       => false
+      }
+
+    override def hashCode(): Int = s.hashCode()
   }
   object Ident {
     def apply(str: Parsley[String]): Parsley[Ident] =
