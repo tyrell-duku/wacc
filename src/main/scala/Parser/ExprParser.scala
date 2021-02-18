@@ -2,7 +2,6 @@ import parsley.Parsley
 import parsley.Parsley._
 import parsley.combinator.{manyN, option, sepBy1}
 import parsley.expr.{InfixL, Ops, Prefix, precedence}
-import parsley.lift.lift2
 import Rules._
 import Lexer._
 import LiterParser._
@@ -18,9 +17,9 @@ object ExprParser {
     Ops[Expr](Prefix)(
       Not("!") ? "unary operator",
       notFollowedBy(intLiter) *> Negation("-") ? "unary operator",
-      Len(lexer.keyword("len")) ? "unary operator",
-      Ord(lexer.keyword("ord")) ? "unary operator",
-      Chr(lexer.keyword("chr")) ? "unary operator"
+      Len("len") ? "unary operator",
+      Ord("ord") ? "unary operator",
+      Chr("chr") ? "unary operator"
     ),
     // arithmetic binary operators
     Ops[Expr](InfixL)(

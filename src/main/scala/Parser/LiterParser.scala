@@ -11,15 +11,15 @@ import Lexer._
 object LiterParser {
   // "int" | "bool"  | "char" | "string"
   lazy val baseType: Parsley[BaseType] =
-    (lexer.keyword("int") #> IntT) <|>
-      (lexer.keyword("bool") #> BoolT) <|>
-      (lexer.keyword("char") #> CharT) <|>
-      (lexer.keyword("string") #> StringT)
+    ("int" #> IntT) <|>
+      ("bool" #> BoolT) <|>
+      ("char" #> CharT) <|>
+      ("string" #> StringT)
 
   // <base-type> | <array-type> | <pair-type>
   val types: Parsley[Type] = precedence[Type](
     baseType ? "base-type" <|> pairType,
-    Ops[Type](Postfix)(lexer.keyword("[]") #> ArrayT ? "array-type")
+    Ops[Type](Postfix)("[]" #> ArrayT ? "array-type")
   )
 
   // <base-type> | <array-type> | 'pair'

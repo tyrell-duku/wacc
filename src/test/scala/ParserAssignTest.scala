@@ -29,7 +29,6 @@ class AssignRHSTest extends AnyFunSuite {
   val assignRHSWhitespace = lexer.whiteSpace *> assignRHS <* eof
 
   test("Successfully parses call with no arguments") {
-    assert(assignRHS.runParser("call_p()").contains(Call(Ident("_p",(1,5)), None,(1,1))))
     assert(
       assignRHSWhitespace
         .runParser("call _p()")
@@ -38,11 +37,6 @@ class AssignRHSTest extends AnyFunSuite {
   }
 
   test("Successfully parses call with one argument") {
-    assert(
-      assignRHS
-        .runParser("call_var(q)")
-        .contains(Call(Ident("_var",(1,5)), Some(ArgList(List(Ident("q",(1,10))))),(1,1)))
-    )
     assert(
       assignRHSWhitespace
         .runParser(" call   _p (65)")
@@ -53,12 +47,12 @@ class AssignRHSTest extends AnyFunSuite {
 
   test("Successfully parses call with multiple arguments") {
     assert(
-      assignRHS
-        .runParser("call_var(q,r,s)")
+      assignRHSWhitespace
+        .runParser("call _var(q,r,s)")
         .contains(
           Call(
-            Ident("_var", (1,5)),
-            Some(ArgList(List(Ident("q",(1,10)), Ident("r",(1,12)), Ident("s",(1,14))))),
+            Ident("_var", (1,6)),
+            Some(ArgList(List(Ident("q",(1,11)), Ident("r",(1,13)), Ident("s",(1,15))))),
             (1,1)
           )
         )
@@ -66,6 +60,6 @@ class AssignRHSTest extends AnyFunSuite {
   }
 
   test("Successfully fails to parse embedded function calls") {
-    assert(assignRHS.runParser("call_p(call q(call r()))").isFailure)
+    assert(assignRHS.runParser("call _p(call q(call r()))").isFailure)
   }
 }
