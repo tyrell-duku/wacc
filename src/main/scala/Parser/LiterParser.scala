@@ -53,7 +53,7 @@ object LiterParser {
 
   // "true" | "false"
   val boolLiteral: Parsley[BoolLiter] =
-    ("true" *> BoolLiter( b = true) <|> "false" *> BoolLiter(b = false)) ? "boolean atom"
+    ((BoolLiter(b = true) <* "true")  <|>  (BoolLiter( b = false) <* "false")) ? "boolean atom"
 
   // '0' | 'b' | 't' |'n' | 'f' | 'r' |'"' | ''' | '\'
   val escapedChar: Parsley[Char] = oneOf(
@@ -74,5 +74,5 @@ object LiterParser {
     StrLiter('\"' *> many(character) <* "\"") ? "\"characters\""
 
   // "null"
-  val pairLiteral: Parsley[PairLiter] = "null" *> PairLiter()
+  val pairLiteral: Parsley[PairLiter] = PairLiter() <* "null"
 }

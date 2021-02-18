@@ -63,5 +63,5 @@ object ExprParser {
 
   // "fst" <expr> | "snd" <expr>
   val pairElem: Parsley[PairElem] =
-    (("fst" *> Fst (expr)) <|> ("snd" *> Snd(expr))) ? "pair-elem"
+    (Fst("fst" *> expr) <|> Snd("snd" *> expr)) ? "pair-elem"
 }

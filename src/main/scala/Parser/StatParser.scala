@@ -18,8 +18,8 @@ object StatParser {
       .parens(
         Newpair(expr, "," *> expr)
       )) <|>
-      ("call" *>
-        Call(
+      (
+        Call("call" *>
         identifier,
         lexer.parens(option(argList)))
       ) <|> pairElem <|> expr <|> arrayLiter
