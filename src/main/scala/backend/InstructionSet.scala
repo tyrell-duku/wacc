@@ -4,22 +4,22 @@ import backend.Reg
 import backend.Condition
 
 object InstructionSet {
-  sealed trait Intruction
+  sealed trait Instruction
   // arithmetic
-  case class Add(rd: Reg, rn: Reg, op2: Operand) extends Intruction
-  case class Sub(rd: Reg, rn: Reg, op2: Operand) extends Intruction
-  case class Mul(rd: Reg, rm: Reg, rs: Reg) extends Intruction
+  case class Add(rd: Reg, rn: Reg, op2: Operand) extends Instruction
+  case class Sub(rd: Reg, rn: Reg, op2: Operand) extends Instruction
+  case class Mul(rd: Reg, rm: Reg, rs: Reg) extends Instruction
   // comparison
-  case class Cmp(rn: Reg, op2: Operand) extends Intruction
+  case class Cmp(rn: Reg, op2: Operand) extends Instruction
   // logical
-  case class And(rd: Reg, rn: Reg, op2: Operand) extends Intruction
-  case class Or(rd: Reg, rn: Reg, op2: Operand) extends Intruction
+  case class And(rd: Reg, rn: Reg, op2: Operand) extends Instruction
+  case class Or(rd: Reg, rn: Reg, op2: Operand) extends Instruction
 
-  case class Push(rs: ListBuffer[Reg]) extends Intruction
-  case class Pop(rs: ListBuffer[Reg]) extends Intruction
-  case class Ldr(rd: Reg, op2: Operand) extends Intruction
+  case class Push(rs: ListBuffer[Reg]) extends Instruction
+  case class Pop(rs: ListBuffer[Reg]) extends Instruction
+  case class Ldr(rd: Reg, op2: Operand) extends Instruction
 
   // Branching
-  case class Branch(label: String)
-  case class BranchCond(cond: Condition, label: String)
+  case class Branch(label: String) extends Instruction
+  case class BranchCond(cond: Condition, label: String) extends Instruction
 }
