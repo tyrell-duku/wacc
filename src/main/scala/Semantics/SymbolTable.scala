@@ -1,7 +1,7 @@
-import Rules.Ident
 import Rules._
 
 import scala.collection.mutable.HashMap
+import scala.collection.mutable
 
 case class Meta(t: Type, pList: Option[List[Type]])
 
@@ -51,11 +51,11 @@ case class SymbolTable(
   }
 
   // Add all variable declarations to dictionary
-  def addVars(vars: List[(Ident, Type)]): List[SemanticError] = {
-    var semErrors: List[SemanticError] = List.empty[SemanticError]
+  def addVars(vars: List[(Ident, Type)]): mutable.ListBuffer[SemanticError] = {
+    var semErrors = mutable.ListBuffer.empty[SemanticError]
     for (v <- vars) {
       if (varMap.contains(v._1)) {
-        semErrors ::= variableDeclared(v._1)
+        semErrors += VariableDeclared(v._1)
       } else {
         varMap.addOne(v)
       }
@@ -64,11 +64,11 @@ case class SymbolTable(
   }
 
   // Add all function declarations to funcMap
-  def addFuncs(funcs: List[(Ident, Meta)]): List[SemanticError] = {
-    var semErrors: List[SemanticError] = List.empty[SemanticError]
+  def addFuncs(funcs: List[(Ident, Meta)]): mutable.ListBuffer[SemanticError] = {
+    var semErrors = mutable.ListBuffer.empty[SemanticError]
     for (f <- funcs) {
       if (funcMap.contains(f._1)) {
-        semErrors ::= functionDeclared(f._1)
+        semErrors += FunctionDeclared(f._1)
       } else {
         funcMap.addOne(f)
       }
@@ -93,17 +93,17 @@ case class SymbolTable(
   }
 
   //  Ensures params match when calling a function
-  def funcParamMatch(id: Ident, args: Option[ArgList]): List[SemanticError] = {
+  def funcParamMatch(id: Ident, args: Option[ArgList]): mutable.ListBuffer[SemanticError] = {
     val meta = funcMap.get(id)
     if (meta.isEmpty) {
-      return List[SemanticError](functionNotDeclared(id: Ident))
+      return mutable.ListBuffer[SemanticError](FunctionNotDeclared(id: Ident))
     }
     val Some(Meta(_, value)) = meta
     if (args.isEmpty) {
       if (value.exists(_.isEmpty)) {
-        return List[SemanticError]()
+        return mutable.ListBuffer[SemanticError]()
       }
-      return List(invalidParams(id, 0, value.get.length))
+      return mutable.ListBuffer[SemanticError](InvalidParams(id, 0, value.get.length))
     }
     val argList = args.get.args
     val pList = value.get
@@ -111,14 +111,14 @@ case class SymbolTable(
     val argLen = argList.length
     // false if number of arguments > number of parameters
     if (argLen != paramLen) {
-      return List(invalidParams(id, argLen, paramLen))
+      return mutable.ListBuffer[SemanticError](InvalidParams(id, argLen, paramLen))
     }
-    var result = List[SemanticError]()
+    var result = mutable.ListBuffer.empty[SemanticError]
     for (i <- 0 until argLen) {
       val argType = argList(i).getType(this)
       val paramType = pList(i)
       if (argType != paramType) {
-        result ::= typeMismatch(argList(i), argType, List(paramType))
+        result += TypeMismatch(argList(i), argType, List(paramType))
       }
     }
     result

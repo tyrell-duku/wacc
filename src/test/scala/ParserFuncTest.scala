@@ -1,9 +1,6 @@
 import org.scalatest.funsuite.AnyFunSuite
 import Parser._
 import Rules._
-import LiterParser._
-import StatParser._
-import ExprParser._
 import Lexer._
 
 class FuncTest extends AnyFunSuite {
@@ -11,7 +8,7 @@ class FuncTest extends AnyFunSuite {
     assert(
       func
         .runParser("int foo () is return 10 end")
-        .contains(Func(IntT, Ident("foo"), None, Return(IntLiter(10))))
+        .contains(Func(IntT, Ident("foo",(1,5)), None, Return(IntLiter(10,(1,22)))))
     )
     assert(
       func
@@ -19,12 +16,12 @@ class FuncTest extends AnyFunSuite {
         .contains(
           Func(
             IntT,
-            Ident("foo"),
+            Ident("foo",(1,5)),
             None,
             Seq(
               List(
-                EqAssign(Ident("x"), Plus(Ident("x"), IntLiter(1))),
-                Exit(IntLiter(0))
+                EqAssign(Ident("x",(1,15)), Plus(Ident("x",(1,19)), IntLiter(1,(1,23)),(1,21))),
+                Exit(IntLiter(0,(1,32)))
               )
             )
           )
@@ -36,12 +33,12 @@ class FuncTest extends AnyFunSuite {
         .contains(
           Func(
             ArrayT(IntT),
-            Ident("foo"),
+            Ident("foo",(1,7)),
             None,
             Seq(
               List(
-                EqAssign(Ident("y"), Plus(Ident("x"), IntLiter(1))),
-                Return(Ident("y"))
+                EqAssign(Ident("y",(1,17)), Plus(Ident("x",(1,21)), IntLiter(1,(1,25)),(1,23))),
+                Return(Ident("y",(1,36)))
               )
             )
           )
@@ -56,9 +53,9 @@ class FuncTest extends AnyFunSuite {
         .contains(
           Func(
             IntT,
-            Ident("foo"),
-            Some(ParamList(List(Param(IntT, Ident("arg1"))))),
-            Return(Ident("arg1"))
+            Ident("foo",(1,5)),
+            Some(ParamList(List(Param(IntT, Ident("arg1",(1,14)))))),
+            Return(Ident("arg1",(1,30)))
           )
         )
     )
@@ -68,13 +65,13 @@ class FuncTest extends AnyFunSuite {
         .contains(
           Func(
             IntT,
-            Ident("foo"),
+            Ident("foo",(1,5)),
             Some(
               ParamList(
-                List(Param(IntT, Ident("arg1")), Param(CharT, Ident("arg2")))
+                List(Param(IntT, Ident("arg1",(1,14))), Param(CharT, Ident("arg2",(1,25))))
               )
             ),
-            Return(Ident("y"))
+            Return(Ident("y",(1,41)))
           )
         )
     )
@@ -84,9 +81,9 @@ class FuncTest extends AnyFunSuite {
         .contains(
           Func(
             StringT,
-            Ident("foo"),
-            Some(ParamList(List(Param(ArrayT(IntT), Ident("arg1"))))),
-            Exit(IntLiter(1))
+            Ident("foo",(1,18)),
+            Some(ParamList(List(Param(ArrayT(IntT), Ident("arg1",(1,19)))))),
+            Exit(IntLiter(1,(1,33)))
           )
         )
     )

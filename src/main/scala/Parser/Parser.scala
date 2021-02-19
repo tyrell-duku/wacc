@@ -1,20 +1,19 @@
 import parsley.Parsley
 import parsley.Parsley._
-import parsley.combinator.{between, eof, option, sepBy1}
-import parsley.lift.{lift2, lift3, lift4}
+import parsley.combinator.{between, eof, option, sepBy1, many}
+import parsley.lift.{lift2, lift4}
 import Rules._
 import Lexer._
 import LiterParser._
-import ExprParser._
 import StatParser._
 
 object Parser {
   // <type> <ident>
-  val param: Parsley[Param] = lift2(Param, types, identifier) ? "<type> <ident>"
+  val param: Parsley[Param] = lift2(Param, types, identifier) ? "param"
 
   // <param> (, <param>)*
   val paramList: Parsley[ParamList] =
-    ParamList <#> sepBy1(param, ",") ? "<param> (, <param>)*"
+    ParamList <#> sepBy1(param, ",") ? "param-list"
 
   // Checks whether a function is ended with a return/exit statement
   private def statTerminates(stat: Stat): Boolean = stat match {
@@ -28,7 +27,7 @@ object Parser {
 
   // Error message if function not ended with a return/exit statement
   private def funcMsg(f: Func): String = f match {
-    case Func(_, Ident(s), _, _) =>
+    case Func(_, Ident(s, _), _, _) =>
       "Function " + s + " is not ended with return or exit statement"
   }
 
@@ -42,16 +41,16 @@ object Parser {
       "is",
       "end",
       stat
-    ) ? "<type> <ident> (<param-list>?) is <stat> end"
+    ) ? "function"
   ).guard((x: Func) => statTerminates(x.s), (x: Func) => funcMsg(x))
 
   // "begin" <func>* <stat> "end"
   val program: Parsley[Program] =
     between(
-      "begin",
-      "end",
+      "begin".explain("every program must start with \"begin\""),
+      "end".explain("every program must terminate with \"end\""),
       lift2(Program, many(attempt(func)), stat)
-    ) ? "begin <func>* <stat> end"
+    ) ? "program"
 
   // WACC file parser
   val waccParser: Parsley[Program] = lexer.whiteSpace *> program <* eof

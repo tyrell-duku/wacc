@@ -1,9 +1,6 @@
 import org.scalatest.funsuite.AnyFunSuite
-import Parser._
 import Rules._
 import parsley.combinator.eof
-import LiterParser._
-import StatParser._
 import ExprParser._
 import Lexer._
 
@@ -13,7 +10,7 @@ class ArrayElemTest extends AnyFunSuite {
       arrayElem
         .runParser("var[10][2]")
         .contains(
-          ArrayElem(Ident("var"), List(IntLiter(10), IntLiter(2)))
+          ArrayElem(Ident("var",(1,1)), List(IntLiter(10,(1,5)), IntLiter(2,(1,9))),(1,1))
         )
     )
   }
@@ -30,15 +27,16 @@ class ArrayElemTest extends AnyFunSuite {
     assert(
       arrayElem
         .runParser("var[10]")
-        .contains(ArrayElem(Ident("var"), List(IntLiter(10))))
+        .contains(ArrayElem(Ident("var",(1,1)), List(IntLiter(10,(1,5))),(1,1)))
     )
     assert(
       arrayElem
         .runParser("var[var[10]]")
         .contains(
           ArrayElem(
-            Ident("var"),
-            List(ArrayElem(Ident("var"), List(IntLiter(10))))
+            Ident("var",(1,1)),
+            List(ArrayElem(Ident("var",(1,5)), List(IntLiter(10,(1,9))),(1,5))),
+            (1,1)
           )
         )
     )
@@ -51,12 +49,12 @@ class PairElemTest extends AnyFunSuite {
 
   test("Successfully parses fst") {
     assert(
-      pairElem.runParser("fst(65)").contains(Fst(Parens(IntLiter(65))))
+      pairElem.runParser("fst(65)").contains(Fst(IntLiter(65,(1,5)),(1,1)))
     )
     assert(
       pairElemWhitespace
         .runParser("fst 65")
-        .contains(Fst(IntLiter(65)))
+        .contains(Fst(IntLiter(65,(1,5)),(1,1)))
     )
   }
 
@@ -66,12 +64,12 @@ class PairElemTest extends AnyFunSuite {
 
   test("Successfully parses snd") {
     assert(
-      pairElem.runParser("snd(5)").contains(Snd(Parens(IntLiter(5))))
+      pairElem.runParser("snd(5)").contains(Snd(IntLiter(5,(1,5)),(1,1)))
     )
     assert(
       pairElemWhitespace
         .runParser(" snd  65")
-        .contains(Snd(IntLiter(65)))
+        .contains(Snd(IntLiter(65,(1,7)),(1,2)))
     )
   }
 
