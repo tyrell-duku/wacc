@@ -52,13 +52,15 @@ object ExprParser {
     ArgList <#> sepBy1(expr, ",") ? "arg-list"
 
   // '[' (<expr> (',' <expr>)*)? ']'
-  val arrayLiter: Parsley[ArrayLiter] = ArrayLiter(lexer.brackets(
-    option(sepBy1(expr, ","))
-  )) ? "array-liter"
+  val arrayLiter: Parsley[ArrayLiter] = ArrayLiter(
+    lexer.brackets(
+      option(sepBy1(expr, ","))
+    )
+  ) ? "array-liter"
 
   // <ident> ('['<expr>']')+
-  lazy val arrayElem: Parsley[ArrayElem] = ArrayElem(identifier, manyN(1, lexer.brackets(expr))
-  ) ? "array-elem"
+  lazy val arrayElem: Parsley[ArrayElem] =
+    ArrayElem(identifier, manyN(1, lexer.brackets(expr))) ? "array-elem"
 
   // "fst" <expr> | "snd" <expr>
   val pairElem: Parsley[PairElem] =

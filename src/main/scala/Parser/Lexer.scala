@@ -5,9 +5,35 @@ import scala.language.implicitConversions
 
 object Lexer {
 
-  val keywords = Set("int", "bool", "char", "string", "[]", "len", "ord", "chr", "fst", "snd",
-    "skip", "read", "free", "return", "exit", "print", "println", "if", "then", "else", "fi",
-    "while", "do", "done", "begin", "end", "call")
+  val keywords = Set(
+    "int",
+    "bool",
+    "char",
+    "string",
+    "[]",
+    "len",
+    "ord",
+    "chr",
+    "fst",
+    "snd",
+    "skip",
+    "read",
+    "free",
+    "return",
+    "exit",
+    "print",
+    "println",
+    "if",
+    "then",
+    "else",
+    "fi",
+    "while",
+    "do",
+    "done",
+    "begin",
+    "end",
+    "call"
+  )
 
   val lexer = new Lexer(
     LanguageDef.plain.copy(
@@ -21,7 +47,7 @@ object Lexer {
   )
 
   implicit def implicitSymbol(s: String): Parsley[_] = {
-    if (keywords.apply(s)){
+    if (keywords.apply(s)) {
       return lexer.keyword(s)
     }
     lexer.symbol_(s)

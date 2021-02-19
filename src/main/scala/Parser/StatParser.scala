@@ -19,9 +19,11 @@ object StatParser {
         Newpair(expr, "," *> expr)
       )) <|>
       (
-        Call("call" *>
-        identifier,
-        lexer.parens(option(argList)))
+        Call(
+          "call" *>
+            identifier,
+          lexer.parens(option(argList))
+        )
       ) <|> pairElem <|> expr <|> arrayLiter
 
   // "skip"

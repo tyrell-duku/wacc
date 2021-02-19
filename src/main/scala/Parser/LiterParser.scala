@@ -40,9 +40,11 @@ object LiterParser {
 
   //  <int-sign>? <digit>+  Range[-2^31 < x < 2^31 - 1]
   val intLiter: Parsley[IntLiter] =
-    IntLiter((option(lookAhead(intSign)) <~> lexer.integer)
-      .guard(notOverflow, "Integer is not between -2^31 and 2^31 - 1")
-      .map((x: (Option[IntSign], Int)) => x._2)) ? "number"
+    IntLiter(
+      (option(lookAhead(intSign)) <~> lexer.integer)
+        .guard(notOverflow, "Integer is not between -2^31 and 2^31 - 1")
+        .map((x: (Option[IntSign], Int)) => x._2)
+    ) ? "number"
 
   // Determines whether the integer X is within the acceptable range for integers
   def notOverflow(x: (Option[IntSign], Int)): Boolean = {
@@ -53,7 +55,9 @@ object LiterParser {
 
   // "true" | "false"
   val boolLiteral: Parsley[BoolLiter] =
-    ((BoolLiter(b = true) <* "true")  <|>  (BoolLiter( b = false) <* "false")) ? "boolean atom"
+    ((BoolLiter(b = true) <* "true") <|> (BoolLiter(b =
+      false
+    ) <* "false")) ? "boolean atom"
 
   // '0' | 'b' | 't' |'n' | 'f' | 'r' |'"' | ''' | '\'
   val escapedChar: Parsley[Char] = oneOf(
@@ -67,7 +71,7 @@ object LiterParser {
 
   // ''' <character> '''
   val charLiteral: Parsley[CharLiter] =
-    CharLiter ('\'' *> character <* "\'") ? "'character'"
+    CharLiter('\'' *> character <* "\'") ? "'character'"
 
   // '"' <character>* '"'
   val strLiteral: Parsley[StrLiter] =
