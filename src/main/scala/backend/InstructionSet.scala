@@ -44,11 +44,17 @@ package object InstructionSet {
   }
 
   // Branching
-  case class Branch(label: String) extends Instruction {
+  case class Branch(label: Label) extends Instruction {
     override def toString: String = "B " + label
   }
-  case class BranchCond(cond: Condition, label: String) extends Instruction
+  case class BranchCond(cond: Condition, label: Label) extends Instruction
 
   // Creating labels
   case class Define(label: String) extends Instruction
+
+  case class Label(s: String) {
+    override def toString: String = s
+  }
+
+  case class Data(label: Label, s: String)
 }
