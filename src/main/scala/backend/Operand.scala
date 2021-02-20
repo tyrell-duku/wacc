@@ -18,7 +18,12 @@ case object R9 extends Reg
 case object R10 extends Reg
 case object R11 extends Reg
 case object R12 extends Reg
-case object R13 extends Reg
-case object R14 extends Reg
 
-// TODO: Stack Pointer, Instruction Register, Program Counter
+// Stack Pointer
+case object SP extends Reg
+
+// Link Register
+case object LR extends Reg
+
+// Program Counter
+case object PC extends Reg
