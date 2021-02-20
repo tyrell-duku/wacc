@@ -17,8 +17,7 @@ object ARMPrinter {
     val file = new File(assemblyFileName)
 
     if (!file.createNewFile()) {
-      // TODO: error
-      return
+      throw new Exception(file.getName + " is already present")
     }
 
     val fileWriter = new FileWriter(file)
