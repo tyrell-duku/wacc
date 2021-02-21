@@ -1,8 +1,10 @@
 package backend
 
 sealed trait Operand
+sealed case class Imm(n: Int) extends Operand
 
-sealed class Imm(n: Int) extends Operand
+sealed trait LoadOperand
+sealed case class ImmMem(n: Int) extends LoadOperand
 
 sealed trait Reg extends Operand
 case object R0 extends Reg

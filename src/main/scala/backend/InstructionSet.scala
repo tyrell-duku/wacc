@@ -2,6 +2,7 @@ package backend
 
 import scala.collection.mutable.ListBuffer
 import backend.Operand
+import backend.LoadOperand
 import backend.Reg
 import backend.Condition
 
@@ -23,10 +24,13 @@ package object InstructionSet {
 
   case class Push(rs: ListBuffer[Reg]) extends Instruction
   case class Pop(rs: ListBuffer[Reg]) extends Instruction
-  case class Ldr(rd: Reg, op2: Operand) extends Instruction
+  case class Ldr(rd: Reg, op2: LoadOperand) extends Instruction
+
+  case class Mov(rd: Reg, op2: Operand) extends Instruction
 
   // Branching
   case class Branch(label: String) extends Instruction
+  case class BranchLink(label: String) extends Instruction
   case class BranchCond(cond: Condition, label: String) extends Instruction
 
   // Creating labels

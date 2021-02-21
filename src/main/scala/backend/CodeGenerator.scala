@@ -3,13 +3,18 @@ package backend
 import InstructionSet._
 import scala.collection.mutable.ListBuffer
 import Rules._
+import backend.LoadOperand
 
 object CodeGenerator {
   private var instructions: ListBuffer[Instruction] =
     ListBuffer.empty[Instruction]
 
   final val allRegs: ListBuffer[Reg] =
-    ListBuffer(R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, SP, LR, PC)
+    ListBuffer(R0, R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12)
+
+  final val resultReg: Reg = R0
+
+  var varTable = Map.empty[Ident, Reg]
 
   private def saveRegs(
       regsNotInUse: ListBuffer[Reg]
@@ -30,8 +35,12 @@ object CodeGenerator {
     // val funcCode = funcs.map(transFunc)
     // instructions += funcCode
     instructions = ListBuffer(Push(ListBuffer(LR)))
-    // var toAdd = transStat(stat, allRegs) ++ ListBuffer(Ldr(R0, ), Pop(ListBuffer(PC)))
-    // instructions ++= toAdd
+    var toAdd =
+      transStat(stat, allRegs) ++ ListBuffer(
+        Ldr(resultReg, ImmMem(0)),
+        Pop(ListBuffer(PC))
+      )
+    instructions ++= toAdd
     instructions
   }
 
@@ -45,7 +54,7 @@ object CodeGenerator {
       case Read(lhs)        =>
       case Free(e)          =>
       case Return(e)        =>
-      case Exit(e)          =>
+      case Exit(e)          => return transExit(e, regs)
       case Print(e)         =>
       case PrintLn(e)       =>
       case If(cond, s1, s2) =>
@@ -56,4 +65,27 @@ object CodeGenerator {
     }
     ListBuffer.empty[Instruction]
   }
+
+  private def transExit(
+      e: Expr,
+      regs: ListBuffer[Reg]
+  ): ListBuffer[Instruction] = {
+    e match {
+      case IntLiter(n, _) =>
+        val freeReg = regs.filter(r => r != R0)(0)
+        ListBuffer[Instruction](
+          Ldr(freeReg, ImmMem(n)),
+          Mov(R0, freeReg),
+          BranchLink("exit")
+        )
+      case _ => transExp(e)
+    }
+  }
+
+  private def transExp(
+      e: Expr
+  ): ListBuffer[Instruction] = {
+    ListBuffer.empty[Instruction]
+  }
+
 }
