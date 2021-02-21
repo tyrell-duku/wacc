@@ -4,7 +4,7 @@ import parsley.implicits.Map2
 
 import scala.collection.mutable
 
-object Rules {
+package object Rules {
 
   sealed case class Program(fs: List[Func], s: Stat)
 
@@ -43,7 +43,8 @@ object Rules {
     // Abstract function to get type of the RHS
     def getType(sTable: SymbolTable): Type
     // Field to store it's semantic errors
-    var semErrs: mutable.ListBuffer[SemanticError] = mutable.ListBuffer.empty[SemanticError]
+    var semErrs: mutable.ListBuffer[SemanticError] =
+      mutable.ListBuffer.empty[SemanticError]
 
   }
 
@@ -66,10 +67,13 @@ object Rules {
   }
   object Newpair {
     def apply(fst: Parsley[Expr], snd: Parsley[Expr]): Parsley[Newpair] =
-      pos <**> (fst, snd).map((fst: Expr, snd: Expr) => (p: (Int, Int)) => Newpair(fst, snd, p))
+      pos <**> (fst, snd).map((fst: Expr, snd: Expr) =>
+        (p: (Int, Int)) => Newpair(fst, snd, p)
+      )
   }
 
-  case class Call(id: Ident, args: Option[ArgList] = None, pos: (Int, Int)) extends AssignRHS {
+  case class Call(id: Ident, args: Option[ArgList] = None, pos: (Int, Int))
+      extends AssignRHS {
     override def getType(sTable: SymbolTable): Type = {
       val idType = id.getType(sTable)
       semErrs ++= sTable.funcParamMatch(id, args)
@@ -79,9 +83,13 @@ object Rules {
       id.toString + "(" + args.getOrElse(ArgList(List())) + ")"
   }
   object Call {
-    def apply(id: Parsley[Ident], args: Parsley[Option[ArgList]]): Parsley[Call] =
-      pos <**> (id, args).map((id: Ident, args: Option[ArgList]) => (p: (Int, Int)) =>
-        Call(id, args, p))
+    def apply(
+        id: Parsley[Ident],
+        args: Parsley[Option[ArgList]]
+    ): Parsley[Call] =
+      pos <**> (id, args).map((id: Ident, args: Option[ArgList]) =>
+        (p: (Int, Int)) => Call(id, args, p)
+      )
   }
 
   sealed case class ArgList(args: List[Expr]) {
@@ -99,7 +107,7 @@ object Rules {
 
     override def getType(sTable: SymbolTable): Type = {
       e match {
-        case Ident(_,_) =>
+        case Ident(_, _) =>
           val eType = e.getType(sTable)
           eType match {
             case Pair(fst, _) => return fst.getType
@@ -121,7 +129,7 @@ object Rules {
 
     override def getType(sTable: SymbolTable): Type = {
       e match {
-        case Ident(_,_) =>
+        case Ident(_, _) =>
           val eType = e.getType(sTable)
           eType match {
             case Pair(_, snd) => return snd.getType
@@ -291,7 +299,8 @@ object Rules {
     val expected: (List[Type], Type)
     val operatorStr: String
 
-    override def toString: String = lExpr.toString + " " + operatorStr + " " + rExpr
+    override def toString: String =
+      lExpr.toString + " " + operatorStr + " " + rExpr
 
     override def getType(sTable: SymbolTable): Type = {
       val actualL = lExpr.getType(sTable)
@@ -307,7 +316,7 @@ object Rules {
         if (!expected._1.contains(actualR)) {
           semErrs += TypeMismatch(rExpr, actualR, expected._1)
         }
-      } else if (!expected._1.contains(actualL) && expected._1.nonEmpty){
+      } else if (!expected._1.contains(actualL) && expected._1.nonEmpty) {
         semErrs += TypeMismatch(lExpr, actualL, expected._1)
         semErrs += TypeMismatch(rExpr, actualR, expected._1)
       }
@@ -319,7 +328,7 @@ object Rules {
   sealed trait ArithOps extends BinOp {
     override val expected: (List[Type], Type) = (List(IntT), IntT)
   }
-  case class Mul(lExpr: Expr, rExpr: Expr, pos: (Int, Int))extends ArithOps {
+  case class Mul(lExpr: Expr, rExpr: Expr, pos: (Int, Int)) extends ArithOps {
     val operatorStr = "*"
   }
   object Mul {
@@ -441,7 +450,7 @@ object Rules {
     override def equals(x: Any): Boolean =
       x match {
         case Ident(s, _) => this.s == s
-        case _       => false
+        case _           => false
       }
 
     override def hashCode(): Int = s.hashCode()
@@ -468,7 +477,9 @@ object Rules {
   }
   object ArrayElem {
     def apply(id: Parsley[Ident], es: Parsley[List[Expr]]): Parsley[ArrayElem] =
-      pos <**> (id, es).map((id: Ident, es: List[Expr]) => (p: (Int, Int)) => ArrayElem(id, es, p))
+      pos <**> (id, es).map((id: Ident, es: List[Expr]) =>
+        (p: (Int, Int)) => ArrayElem(id, es, p)
+      )
   }
 
   sealed case class IntLiter(n: Int, pos: (Int, Int)) extends Expr {
@@ -512,16 +523,20 @@ object Rules {
     override def toString: String = s"\\$c"
   }
 
-  sealed case class StrLiter(str: List[Character], pos: (Int, Int)) extends Expr {
+  sealed case class StrLiter(str: List[Character], pos: (Int, Int))
+      extends Expr {
     override def toString: String = "\"" + str.mkString("") + "\""
     override def getType(sTable: SymbolTable): Type = StringT
   }
   object StrLiter {
     def apply(str: Parsley[List[Character]]): Parsley[StrLiter] =
-      pos <**> str.map((str: List[Character]) => (p: (Int, Int)) => StrLiter(str, p))
+      pos <**> str.map((str: List[Character]) =>
+        (p: (Int, Int)) => StrLiter(str, p)
+      )
   }
 
-  sealed case class ArrayLiter(arr: Option[List[Expr]], pos: (Int, Int)) extends AssignRHS {
+  sealed case class ArrayLiter(arr: Option[List[Expr]], pos: (Int, Int))
+      extends AssignRHS {
     override def getType(sTable: SymbolTable): Type = {
       if (arr.isEmpty) {
         return ArrayT(null)
@@ -535,7 +550,9 @@ object Rules {
   }
   object ArrayLiter {
     def apply(exprs: Parsley[Option[List[Expr]]]): Parsley[ArrayLiter] =
-      pos <**> exprs.map((exprs: Option[List[Expr]]) => (p: (Int, Int)) => ArrayLiter(exprs, p))
+      pos <**> exprs.map((exprs: Option[List[Expr]]) =>
+        (p: (Int, Int)) => ArrayLiter(exprs, p)
+      )
   }
 
   sealed case class PairLiter(pos: (Int, Int)) extends Expr {
