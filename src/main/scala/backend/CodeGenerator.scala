@@ -81,7 +81,7 @@ object CodeGenerator {
         ListBuffer[Instruction](
           Ldr(freeReg, ImmMem(n)),
           Mov(R0, freeReg),
-          BranchLink("exit")
+          BranchLink(Label("exit"))
         )
       case _ => transExp(e)
     }
@@ -110,7 +110,6 @@ object CodeGenerator {
   }
 
   private def getBaseTypeSize(t: Type): Int = {
-
     t match {
       case IntT           => INT_SIZE
       case BoolT          => BOOL_SIZE
