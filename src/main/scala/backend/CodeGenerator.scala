@@ -16,6 +16,12 @@ object CodeGenerator {
 
   var varTable = Map.empty[Ident, Reg]
 
+  private val INT_SIZE = 4
+  private val CHAR_SIZE = 1
+  private val BOOL_SIZE = 1
+  private val STR_SIZE = 4
+  private val ARRAY_SIZE = 4
+
   private def saveRegs(
       regsNotInUse: ListBuffer[Reg]
   ): Instruction = {
@@ -49,21 +55,20 @@ object CodeGenerator {
       regs: ListBuffer[Reg]
   ): ListBuffer[Instruction] = {
     stat match {
-      case EqIdent(t, i, r) =>
-      case EqAssign(l, r)   =>
-      case Read(lhs)        =>
-      case Free(e)          =>
-      case Return(e)        =>
-      case Exit(e)          => return transExit(e, regs)
-      case Print(e)         =>
-      case PrintLn(e)       =>
-      case If(cond, s1, s2) =>
-      case While(cond, s)   =>
-      case Begin(s)         =>
-      case Seq(statList)    =>
-      case _                => // ignore Skip
+      case EqIdent(t, i, r) => transEqIdent(t, i, r, regs)
+      case EqAssign(l, r)   => ListBuffer.empty[Instruction]
+      case Read(lhs)        => ListBuffer.empty[Instruction]
+      case Free(e)          => ListBuffer.empty[Instruction]
+      case Return(e)        => ListBuffer.empty[Instruction]
+      case Exit(e)          => transExit(e, regs)
+      case Print(e)         => ListBuffer.empty[Instruction]
+      case PrintLn(e)       => ListBuffer.empty[Instruction]
+      case If(cond, s1, s2) => ListBuffer.empty[Instruction]
+      case While(cond, s)   => ListBuffer.empty[Instruction]
+      case Begin(s)         => ListBuffer.empty[Instruction]
+      case Seq(statList)    => ListBuffer.empty[Instruction]
+      case _                => ListBuffer.empty[Instruction]
     }
-    ListBuffer.empty[Instruction]
   }
 
   private def transExit(
@@ -72,7 +77,7 @@ object CodeGenerator {
   ): ListBuffer[Instruction] = {
     e match {
       case IntLiter(n, _) =>
-        val freeReg = regs.filter(r => r != R0)(0)
+        val freeReg = getFreeReg(regs, ListBuffer.empty[Reg])
         ListBuffer[Instruction](
           Ldr(freeReg, ImmMem(n)),
           Mov(R0, freeReg),
@@ -82,10 +87,39 @@ object CodeGenerator {
     }
   }
 
+  private def transEqIdent(
+      t: Type,
+      id: Ident,
+      aRHS: AssignRHS,
+      regs: ListBuffer[Reg]
+  ): ListBuffer[Instruction] = {
+    ListBuffer.empty[Instruction]
+  }
+
   private def transExp(
       e: Expr
   ): ListBuffer[Instruction] = {
     ListBuffer.empty[Instruction]
+  }
+
+  private def getFreeReg(
+      regs: ListBuffer[Reg],
+      regsInUse: ListBuffer[Reg]
+  ): Reg = {
+    regs.filter(r => !regsInUse.contains(r))(0)
+  }
+
+  private def getBaseTypeSize(t: Type): Int = {
+
+    t match {
+      case IntT           => INT_SIZE
+      case BoolT          => BOOL_SIZE
+      case CharT          => CHAR_SIZE
+      case StringT        => STR_SIZE
+      case ArrayT(innerT) => ARRAY_SIZE
+      case _: PairType    => -1
+      case _              => -1
+    }
   }
 
 }
