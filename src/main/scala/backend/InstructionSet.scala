@@ -25,7 +25,9 @@ package object InstructionSet {
   case class Push(rs: ListBuffer[Reg]) extends Instruction
   case class Pop(rs: ListBuffer[Reg]) extends Instruction
   case class Ldr(rd: Reg, op2: LoadOperand) extends Instruction
-
+  case class Str(rd: Reg, add: Address) extends Instruction
+  case class StrB(rd: Reg, add: Address) extends Instruction
+  case class StrOffset(rd: Reg, regAdd: Reg, offset: Int) extends Instruction
   case class Mov(rd: Reg, op2: Operand) extends Instruction
 
   // Branching
