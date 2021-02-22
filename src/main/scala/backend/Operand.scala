@@ -6,7 +6,7 @@ sealed case class ImmInt(n: Int) extends Operand {
   override def toString: String = "#" + n
 }
 
-sealed case class ImmChar(c: Character) extends Operand {
+sealed case class ImmChar(c: Character) extends Operand with LoadOperand {
   override def toString: String = "#'" + c + "'"
 }
 
@@ -15,12 +15,16 @@ sealed case class Offset(n: Int) extends Address {
   override def toString: String = "[" + n + "]"
 }
 
+sealed case class RegAdd(r: Reg) extends Address {
+  override def toString: String = "[" + r + "]"
+}
+
 sealed trait LoadOperand
 sealed case class ImmMem(n: Int) extends LoadOperand {
   override def toString: String = "=" + n
 }
 
-sealed case class DataLabel(label: Label) extends LoadOperand {
+sealed case class DataLabel(label: Label) extends Operand with LoadOperand {
   override def toString: String = "=" + label
 }
 

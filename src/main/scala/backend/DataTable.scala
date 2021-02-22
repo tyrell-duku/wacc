@@ -1,14 +1,16 @@
 package backend
 
-case class MetaData(string: String)
+import scala.collection.mutable.ListBuffer
+import InstructionSet.Data
+import InstructionSet.Label
 
 class DataTable {
-  var map = Map.empty[String, MetaData]
+  var table = ListBuffer.empty[Data]
   val stringDataSkeleton = "msg_"
   var dataCount = 0
 
   def addDataEntry(string: List[Character]) = {
-    map += (getNextLabel() -> MetaData(string.toString()))
+    table += (Data(Label(getNextLabel()), string.toString()))
   }
 
   private def getNextLabel(): String = {
@@ -21,7 +23,7 @@ class DataTable {
   }
 
   override def toString() = {
-    map.toString()
+    table.toString()
   }
 
 }
