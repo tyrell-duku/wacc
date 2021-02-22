@@ -1,9 +1,9 @@
 package backend
 
 import InstructionSet._
+import frontend.Rules._
+
 import scala.collection.mutable.ListBuffer
-import Rules._
-import backend.LoadOperand
 
 object CodeGenerator {
   private var instructions: ListBuffer[Instruction] =
@@ -36,7 +36,9 @@ object CodeGenerator {
     new Pop(regsToPush)
   }
 
-  def transProg(prog: Program): ListBuffer[Instruction] = {
+  def transProg(
+      prog: Program
+  ): (List[Data], List[(Label, List[Instruction])]) = {
     val Program(funcs, stat) = prog
     // val funcCode = funcs.map(transFunc)
     // instructions += funcCode
@@ -46,8 +48,9 @@ object CodeGenerator {
         Ldr(resultReg, ImmMem(0)),
         Pop(ListBuffer(PC))
       )
+    val data = List.empty[Data]
     instructions ++= toAdd
-    instructions
+    (data, List((Label("main"), instructions.toList)))
   }
 
   private def transStat(

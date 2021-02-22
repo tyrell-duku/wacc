@@ -1,6 +1,6 @@
 import org.scalatest.funsuite.AnyFunSuite
 import Parser._
-import Rules._
+import frontend.Rules._
 import Lexer._
 
 class FuncTest extends AnyFunSuite {

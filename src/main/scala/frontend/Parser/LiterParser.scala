@@ -5,7 +5,7 @@ import parsley.implicits.charLift
 import parsley.expr.{Ops, Postfix, precedence}
 import parsley.character.{noneOf, oneOf}
 import parsley.lift.lift2
-import Rules._
+import frontend.Rules._
 import Lexer._
 
 object LiterParser {

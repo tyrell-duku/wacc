@@ -1,4 +1,6 @@
-import Rules._
+package frontend.Semantics
+
+import frontend.Rules._
 
 import scala.collection.mutable.HashMap
 import scala.collection.mutable

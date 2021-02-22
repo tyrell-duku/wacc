@@ -1,10 +1,6 @@
 package backend
 
 import scala.collection.mutable.ListBuffer
-import backend.Operand
-import backend.LoadOperand
-import backend.Reg
-import backend.Condition
 
 package object InstructionSet {
 

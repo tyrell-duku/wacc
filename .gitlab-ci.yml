@@ -1,18 +1,8 @@
-image: openjdk:11
+image: hseeberger/scala-sbt:11.0.9.1_1.4.6_2.13.4
 
 stages:
   - compile
   - test
-
-before_script:
-  - apt-get update -y
-  - apt-get install apt-transport-https -y
-  # Add keyserver for SBT
-  - echo "deb http://dl.bintray.com/sbt/debian /" | tee -a /etc/apt/sources.list.d/sbt.list
-  - apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 2EE0EA64E40A89B84B2DF73499E82A75642AC823
-  # Install SBT
-  - apt-get update -y
-  - apt-get install sbt -y
 
 compile:
   stage: compile
@@ -28,3 +18,11 @@ test:
     reports:
       junit:
         - target/test-reports/TEST-*.xml 
+
+backend-test:
+  stage: test
+  script:
+    - apt-get install python3 gcc-arm-linux-gnueabi qemu qemu-user python3-pip -y
+    - pip3 install colorama
+    - python3 backend_test.py
+  needs: []

@@ -1,5 +1,5 @@
 import org.scalatest.funsuite.AnyFunSuite
-import Rules._
+import frontend.Rules._
 import parsley.combinator.eof
 import LiterParser._
 import ExprParser._

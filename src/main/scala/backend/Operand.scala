@@ -1,5 +1,4 @@
 package backend
-import Rules._
 import backend.InstructionSet.Label
 
 sealed trait Operand

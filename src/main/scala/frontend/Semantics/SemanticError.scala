@@ -1,4 +1,6 @@
-import Rules._
+package frontend.Semantics
+
+import frontend.Rules._
 
 sealed trait SemanticError {
   override def toString: String = this match {
