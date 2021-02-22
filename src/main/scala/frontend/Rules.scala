@@ -1,10 +1,13 @@
+package frontend
+
+import frontend.Semantics._
 import parsley.Parsley
 import parsley.Parsley.pos
 import parsley.implicits.Map2
 
 import scala.collection.mutable
 
-package object Rules {
+object Rules {
 
   sealed case class Program(fs: List[Func], s: Stat)
 

@@ -2,7 +2,7 @@ import parsley.Parsley
 import parsley.Parsley._
 import parsley.combinator.{between, option, sepBy1}
 import parsley.lift.{lift2, lift3}
-import Rules._
+import frontend.Rules._
 import Lexer._
 import LiterParser._
 import ExprParser._

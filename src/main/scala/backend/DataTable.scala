@@ -7,7 +7,7 @@ class DataTable {
   val stringDataSkeleton = "msg_"
   var dataCount = 0
 
-  def addDataEntry(string: List[Rules.Character]) = {
+  def addDataEntry(string: List[Character]) = {
     map += (getNextLabel() -> MetaData(string.toString()))
   }
 

@@ -1,10 +1,12 @@
 import java.io.File
 
-import Rules.Program
+import frontend.Rules.Program
+import frontend.Semantics._
 import parsley.Failure
 import parsley.Success
 
 import scala.collection.mutable.ListBuffer
+import backend.{ARMPrinter, CodeGenerator}
 
 object Main {
   val syntaxError = 100
@@ -44,7 +46,10 @@ object Main {
 
     parserResult match {
       case Failure(msg) => syntaxExit(msg)
-      case Success(x)   => semanticAnalysis(x)
+      case Success(x) =>
+        semanticAnalysis(x)
+        val (data, instrs) = CodeGenerator.transProg(x)
+        ARMPrinter.execute(file.getName(), data, instrs)
     }
   }
 }

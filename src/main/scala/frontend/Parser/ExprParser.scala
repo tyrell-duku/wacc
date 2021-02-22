@@ -2,7 +2,7 @@ import parsley.Parsley
 import parsley.Parsley._
 import parsley.combinator.{manyN, option, sepBy1}
 import parsley.expr.{InfixL, Ops, Prefix, precedence}
-import Rules._
+import frontend.Rules._
 import Lexer._
 import LiterParser._
 
