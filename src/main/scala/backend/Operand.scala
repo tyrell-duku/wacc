@@ -1,9 +1,28 @@
 package backend
+import Rules._
+import backend.InstructionSet.Label
 
 sealed trait Operand
-
-sealed class Imm(n: Int) extends Operand {
+sealed case class ImmInt(n: Int) extends Operand {
   override def toString: String = "#" + n
+}
+
+sealed case class ImmChar(c: Character) extends Operand {
+  override def toString: String = "#'" + c + "'"
+}
+
+sealed trait Address
+sealed case class Offset(n: Int) extends Address {
+  override def toString: String = "[" + n + "]"
+}
+
+sealed trait LoadOperand
+sealed case class ImmMem(n: Int) extends LoadOperand {
+  override def toString: String = "=" + n
+}
+
+sealed case class DataLabel(label: Label) extends LoadOperand {
+  override def toString: String = "=" + label
 }
 
 sealed trait Reg extends Operand

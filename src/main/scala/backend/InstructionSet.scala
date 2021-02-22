@@ -2,6 +2,7 @@ package backend
 
 import scala.collection.mutable.ListBuffer
 import backend.Operand
+import backend.LoadOperand
 import backend.Reg
 import backend.Condition
 
@@ -33,24 +34,42 @@ package object InstructionSet {
     override def toString: String = "OR " + rd + ", " + rn + ", " + op2
   }
 
-  case class Push(rs: List[Reg]) extends Instruction {
-    override def toString: String = "PUSH " + "{" + rs.mkString(", ") + "}"
-  }
-  case class Pop(rs: List[Reg]) extends Instruction {
-    override def toString: String = "POP " + "{" + rs.mkString(", ") + "}"
-  }
-  case class Ldr(rd: Reg, op2: Operand) extends Instruction {
-    override def toString: String = "LDR " + rd + ", " + op2
-  }
-
   // Branching
   case class Branch(label: Label) extends Instruction {
     override def toString: String = "B " + label
   }
-  case class BranchCond(cond: Condition, label: Label) extends Instruction
+  case class BranchLink(label: Label) extends Instruction {
+    override def toString: String = "BL " + label
+  }
 
   // Creating labels
-  case class Define(label: String) extends Instruction
+  case class Push(rs: ListBuffer[Reg]) extends Instruction {
+    override def toString: String = "PUSH " + "{" + rs.mkString(", ") + "}"
+  }
+  case class Pop(rs: ListBuffer[Reg]) extends Instruction {
+    override def toString: String = "POP " + "{" + rs.mkString(", ") + "}"
+  }
+  case class Ldr(rd: Reg, op2: LoadOperand) extends Instruction {
+    override def toString: String = "LDR " + rd + ", " + op2
+  }
+
+  case class StrOffset(rd: Reg, regAdd: Reg, offset: Int) extends Instruction {
+    override def toString: String =
+      "STR " + rd + ", " + "[" + regAdd + ", #" + offset + "]"
+  }
+
+  case class Mov(rd: Reg, op2: Operand) extends Instruction {
+    override def toString: String = "MOV " + rd + ", " + op2
+  }
+
+  // Branching
+  case class Str(rd: Reg, add: Address) extends Instruction {
+    override def toString: String = "STR " + rd + ", " + add
+  }
+
+  case class StrB(rd: Reg, add: Address) extends Instruction {
+    override def toString: String = "STRB"
+  }
 
   case class Label(s: String) {
     override def toString: String = s

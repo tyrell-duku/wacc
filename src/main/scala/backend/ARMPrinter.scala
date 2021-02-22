@@ -34,7 +34,7 @@ object ARMPrinter {
     fileWriter.close()
   }
 
-  def printData(data: Data, fileWriter: FileWriter) {
+  def printData(data: Data, fileWriter: FileWriter): Unit = {
     val Data(Label(label), s) = data
     fileWriter.write(tab + label + "\n")
     fileWriter.write(tab2 + ".word " + s.length() + "\n")
@@ -45,7 +45,7 @@ object ARMPrinter {
       label: Label,
       instr: List[Instruction],
       fileWriter: FileWriter
-  ) {
+  ): Unit = {
     fileWriter.write(tab + label + ":\n")
     instr.foreach((i: Instruction) => fileWriter.write(tab2 + i + "\n"))
   }
