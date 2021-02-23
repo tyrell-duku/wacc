@@ -2,7 +2,6 @@ package backend
 
 import InstructionSet._
 import frontend.Rules._
-
 import scala.collection.mutable.ListBuffer
 
 object CodeGenerator {
@@ -15,6 +14,8 @@ object CodeGenerator {
   final val resultReg: Reg = R0
 
   var varTable = Map.empty[Ident, Reg]
+
+  private val dataTable = new DataTable
 
   private val INT_SIZE = 4
   private val CHAR_SIZE = 1
@@ -103,19 +104,24 @@ object CodeGenerator {
       e: Expr
   ): ListBuffer[Instruction] = {
     e match {
-      case IntLiter(n, _) => return ListBuffer(Mov(R1, ImmInt(n)))
+      case IntLiter(n, _) => ListBuffer(Mov(R1, ImmInt(n)))
       case BoolLiter(b, _) =>
         return ListBuffer
           .empty[Instruction] // return ListBuffer(Mov(R1, ImmInt(n)))
       // TODO: escaped character
-      case CharLiter(c, _)         => return ListBuffer(Mov(R1, ImmChar(c)))
-      case StrLiter(str, _)        => ListBuffer.empty[Instruction]
+      case CharLiter(c, _)         => ListBuffer(Mov(R1, ImmChar(c)))
+      case StrLiter(str, _)        => transStrLiter(str)
       case PairLiter(_)            => ListBuffer.empty[Instruction]
       case Ident(s, _)             => ListBuffer.empty[Instruction]
       case ArrayElem(id, exprs, _) => ListBuffer.empty[Instruction]
       case e: UnOp                 => ListBuffer.empty[Instruction]
       case e: BinOp                => ListBuffer.empty[Instruction]
     }
+  }
+
+  private def transStrLiter(str: List[Character]): ListBuffer[Instruction] = {
+    dataTable.addDataEntry(str)
+    ListBuffer(Ldr(R1, DataLabel(Label(dataTable.getCurrLabel()))))
   }
 
   private def getFreeReg(

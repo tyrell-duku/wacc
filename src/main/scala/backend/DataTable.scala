@@ -3,6 +3,7 @@ package backend
 import scala.collection.mutable.ListBuffer
 import InstructionSet.Data
 import InstructionSet.Label
+import frontend.Rules._
 
 class DataTable {
   var table = ListBuffer.empty[Data]
