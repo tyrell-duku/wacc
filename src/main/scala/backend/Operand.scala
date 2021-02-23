@@ -1,5 +1,6 @@
 package backend
 import backend.InstructionSet.Label
+import frontend.Rules.Character
 
 sealed trait Operand
 sealed case class ImmInt(n: Int) extends Operand {
