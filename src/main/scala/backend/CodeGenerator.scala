@@ -125,6 +125,16 @@ object CodeGenerator {
     lb
   }
 
+  private def transUnOp(op: UnOp): ListBuffer[Instruction] = {
+    op match {
+      case Chr(e, pos)      => ListBuffer.empty
+      case Len(e, pos)      => ListBuffer.empty
+      case Negation(e, pos) => ListBuffer.empty
+      case Not(e, pos)      => ListBuffer.empty
+      case Ord(e, pos)      => ListBuffer.empty
+    }
+  }
+
   private def transBinOp(op: BinOp): ListBuffer[Instruction] = {
     op match {
       case frontend.Rules.Mul(lExpr, rExpr, _) => ListBuffer.empty
