@@ -102,7 +102,18 @@ object CodeGenerator {
   private def transExp(
       e: Expr
   ): ListBuffer[Instruction] = {
-    ListBuffer.empty[Instruction]
+    e match {
+      case IntLiter(n, _) => return ListBuffer(Mov(R1, ImmInt(n)))
+      case BoolLiter(b, _) =>
+        ListBuffer.empty[Instruction] // MOV #0 Rn or MOV #1 Rn
+      case CharLiter(c, _)         => ListBuffer.empty[Instruction]
+      case StrLiter(str, _)        => ListBuffer.empty[Instruction]
+      case PairLiter(_)            => ListBuffer.empty[Instruction]
+      case Ident(s, _)             => ListBuffer.empty[Instruction]
+      case ArrayElem(id, exprs, _) => ListBuffer.empty[Instruction]
+      case e: UnOp                 => ListBuffer.empty[Instruction]
+      case e: BinOp                => ListBuffer.empty[Instruction]
+    }
   }
 
   private def getFreeReg(
