@@ -110,19 +110,40 @@ object CodeGenerator {
         return ListBuffer
           .empty[Instruction] // return ListBuffer(Mov(R1, ImmInt(n)))
       // TODO: escaped character
-      case CharLiter(c, _)         => ListBuffer(Mov(R1, ImmChar(c)))
-      case StrLiter(str, _)        => transStrLiter(str)
-      case PairLiter(_)            => ListBuffer(Ldr(R1, ImmMem(0)))
-      case Ident(s, _)             => ListBuffer.empty[Instruction]
-      case ArrayElem(id, exprs, _) => ListBuffer.empty[Instruction]
-      case e: UnOp                 => ListBuffer.empty[Instruction]
-      case e: BinOp                => ListBuffer.empty[Instruction]
+      case CharLiter(c, _)  => ListBuffer(Mov(R1, ImmChar(c)))
+      case StrLiter(str, _) => transStrLiter(str)
+      case PairLiter(_)     => ListBuffer(Ldr(R1, ImmMem(0)))
+      // TODO: track variable location
+      case Ident(s, _)          => ListBuffer.empty[Instruction]
+      case ArrayElem(id, es, _) => transArraryElem(es)
+      case e: UnOp              => ListBuffer.empty[Instruction]
+      case e: BinOp             => ListBuffer.empty[Instruction]
     }
   }
 
   private def transStrLiter(str: List[Character]): ListBuffer[Instruction] = {
     dataTable.addDataEntry(str)
     ListBuffer(Ldr(R1, DataLabel(Label(dataTable.getCurrLabel()))))
+  }
+
+  private def transArraryElem(es: List[Expr]): ListBuffer[Instruction] = {
+    // TODO: symbol table from semanticChecker required
+    val st = null
+    val length = es.length
+    val typeSize = getBaseTypeSize(es(0).getType(st))
+    val lb = ListBuffer.empty[Instruction]
+
+    lb += Ldr(R4, ImmMem(4 + typeSize * length))
+    lb += BranchLink(Label("malloc"))
+    lb += Mov(R4, R0)
+
+    for (i <- 1 to length) {
+      lb += Ldr(R5, ImmMem(0))
+      lb += StrOffset(R5, R4, typeSize * i)
+    }
+
+    lb += Str(R5, RegAdd(R4))
+    lb
   }
 
   private def getFreeReg(
