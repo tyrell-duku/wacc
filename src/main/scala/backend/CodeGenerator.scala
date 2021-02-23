@@ -100,27 +100,6 @@ object CodeGenerator {
     ListBuffer.empty[Instruction]
   }
 
-  // TODO: Determine free registers
-  private def transExp(
-      e: Expr
-  ): ListBuffer[Instruction] = {
-    e match {
-      case IntLiter(n, _) => ListBuffer(Mov(R1, ImmInt(n)))
-      case BoolLiter(b, _) =>
-        return ListBuffer
-          .empty[Instruction] // return ListBuffer(Mov(R1, ImmInt(n)))
-      // TODO: escaped character
-      case CharLiter(c, _)  => ListBuffer(Mov(R1, ImmChar(c)))
-      case StrLiter(str, _) => transStrLiter(str)
-      case PairLiter(_)     => ListBuffer(Ldr(R1, ImmMem(0)))
-      // TODO: track variable location
-      case Ident(s, _)          => ListBuffer.empty[Instruction]
-      case ArrayElem(id, es, _) => transArraryElem(es)
-      case e: UnOp              => ListBuffer.empty[Instruction]
-      case e: BinOp             => ListBuffer.empty[Instruction]
-    }
-  }
-
   private def transStrLiter(str: List[Character]): ListBuffer[Instruction] = {
     dataTable.addDataEntry(str)
     ListBuffer(Ldr(R1, DataLabel(Label(dataTable.getCurrLabel()))))
@@ -144,6 +123,45 @@ object CodeGenerator {
 
     lb += Str(R5, RegAdd(R4))
     lb
+  }
+
+  private def transBinOp(op: BinOp): ListBuffer[Instruction] = {
+    op match {
+      case frontend.Rules.Mul(lExpr, rExpr, _) => ListBuffer.empty
+      case Div(lExpr, rExpr, _)                => ListBuffer.empty
+      case Mod(lExpr, rExpr, _)                => ListBuffer.empty
+      case Plus(lExpr, rExpr, _)               => ListBuffer.empty
+      case frontend.Rules.Sub(lExpr, rExpr, _) => ListBuffer.empty
+      case GT(lExpr, rExpr, _)                 => ListBuffer.empty
+      case GTE(lExpr, rExpr, _)                => ListBuffer.empty
+      case LT(lExpr, rExpr, _)                 => ListBuffer.empty
+      case LTE(lExpr, rExpr, _)                => ListBuffer.empty
+      case Equal(lExpr, rExpr, _)              => ListBuffer.empty
+      case NotEqual(lExpr, rExpr, _)           => ListBuffer.empty
+      case frontend.Rules.And(lExpr, rExpr, _) => ListBuffer.empty
+      case frontend.Rules.Or(lExpr, rExpr, _)  => ListBuffer.empty
+    }
+  }
+
+  // TODO: Determine free registers
+  private def transExp(
+      e: Expr
+  ): ListBuffer[Instruction] = {
+    e match {
+      case IntLiter(n, _) => ListBuffer(Mov(R1, ImmInt(n)))
+      case BoolLiter(b, _) =>
+        return ListBuffer
+          .empty[Instruction] // return ListBuffer(Mov(R1, ImmInt(n)))
+      // TODO: escaped character
+      case CharLiter(c, _)  => ListBuffer(Mov(R1, ImmChar(c)))
+      case StrLiter(str, _) => transStrLiter(str)
+      case PairLiter(_)     => ListBuffer(Ldr(R1, ImmMem(0)))
+      // TODO: track variable location
+      case Ident(s, _)          => ListBuffer.empty[Instruction]
+      case ArrayElem(id, es, _) => transArraryElem(es)
+      case e: UnOp              => ListBuffer.empty[Instruction]
+      case e: BinOp             => ListBuffer.empty[Instruction]
+    }
   }
 
   private def getFreeReg(
