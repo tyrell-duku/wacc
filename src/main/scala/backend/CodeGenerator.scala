@@ -13,6 +13,7 @@ object CodeGenerator {
     ListBuffer(R0, R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12)
 
   final val resultReg: Reg = R0
+  val dataTable = new DataTable()
 
   var varTable = Map.empty[Ident, Reg]
 
@@ -48,9 +49,8 @@ object CodeGenerator {
         Ldr(resultReg, ImmMem(0)),
         Pop(ListBuffer(PC))
       )
-    val data = List.empty[Data]
     instructions ++= toAdd
-    (data, List((Label("main"), instructions.toList)))
+    (dataTable.table.toList, List((Label("main"), instructions.toList)))
   }
 
   private def transStat(
@@ -80,7 +80,7 @@ object CodeGenerator {
   ): ListBuffer[Instruction] = {
     e match {
       case IntLiter(n, _) =>
-        val freeReg = getFreeReg(regs, ListBuffer.empty[Reg])
+        val freeReg = getFreeReg(regs, ListBuffer(R0))
         ListBuffer[Instruction](
           Ldr(freeReg, ImmMem(n)),
           Mov(R0, freeReg),
@@ -110,6 +110,11 @@ object CodeGenerator {
       regsInUse: ListBuffer[Reg]
   ): Reg = {
     regs.filter(r => !regsInUse.contains(r))(0)
+  }
+
+  private def boolToInt(b: Boolean): Int = {
+    if (b) { 1 }
+    else { 0 }
   }
 
   private def getBaseTypeSize(t: Type): Int = {
