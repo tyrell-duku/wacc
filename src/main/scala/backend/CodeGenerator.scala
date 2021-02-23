@@ -12,10 +12,13 @@ object CodeGenerator {
   final val allRegs: ListBuffer[Reg] =
     ListBuffer(R0, R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12)
 
+  var freeRegs = allRegs
   final val resultReg: Reg = R0
+  freeRegs -= resultReg
+
   val dataTable = new DataTable()
 
-  var varTable = Map.empty[Ident, Reg]
+  var varTable = Map.empty[Ident, Int]
 
   private val INT_SIZE = 4
   private val CHAR_SIZE = 1
@@ -44,8 +47,9 @@ object CodeGenerator {
     // val funcCode = funcs.map(transFunc)
     // instructions += funcCode
     instructions = ListBuffer(Push(ListBuffer(LR)))
+    transStat(stat)
     var toAdd =
-      transStat(stat, allRegs) ++ ListBuffer(
+      ListBuffer(
         Ldr(resultReg, ImmMem(0)),
         Pop(ListBuffer(PC))
       )
@@ -54,40 +58,39 @@ object CodeGenerator {
   }
 
   private def transStat(
-      stat: Stat,
-      regs: ListBuffer[Reg]
-  ): ListBuffer[Instruction] = {
+      stat: Stat
+  ) = {
     stat match {
-      case EqIdent(t, i, r) => transEqIdent(t, i, r, regs)
-      case EqAssign(l, r)   => ListBuffer.empty[Instruction]
-      case Read(lhs)        => ListBuffer.empty[Instruction]
-      case Free(e)          => ListBuffer.empty[Instruction]
-      case Return(e)        => ListBuffer.empty[Instruction]
-      case Exit(e)          => transExit(e, regs)
-      case Print(e)         => ListBuffer.empty[Instruction]
-      case PrintLn(e)       => ListBuffer.empty[Instruction]
-      case If(cond, s1, s2) => ListBuffer.empty[Instruction]
-      case While(cond, s)   => ListBuffer.empty[Instruction]
-      case Begin(s)         => ListBuffer.empty[Instruction]
-      case Seq(statList)    => ListBuffer.empty[Instruction]
-      case _                => ListBuffer.empty[Instruction]
+      case EqIdent(t, i, r) => transEqIdent(t, i, r)
+      case EqAssign(l, r)   =>
+      case Read(lhs)        =>
+      case Free(e)          =>
+      case Return(e)        =>
+      case Exit(e)          => transExit(e)
+      case Print(e)         =>
+      case PrintLn(e)       =>
+      case If(cond, s1, s2) =>
+      case While(cond, s)   =>
+      case Begin(s)         =>
+      case Seq(statList)    =>
+      case _                =>
     }
   }
 
   private def transExit(
-      e: Expr,
-      regs: ListBuffer[Reg]
-  ): ListBuffer[Instruction] = {
+      e: Expr
+  ): Unit = {
+    val freeReg = getFreeReg()
     e match {
       case IntLiter(n, _) =>
-        val freeReg = getFreeReg(regs, ListBuffer(R0))
-        ListBuffer[Instruction](
+        instructions ++= ListBuffer[Instruction](
           Ldr(freeReg, ImmMem(n)),
           Mov(R0, freeReg),
           BranchLink(Label("exit"))
         )
-      case _ => transExp(e)
+      case _ => transExp(e, freeReg, regs)
     }
+    addUnusedReg(freeReg)
   }
 
   private def transEqIdent(
@@ -95,21 +98,121 @@ object CodeGenerator {
       id: Ident,
       aRHS: AssignRHS,
       regs: ListBuffer[Reg]
-  ): ListBuffer[Instruction] = {
-    ListBuffer.empty[Instruction]
+  ): Unit = {
+    var freeReg = getFreeReg()
+
+    val spOffset = ImmInt(getBaseTypeSize(t))
+    instructions += InstructionSet.Sub(SP, SP, spOffset)
+
+    t match {
+      case IntT | CharT | BoolT | StringT =>
+        aRHS match {
+          case ex: Expr          => transExp(ex, freeReg, regs)
+          case p: PairElem       =>
+          case Call(id, args, _) =>
+          case _                 => ListBuffer.empty[Instruction]
+        }
+        instructions ++= ListBuffer(
+          Str(freeReg, RegAdd(SP)),
+          Add(SP, SP, spOffset)
+        )
+      case ArrayT(t) =>
+        aRHS match {
+          case ArrayLiter(arr, _) =>
+            instructions ++= ListBuffer[Instruction](
+              InstructionSet.Sub(SP, SP, ImmInt(ARRAY_SIZE))
+            )
+            var rawList = List.empty[Expr]
+            if (!arr.isEmpty) {
+              rawList = arr.get
+            }
+
+            val baseTSize = getBaseTypeSize(t)
+            var rawSize = 4 + (rawList.size * baseTSize)
+            val arrayReg = getFreeReg()
+            val tempReg = getFreeReg()
+            val elemReg = getFreeReg()
+
+            instructions ++= ListBuffer[Instruction](
+              Ldr(arrayReg, ImmMem(rawSize)),
+              BranchLink(Label("malloc")),
+              Mov(tempReg, arrayReg)
+            )
+
+            if (rawSize == 4) {
+              instructions ++= ListBuffer[Instruction](
+                Ldr(elemReg, ImmMem(0))
+              )
+            } else {
+
+              for (index <- 0 until rawList.size) {
+                t match {
+                  case IntT =>
+                    val IntLiter(i, _) = rawList(index)
+                    instructions ++= ListBuffer[Instruction](
+                      Ldr(elemReg, ImmMem(i))
+                    )
+                  case BoolT =>
+                    val BoolLiter(b, _) = rawList(index)
+                    instructions ++= ListBuffer[Instruction](
+                      Ldr(elemReg, ImmMem(boolToInt(b)))
+                    )
+                  case CharT =>
+                    val CharLiter(c, _) = rawList(index)
+                    instructions ++= ListBuffer[Instruction](
+                      Ldr(elemReg, ImmChar(c))
+                    )
+                  case StringT =>
+                    val StrLiter(s, _) = rawList(index)
+                    val label = dataTable.addDataEntry(s)
+
+                    instructions ++= ListBuffer[Instruction](
+                      Ldr(elemReg, DataLabel(label))
+                    )
+                  case ArrayT(_) =>
+                  case _         =>
+                }
+
+                instructions ++= ListBuffer[Instruction](
+                  StrOffset(elemReg, tempReg, 4 + (index * baseTSize))
+                )
+              }
+            }
+
+            instructions ++= ListBuffer[Instruction](
+              Ldr(elemReg, ImmMem(rawList.size)),
+              Str(elemReg, RegAdd(tempReg)),
+              Str(tempReg, RegAdd(SP)),
+              Add(SP, SP, ImmInt(ARRAY_SIZE))
+            )
+          case _ => ListBuffer.empty[Instruction]
+        }
+      case _: PairType => ListBuffer.empty[Instruction]
+      case _           => ListBuffer.empty[Instruction]
+    }
+    addUnusedReg(freeReg)
   }
 
   private def transExp(
-      e: Expr
+      e: Expr,
+      resultReg: Reg,
+      freeRegs: ListBuffer[Reg]
   ): ListBuffer[Instruction] = {
     ListBuffer.empty[Instruction]
   }
 
-  private def getFreeReg(
-      regs: ListBuffer[Reg],
-      regsInUse: ListBuffer[Reg]
-  ): Reg = {
-    regs.filter(r => !regsInUse.contains(r))(0)
+  private def getFreeReg(): Reg = {
+    if (freeRegs.isEmpty) {
+      //todo: free up regs?
+      return R0
+    }
+    val reg = freeRegs(0)
+    freeRegs.remove(0)
+    reg
+  }
+
+  private def addUnusedReg(r: Reg): Unit = {
+    freeRegs += r
   }
 
   private def boolToInt(b: Boolean): Int = {
