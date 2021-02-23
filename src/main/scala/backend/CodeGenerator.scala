@@ -105,8 +105,10 @@ object CodeGenerator {
     e match {
       case IntLiter(n, _) => return ListBuffer(Mov(R1, ImmInt(n)))
       case BoolLiter(b, _) =>
-        ListBuffer.empty[Instruction] // MOV #0 Rn or MOV #1 Rn
-      case CharLiter(c, _)         => ListBuffer.empty[Instruction]
+        return ListBuffer
+          .empty[Instruction] // return ListBuffer(Mov(R1, ImmInt(n)))
+      // TODO: escaped character
+      case CharLiter(c, _)         => return ListBuffer(Mov(R1, ImmChar(c)))
       case StrLiter(str, _)        => ListBuffer.empty[Instruction]
       case PairLiter(_)            => ListBuffer.empty[Instruction]
       case Ident(s, _)             => ListBuffer.empty[Instruction]
