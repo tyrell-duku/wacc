@@ -100,6 +100,7 @@ object CodeGenerator {
     ListBuffer.empty[Instruction]
   }
 
+  // TODO: Determine free registers
   private def transExp(
       e: Expr
   ): ListBuffer[Instruction] = {
@@ -111,7 +112,7 @@ object CodeGenerator {
       // TODO: escaped character
       case CharLiter(c, _)         => ListBuffer(Mov(R1, ImmChar(c)))
       case StrLiter(str, _)        => transStrLiter(str)
-      case PairLiter(_)            => ListBuffer.empty[Instruction]
+      case PairLiter(_)            => ListBuffer(Ldr(R1, ImmMem(0)))
       case Ident(s, _)             => ListBuffer.empty[Instruction]
       case ArrayElem(id, exprs, _) => ListBuffer.empty[Instruction]
       case e: UnOp                 => ListBuffer.empty[Instruction]
