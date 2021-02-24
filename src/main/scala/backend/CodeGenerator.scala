@@ -18,7 +18,8 @@ object CodeGenerator {
 
   val dataTable = new DataTable()
 
-  var varTable = Map.empty[Ident, Int]
+  var varTable = Map.empty[Ident, (Int, Int)]
+  var currentSP = 0
 
   private val INT_SIZE = 4
   private val CHAR_SIZE = 1
@@ -54,6 +55,7 @@ object CodeGenerator {
         Pop(ListBuffer(PC))
       )
     instructions ++= toAdd
+    println(varTable)
     (dataTable.table.toList, List((Label("main"), instructions.toList)))
   }
 
@@ -94,9 +96,13 @@ object CodeGenerator {
       id: Ident,
       aRHS: AssignRHS
   ): Unit = {
-    var freeReg = getFreeReg()
+    val freeReg = getFreeReg()
 
-    val spOffset = ImmInt(getBaseTypeSize(t))
+    val baseTypeSize = getBaseTypeSize(t)
+    currentSP += baseTypeSize
+    varTable += (id -> (currentSP, baseTypeSize))
+
+    val spOffset = ImmInt(currentSP)
     instructions += InstructionSet.Sub(SP, SP, spOffset)
 
     t match {
