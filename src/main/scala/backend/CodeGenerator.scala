@@ -139,12 +139,13 @@ object CodeGenerator {
     // TODO: determine result register for l & r
     op match {
       case frontend.Rules.Mul(l, r, _) =>
-        transExp(l) ++ transExp(r) += backend.InstructionSet.Mul(R0, R1, R2)
+        transExp(l) ++ transExp(r) += InstructionSet.Mul(R0, R1, R2)
       case Div(lExpr, rExpr, _) => ListBuffer.empty
       case Mod(lExpr, rExpr, _) => ListBuffer.empty
       case Plus(l, r, _) =>
         transExp(l) ++ transExp(r) += Add(R0, R1, R2)
-      case frontend.Rules.Sub(lExpr, rExpr, _) => ListBuffer.empty
+      case frontend.Rules.Sub(l, r, _) =>
+        transExp(l) ++ transExp(r) += InstructionSet.Sub(R0, R1, R2)
       case GT(lExpr, rExpr, _)                 => ListBuffer.empty
       case GTE(lExpr, rExpr, _)                => ListBuffer.empty
       case LT(lExpr, rExpr, _)                 => ListBuffer.empty
