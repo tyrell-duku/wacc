@@ -125,6 +125,7 @@ object CodeGenerator {
     lb
   }
 
+  /* Translates unary operator to the internal representation. */
   private def transUnOp(op: UnOp): ListBuffer[Instruction] = {
     op match {
       case Chr(e, pos)      => ListBuffer.empty
@@ -136,6 +137,8 @@ object CodeGenerator {
     }
   }
 
+  /* Changes a comparison operator to the Condition equivalent.
+     Returns null when not a comparison operator. */
   private def rulesCmpToInstrCmp(cmp: BinOp): Condition = {
     cmp match {
       case GT(lExpr, rExpr, pos)       => backend.GT
@@ -144,10 +147,11 @@ object CodeGenerator {
       case LTE(lExpr, rExpr, pos)      => backend.LTE
       case Equal(lExpr, rExpr, pos)    => backend.EQ
       case NotEqual(lExpr, rExpr, pos) => backend.NE
-      case _                           => null // ERROR
+      case _                           => null // Undefined
     }
   }
 
+  /* Translates a comparator operator to the internal representation. */
   private def transCond(op: BinOp): ListBuffer[Instruction] = {
     val lb = transExp(op.lExpr) ++ transExp(op.rExpr)
     val cmp = rulesCmpToInstrCmp(op)
@@ -158,6 +162,7 @@ object CodeGenerator {
     lb
   }
 
+  /* Translates a binary operator to the internal representation. */
   private def transBinOp(op: BinOp): ListBuffer[Instruction] = {
     // TODO: determine result register for l & r
     op match {
@@ -178,10 +183,9 @@ object CodeGenerator {
     }
   }
 
-  // TODO: Determine free registers
-  private def transExp(
-      e: Expr
-  ): ListBuffer[Instruction] = {
+  /* Translates an expression operator to the internal representation. */
+  private def transExp(e: Expr): ListBuffer[Instruction] = {
+    // TODO: Determine free registers
     e match {
       case IntLiter(n, _) => ListBuffer(Mov(R1, ImmInt(n)))
       case BoolLiter(b, _) =>
