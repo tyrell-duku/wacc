@@ -58,6 +58,11 @@ package object InstructionSet {
     override def toString: String = "MOV " + rd + ", " + op2
   }
 
+  case class MovCond(cond: Condition, rd: Reg, op2: Operand)
+      extends Instruction {
+    override def toString: String = "MOV" + cond + " " + rd + ", " + op2
+  }
+
   // Branching
   case class Str(rd: Reg, add: Address) extends Instruction {
     override def toString: String = "STR " + rd + ", " + add
