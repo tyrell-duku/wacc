@@ -136,8 +136,10 @@ object CodeGenerator {
   }
 
   private def transBinOp(op: BinOp): ListBuffer[Instruction] = {
+    // TODO: determine result register for l & r
     op match {
-      case frontend.Rules.Mul(lExpr, rExpr, _) => ListBuffer.empty
+      case frontend.Rules.Mul(l, r, _) =>
+        transExp(l) ++ transExp(r) += backend.InstructionSet.Mul(R0, R1, R2)
       case Div(lExpr, rExpr, _)                => ListBuffer.empty
       case Mod(lExpr, rExpr, _)                => ListBuffer.empty
       case Plus(lExpr, rExpr, _)               => ListBuffer.empty
