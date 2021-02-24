@@ -18,7 +18,7 @@ object CodeGenerator {
 
   val dataTable = new DataTable()
 
-  var varTable = Map.empty[Ident, (Int, Int)]
+  var varTable = Map.empty[Ident, (Int, Type)]
   var currentSP = 0
 
   private val INT_SIZE = 4
@@ -61,10 +61,10 @@ object CodeGenerator {
 
   private def transStat(
       stat: Stat
-  ) = {
+  ): Unit = {
     stat match {
       case EqIdent(t, i, r) => transEqIdent(t, i, r)
-      case EqAssign(l, r)   =>
+      case EqAssign(l, r)   => transEqAssign(l, r)
       case Read(lhs)        =>
       case Free(e)          =>
       case Return(e)        =>
@@ -74,7 +74,7 @@ object CodeGenerator {
       case If(cond, s1, s2) =>
       case While(cond, s)   =>
       case Begin(s)         =>
-      case Seq(statList)    =>
+      case Seq(statList)    => statList.map(transStat)
       case _                =>
     }
   }
@@ -96,15 +96,17 @@ object CodeGenerator {
       id: Ident,
       aRHS: AssignRHS
   ): Unit = {
-    val freeReg = getFreeReg()
 
-    val baseTypeSize = getBaseTypeSize(t)
-    currentSP += baseTypeSize
-    varTable += (id -> (currentSP, baseTypeSize))
+    currentSP += getBaseTypeSize(t)
+    varTable += (id -> (currentSP, t))
 
-    val spOffset = ImmInt(currentSP)
+    assignRHS(t, aRHS, currentSP)
+  }
+
+  private def assignRHS(t: Type, aRHS: AssignRHS, spIndex: Int) {
+    val spOffset = ImmInt(spIndex)
     instructions += InstructionSet.Sub(SP, SP, spOffset)
-
+    val freeReg = getFreeReg()
     t match {
       case IntT | CharT | BoolT | StringT =>
         aRHS match {
@@ -194,6 +196,19 @@ object CodeGenerator {
     addUnusedReg(freeReg)
   }
 
+  private def transEqAssign(
+      aLHS: AssignLHS,
+      aRHS: AssignRHS
+  ): Unit = {
+    aLHS match {
+      case elem: PairElem =>
+      case id: Ident =>
+        val (index, t) = varTable.apply(id)
+        assignRHS(t, aRHS, index)
+      case arrayElem: ArrayElem =>
+    }
+  }
+
   private def transExp(
       e: Expr,
       resultReg: Reg
@@ -212,7 +227,7 @@ object CodeGenerator {
   }
 
   private def addUnusedReg(r: Reg): Unit = {
-    freeRegs += r
+    r +=: freeRegs
   }
 
   private def boolToInt(b: Boolean): Int = {
