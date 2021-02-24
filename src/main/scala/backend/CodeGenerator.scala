@@ -135,6 +135,20 @@ object CodeGenerator {
     }
   }
 
+  private def transCond(
+      l: Expr,
+      r: Expr,
+      cond1: Condition,
+      cond2: Condition
+  ): ListBuffer[Instruction] = {
+    val lb = transExp(l) ++ transExp(r)
+    lb += Cmp(R4, R5)
+    lb += MovCond(cond1, R4, ImmInt(1))
+    lb += MovCond(cond2, R4, ImmInt(0))
+    lb += Mov(R0, R4)
+    lb
+  }
+
   private def transBinOp(op: BinOp): ListBuffer[Instruction] = {
     // TODO: determine result register for l & r
     op match {
@@ -146,14 +160,14 @@ object CodeGenerator {
         transExp(l) ++ transExp(r) += Add(R0, R1, R2)
       case frontend.Rules.Sub(l, r, _) =>
         transExp(l) ++ transExp(r) += InstructionSet.Sub(R0, R1, R2)
-      case GT(lExpr, rExpr, _)                 => ListBuffer.empty
-      case GTE(lExpr, rExpr, _)                => ListBuffer.empty
-      case LT(lExpr, rExpr, _)                 => ListBuffer.empty
-      case LTE(lExpr, rExpr, _)                => ListBuffer.empty
-      case Equal(lExpr, rExpr, _)              => ListBuffer.empty
-      case NotEqual(lExpr, rExpr, _)           => ListBuffer.empty
-      case frontend.Rules.And(lExpr, rExpr, _) => ListBuffer.empty
-      case frontend.Rules.Or(lExpr, rExpr, _)  => ListBuffer.empty
+      case GT(l, r, _)                 => transCond(l, r, backend.GT, backend.LTE)
+      case GTE(l, r, _)                => transCond(l, r, backend.GTE, backend.LT)
+      case LT(l, r, _)                 => transCond(l, r, backend.LT, backend.GTE)
+      case LTE(l, r, _)                => transCond(l, r, backend.LTE, backend.GT)
+      case Equal(l, r, _)              => transCond(l, r, backend.EQ, backend.NE)
+      case NotEqual(l, r, _)           => transCond(l, r, backend.NE, backend.EQ)
+      case frontend.Rules.And(l, r, _) => ListBuffer.empty
+      case frontend.Rules.Or(l, r, _)  => ListBuffer.empty
     }
   }
 
