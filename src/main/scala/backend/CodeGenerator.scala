@@ -147,16 +147,12 @@ object CodeGenerator {
     }
   }
 
-  private def transCond(
-      l: Expr,
-      r: Expr,
-      cond1: Condition,
-      cond2: Condition
-  ): ListBuffer[Instruction] = {
-    val lb = transExp(l) ++ transExp(r)
+  private def transCond(op: BinOp): ListBuffer[Instruction] = {
+    val lb = transExp(op.lExpr) ++ transExp(op.rExpr)
+    val cmp = rulesCmpToInstrCmp(op)
     lb += Cmp(R4, R5)
-    lb += MovCond(cond1, R4, ImmInt(1))
-    lb += MovCond(cond2, R4, ImmInt(0))
+    lb += MovCond(cmp, R4, ImmInt(1))
+    lb += MovCond(cmp.oppositeCmp, R4, ImmInt(0))
     lb += Mov(R0, R4)
     lb
   }
@@ -172,16 +168,12 @@ object CodeGenerator {
         transExp(l) ++ transExp(r) += Add(R0, R1, R2)
       case frontend.Rules.Sub(l, r, _) =>
         transExp(l) ++ transExp(r) += InstructionSet.Sub(R0, R1, R2)
-      case GT(l, r, _)       => transCond(l, r, backend.GT, backend.LTE)
-      case GTE(l, r, _)      => transCond(l, r, backend.GTE, backend.LT)
-      case LT(l, r, _)       => transCond(l, r, backend.LT, backend.GTE)
-      case LTE(l, r, _)      => transCond(l, r, backend.LTE, backend.GT)
-      case Equal(l, r, _)    => transCond(l, r, backend.EQ, backend.NE)
-      case NotEqual(l, r, _) => transCond(l, r, backend.NE, backend.EQ)
       case frontend.Rules.And(l, r, _) =>
         transExp(l) ++ transExp(r) += backend.InstructionSet.And(R5, R5, R6)
       case frontend.Rules.Or(l, r, _) =>
         transExp(l) ++ transExp(r) += backend.InstructionSet.Or(R5, R5, R6)
+      // Comparison binary operators
+      case cmpOp => transCond(cmpOp)
     }
   }
 
