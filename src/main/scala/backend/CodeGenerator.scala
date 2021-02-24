@@ -81,23 +81,18 @@ object CodeGenerator {
       e: Expr
   ): Unit = {
     val freeReg = getFreeReg()
-    e match {
-      case IntLiter(n, _) =>
-        instructions ++= ListBuffer[Instruction](
-          Ldr(freeReg, ImmMem(n)),
-          Mov(R0, freeReg),
-          BranchLink(Label("exit"))
-        )
-      case _ => transExp(e, freeReg, regs)
-    }
+    transExp(e, freeReg)
+    instructions ++= ListBuffer[Instruction](
+      Mov(R0, freeReg),
+      BranchLink(Label("exit"))
+    )
     addUnusedReg(freeReg)
   }
 
   private def transEqIdent(
       t: Type,
       id: Ident,
-      aRHS: AssignRHS,
-      regs: ListBuffer[Reg]
+      aRHS: AssignRHS
   ): Unit = {
     var freeReg = getFreeReg()
 
@@ -107,7 +102,7 @@ object CodeGenerator {
     t match {
       case IntT | CharT | BoolT | StringT =>
         aRHS match {
-          case ex: Expr          => transExp(ex, freeReg, regs)
+          case ex: Expr          => transExp(ex, freeReg)
           case p: PairElem       =>
           case Call(id, args, _) =>
           case _                 => ListBuffer.empty[Instruction]
@@ -195,8 +190,7 @@ object CodeGenerator {
 
   private def transExp(
       e: Expr,
-      resultReg: Reg,
-      freeRegs: ListBuffer[Reg]
+      resultReg: Reg
   ): ListBuffer[Instruction] = {
     ListBuffer.empty[Instruction]
   }
