@@ -160,14 +160,16 @@ object CodeGenerator {
         transExp(l) ++ transExp(r) += Add(R0, R1, R2)
       case frontend.Rules.Sub(l, r, _) =>
         transExp(l) ++ transExp(r) += InstructionSet.Sub(R0, R1, R2)
-      case GT(l, r, _)                 => transCond(l, r, backend.GT, backend.LTE)
-      case GTE(l, r, _)                => transCond(l, r, backend.GTE, backend.LT)
-      case LT(l, r, _)                 => transCond(l, r, backend.LT, backend.GTE)
-      case LTE(l, r, _)                => transCond(l, r, backend.LTE, backend.GT)
-      case Equal(l, r, _)              => transCond(l, r, backend.EQ, backend.NE)
-      case NotEqual(l, r, _)           => transCond(l, r, backend.NE, backend.EQ)
-      case frontend.Rules.And(l, r, _) => ListBuffer.empty
-      case frontend.Rules.Or(l, r, _)  => ListBuffer.empty
+      case GT(l, r, _)       => transCond(l, r, backend.GT, backend.LTE)
+      case GTE(l, r, _)      => transCond(l, r, backend.GTE, backend.LT)
+      case LT(l, r, _)       => transCond(l, r, backend.LT, backend.GTE)
+      case LTE(l, r, _)      => transCond(l, r, backend.LTE, backend.GT)
+      case Equal(l, r, _)    => transCond(l, r, backend.EQ, backend.NE)
+      case NotEqual(l, r, _) => transCond(l, r, backend.NE, backend.EQ)
+      case frontend.Rules.And(l, r, _) =>
+        transExp(l) ++ transExp(r) += backend.InstructionSet.And(R5, R5, R6)
+      case frontend.Rules.Or(l, r, _) =>
+        transExp(l) ++ transExp(r) += backend.InstructionSet.Or(R5, R5, R6)
     }
   }
 
