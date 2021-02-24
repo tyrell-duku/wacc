@@ -130,8 +130,9 @@ object CodeGenerator {
       case Chr(e, pos)      => ListBuffer.empty
       case Len(e, pos)      => ListBuffer.empty
       case Negation(e, pos) => ListBuffer.empty
-      case Not(e, pos)      => ListBuffer.empty
-      case Ord(e, pos)      => ListBuffer.empty
+      case Not(e, pos) =>
+        transExp(e) ++ ListBuffer(Eor(R4, R4, ImmInt(1)))
+      case Ord(e, pos) => ListBuffer.empty
     }
   }
 
