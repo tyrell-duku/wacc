@@ -358,7 +358,9 @@ object CodeGenerator {
       // TODO: track variable location
       case id: Ident =>
         val (index, _) = varTable.apply(id)
-        instructions += LdrOffset(reg, SP, index)
+        instructions += InstructionSet.Sub(SP, SP, ImmInt(index))
+        instructions += Ldr(reg, RegAdd(SP))
+        instructions += InstructionSet.Add(SP, SP, ImmInt(index))
       case ArrayElem(id, es, _) => transArrayElem(es)
       case e: UnOp              => transUnOp(e, reg)
       case e: BinOp             => transBinOp(e, reg)
