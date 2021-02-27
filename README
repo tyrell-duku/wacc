@@ -7,7 +7,7 @@ Git commit convention
 
 > commit message <
 
-<type>[optional scope]: <description>
+<type>(scope): <description>
 
 > types <
 

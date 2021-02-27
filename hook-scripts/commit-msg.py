@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import sys
+import re
 from colorama import Fore, Back, Style
 
 
@@ -12,7 +13,7 @@ def exit_failure(error_message):
 def follows_convention(first_line):
     # located in the README
     types = ["feat", "fix", "style", "refactor", "test", "docs", "maintenance"]
-    if not any([first_line.startswith(x) for x in types]):
+    if all([re.match(t + "(\S+): ", first_line) == None for t in types]):
         exit_failure("commit message does not follow convention.")
     if len(first_line) > 50:
         exit_failure("header is longer than 50 characters.")
