@@ -16,7 +16,7 @@ sealed case class Offset(n: Int) extends Address {
   override def toString: String = "[" + n + "]"
 }
 
-sealed case class RegAdd(r: Reg) extends Address {
+sealed case class RegAdd(r: Reg) extends Address with LoadOperand {
   override def toString: String = "[" + r + "]"
 }
 

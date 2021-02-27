@@ -528,7 +528,7 @@ object Rules {
 
   sealed case class StrLiter(str: List[Character], pos: (Int, Int))
       extends Expr {
-    override def toString: String = "\"" + str.mkString("") + "\""
+    override def toString: String = str.mkString("")
     override def getType(sTable: SymbolTable): Type = StringT
   }
   object StrLiter {

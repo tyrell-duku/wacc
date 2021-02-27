@@ -114,10 +114,13 @@ object CodeGenerator {
           case Call(id, args, _) =>
           case _                 => ListBuffer.empty[Instruction]
         }
-        instructions ++= ListBuffer(
-          Str(freeReg, RegAdd(SP)),
-          Add(SP, SP, spOffset)
-        )
+
+        if (t == CharT || t == BoolT) {
+          instructions += StrB(freeReg, RegAdd(SP))
+        } else {
+          instructions += Str(freeReg, RegAdd(SP))
+        }
+        instructions += Add(SP, SP, spOffset)
       case ArrayT(t) =>
         aRHS match {
           case ArrayLiter(arr, _) =>
@@ -165,8 +168,8 @@ object CodeGenerator {
                       Ldr(elemReg, ImmChar(c))
                     )
                   case StringT =>
-                    val StrLiter(s, _) = rawList(index)
-                    val label = dataTable.addDataEntry(s)
+                    val StrLiter(str, pos) = rawList(index)
+                    val label = dataTable.addDataEntry(StrLiter(str, pos))
 
                     instructions ++= ListBuffer[Instruction](
                       Ldr(elemReg, DataLabel(label))
@@ -209,7 +212,7 @@ object CodeGenerator {
   }
 
   private def transStrLiter(
-      str: List[Character],
+      str: StrLiter,
       reg: Reg
   ): Unit = {
     val curLabel = dataTable.addDataEntry(str)
@@ -349,13 +352,18 @@ object CodeGenerator {
       case IntLiter(n, _)  => instructions += Ldr(reg, ImmMem(n))
       case BoolLiter(b, _) => instructions += Mov(reg, ImmInt(boolToInt(b)))
       // TODO: escaped character
-      case CharLiter(c, _)  => instructions += Mov(reg, ImmChar(c))
-      case StrLiter(str, _) => transStrLiter(str, reg)
-      case PairLiter(_)     => instructions += Ldr(reg, ImmMem(0))
+      case CharLiter(c, _) => instructions += Mov(reg, ImmChar(c))
+      case str: StrLiter   => transStrLiter(str, reg)
+      case PairLiter(_)    => instructions += Ldr(reg, ImmMem(0))
       // TODO: track variable location
       case id: Ident =>
-        val (index, _) = varTable.apply(id)
-        instructions += LdrOffset(reg, SP, index)
+        val (index, t) = varTable.apply(id)
+        instructions += InstructionSet.Sub(SP, SP, ImmInt(index))
+        t match {
+          case CharT | BoolT => instructions += LdrB(reg, RegAdd(SP))
+          case _             => instructions += Ldr(reg, RegAdd(SP))
+        }
+        instructions += InstructionSet.Add(SP, SP, ImmInt(index))
       case ArrayElem(id, es, _) => transArrayElem(es)
       case e: UnOp              => transUnOp(e, reg)
       case e: BinOp             => transBinOp(e, reg)
