@@ -75,6 +75,10 @@ package object InstructionSet {
     override def toString: String = "STRB"
   }
 
+  case object Ltorg extends Instruction {
+    override def toString: String = ".ltorg"
+  }
+
   case class Label(s: String) {
     override def toString: String = s
   }
