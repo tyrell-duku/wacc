@@ -114,10 +114,13 @@ object CodeGenerator {
           case Call(id, args, _) =>
           case _                 => ListBuffer.empty[Instruction]
         }
-        instructions ++= ListBuffer(
-          Str(freeReg, RegAdd(SP)),
-          Add(SP, SP, spOffset)
-        )
+
+        if (t == CharT || t == BoolT) {
+          instructions += StrB(freeReg, RegAdd(SP))
+        } else {
+          instructions += Str(freeReg, RegAdd(SP))
+        }
+        instructions += Add(SP, SP, spOffset)
       case ArrayT(t) =>
         aRHS match {
           case ArrayLiter(arr, _) =>
