@@ -237,15 +237,18 @@ object CodeGenerator {
   }
 
   /* Translates unary operator OP to the internal representation. */
-  private def transUnOp(op: UnOp, reg: Reg): ListBuffer[Instruction] = {
+  private def transUnOp(op: UnOp, reg: Reg): Unit = {
     op match {
-      case Chr(e, pos)      => ListBuffer.empty
-      case Len(e, pos)      => ListBuffer.empty
-      case Negation(e, pos) => ListBuffer.empty
-      case Not(e, pos) =>
+      case Chr(e, _)   => transExp(e, reg)
+      case Len(e, pos) => ListBuffer.empty
+      case Negation(e, _) =>
+        transExp(e, reg)
+        instructions += NegInstr(reg, reg)
+      case Not(e, _) =>
         transExp(e, reg)
         instructions += Eor(reg, reg, ImmInt(1))
-      case Ord(e, pos) => ListBuffer.empty
+      case Ord(e, _) =>
+        transExp(e, reg)
     }
   }
 
@@ -286,8 +289,30 @@ object CodeGenerator {
         transExp(r, rReg)
         instructions += InstructionSet.Mul(reg, reg, rReg)
         addUnusedReg(rReg)
-      case Div(lExpr, rExpr, _) => ListBuffer.empty
-      case Mod(lExpr, rExpr, _) => ListBuffer.empty
+      case Div(l, r, _) =>
+        val rReg = getFreeReg()
+        // TODO: make sure R0 and R1 are free
+        transExp(l, reg)
+        transExp(r, rReg)
+        // Needs to be in R0 and R1 for "__aeabi_idiv"
+        instructions += Mov(reg, R0)
+        instructions += Mov(rReg, R1)
+        // Divide function
+        instructions += BranchLink(Label("__aeabi_idiv"))
+        addUnusedReg(rReg)
+        instructions += Mov(reg, R0)
+      case Mod(l, r, _) =>
+        val rReg = getFreeReg()
+        // TODO: make sure R0 and R1 are free
+        transExp(l, reg)
+        transExp(r, rReg)
+        // Needs to be in R0 and R1 for "__aeabi_idivmod"
+        instructions += Mov(reg, R0)
+        instructions += Mov(rReg, R1)
+        // Mod function
+        instructions += BranchLink(Label("__aeabi_idivmod"))
+        addUnusedReg(rReg)
+        instructions += Mov(reg, R1)
       case Plus(l, r, _) =>
         val rReg = getFreeReg()
         transExp(l, reg)
@@ -332,8 +357,8 @@ object CodeGenerator {
         val (index, _) = varTable.apply(id)
         instructions += LdrOffset(reg, SP, index)
       case ArrayElem(id, es, _) => transArrayElem(es)
-      case e: UnOp              => ListBuffer.empty[Instruction]
-      case e: BinOp             => ListBuffer.empty[Instruction]
+      case e: UnOp              => transUnOp(e, reg)
+      case e: BinOp             => transBinOp(e, reg)
     }
   }
 
