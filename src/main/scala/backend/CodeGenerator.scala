@@ -301,7 +301,18 @@ object CodeGenerator {
         instructions += BranchLink(Label("__aeabi_idiv"))
         addUnusedReg(rReg)
         instructions += Mov(reg, R0)
-      case Mod(lExpr, rExpr, _) => ListBuffer.empty
+      case Mod(l, r, _) =>
+        val rReg = getFreeReg()
+        // TODO: make sure R0 and R1 are free
+        transExp(l, reg)
+        transExp(r, rReg)
+        // Needs to be in R0 and R1 for "__aeabi_idivmod"
+        instructions += Mov(reg, R0)
+        instructions += Mov(rReg, R1)
+        // Mod function
+        instructions += BranchLink(Label("__aeabi_idivmod"))
+        addUnusedReg(rReg)
+        instructions += Mov(reg, R1)
       case Plus(l, r, _) =>
         val rReg = getFreeReg()
         transExp(l, reg)
