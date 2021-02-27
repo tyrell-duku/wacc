@@ -54,7 +54,6 @@ object CodeGenerator {
         Pop(ListBuffer(PC))
       )
     instructions ++= toAdd
-    println(varTable)
     (dataTable.table.toList, List((Label("main"), instructions.toList)))
   }
 
@@ -82,7 +81,7 @@ object CodeGenerator {
       e: Expr
   ): Unit = {
     val freeReg = getFreeReg()
-    transExp(e)
+    transExp(e, freeReg)
     instructions ++= ListBuffer[Instruction](
       Mov(R0, freeReg),
       BranchLink(Label("exit"))
@@ -102,14 +101,14 @@ object CodeGenerator {
     assignRHS(t, aRHS, currentSP)
   }
 
-  private def assignRHS(t: Type, aRHS: AssignRHS, spIndex: Int) {
+  private def assignRHS(t: Type, aRHS: AssignRHS, spIndex: Int): Unit = {
     val spOffset = ImmInt(spIndex)
     instructions += InstructionSet.Sub(SP, SP, spOffset)
     val freeReg = getFreeReg()
     t match {
       case IntT | CharT | BoolT | StringT =>
         aRHS match {
-          case ex: Expr          => transExp(ex)
+          case ex: Expr          => transExp(ex, freeReg)
           case p: PairElem       =>
           case Call(id, args, _) =>
           case _                 => ListBuffer.empty[Instruction]
@@ -208,12 +207,15 @@ object CodeGenerator {
     }
   }
 
-  private def transStrLiter(str: List[Character]): ListBuffer[Instruction] = {
+  private def transStrLiter(
+      str: List[Character],
+      reg: Reg
+  ): Unit = {
     val curLabel = dataTable.addDataEntry(str)
-    ListBuffer(Ldr(R1, DataLabel(curLabel)))
+    instructions += Ldr(reg, DataLabel(curLabel))
   }
 
-  private def transArrayElem(es: List[Expr]): ListBuffer[Instruction] = {
+  private def transArrayElem(es: List[Expr]): Unit = {
     // TODO: symbol table from semanticChecker required
     val st = null
     val length = es.length
@@ -230,17 +232,18 @@ object CodeGenerator {
     }
 
     lb += Str(R5, RegAdd(R4))
-    lb
+    instructions ++= lb
   }
 
-  /* Translates unary operator to the internal representation. */
-  private def transUnOp(op: UnOp): ListBuffer[Instruction] = {
+  /* Translates unary operator OP to the internal representation. */
+  private def transUnOp(op: UnOp, reg: Reg): ListBuffer[Instruction] = {
     op match {
       case Chr(e, pos)      => ListBuffer.empty
       case Len(e, pos)      => ListBuffer.empty
       case Negation(e, pos) => ListBuffer.empty
       case Not(e, pos) =>
-        transExp(e) ++ ListBuffer(Eor(R4, R4, ImmInt(1)))
+        transExp(e, reg)
+        instructions += Eor(reg, reg, ImmInt(1))
       case Ord(e, pos) => ListBuffer.empty
     }
   }
@@ -260,49 +263,69 @@ object CodeGenerator {
   }
 
   /* Translates a comparator operator to the internal representation. */
-  private def transCond(op: BinOp): ListBuffer[Instruction] = {
-    val lb = transExp(op.lExpr) ++ transExp(op.rExpr)
+  private def transCond(op: BinOp, reg: Reg): Unit = {
+    val rReg = getFreeReg()
+    transExp(op.lExpr, reg)
+    transExp(op.rExpr, rReg)
     val cmp = rulesCmpToInstrCmp(op)
-    lb += Cmp(R4, R5)
-    lb += MovCond(cmp, R4, ImmInt(1))
-    lb += MovCond(cmp.oppositeCmp, R4, ImmInt(0))
-    lb += Mov(R0, R4)
-    lb
+    instructions += Cmp(reg, rReg)
+    addUnusedReg(rReg)
+    instructions += MovCond(cmp, reg, ImmInt(1))
+    instructions += MovCond(cmp.oppositeCmp, reg, ImmInt(0))
+    // lb += Mov(R0, R4)
   }
 
   /* Translates a binary operator to the internal representation. */
-  private def transBinOp(op: BinOp): ListBuffer[Instruction] = {
+  private def transBinOp(op: BinOp, reg: Reg): Unit = {
     // TODO: determine result register for l & r
     op match {
       case frontend.Rules.Mul(l, r, _) =>
-        transExp(l) ++ transExp(r) += InstructionSet.Mul(R0, R1, R2)
+        val rReg = getFreeReg()
+        transExp(l, reg)
+        transExp(r, rReg)
+        instructions += InstructionSet.Mul(reg, reg, rReg)
+        addUnusedReg(rReg)
       case Div(lExpr, rExpr, _) => ListBuffer.empty
       case Mod(lExpr, rExpr, _) => ListBuffer.empty
       case Plus(l, r, _) =>
-        transExp(l) ++ transExp(r) += Add(R0, R1, R2)
+        val rReg = getFreeReg()
+        transExp(l, reg)
+        transExp(r, rReg)
+        instructions += Add(reg, reg, rReg)
+        addUnusedReg(rReg)
       case frontend.Rules.Sub(l, r, _) =>
-        transExp(l) ++ transExp(r) += InstructionSet.Sub(R0, R1, R2)
+        val rReg = getFreeReg()
+        transExp(l, reg)
+        transExp(r, rReg)
+        instructions += InstructionSet.Sub(reg, reg, rReg)
+        addUnusedReg(rReg)
       case frontend.Rules.And(l, r, _) =>
-        transExp(l) ++ transExp(r) += backend.InstructionSet.And(R5, R5, R6)
+        val rReg = getFreeReg()
+        transExp(l, reg)
+        transExp(r, rReg)
+        instructions += InstructionSet.And(reg, reg, rReg)
+        addUnusedReg(rReg)
       case frontend.Rules.Or(l, r, _) =>
-        transExp(l) ++ transExp(r) += backend.InstructionSet.Or(R5, R5, R6)
+        val rReg = getFreeReg()
+        transExp(l, reg)
+        transExp(r, rReg)
+        instructions += InstructionSet.Or(reg, reg, rReg)
+        addUnusedReg(rReg)
       // Comparison binary operators
-      case cmpOp => transCond(cmpOp)
+      case cmpOp => transCond(cmpOp, reg)
     }
   }
 
   /* Translates an expression operator to the internal representation. */
-  private def transExp(e: Expr): ListBuffer[Instruction] = {
+  private def transExp(e: Expr, reg: Reg): Unit = {
     // TODO: Determine free registers
     e match {
-      case IntLiter(n, _) => ListBuffer(Mov(R1, ImmInt(n)))
-      case BoolLiter(b, _) =>
-        return ListBuffer
-          .empty[Instruction] // return ListBuffer(Mov(R1, ImmInt(n)))
+      case IntLiter(n, _)  => instructions += Mov(reg, ImmInt(n))
+      case BoolLiter(b, _) => instructions += Mov(reg, ImmInt(boolToInt(b)))
       // TODO: escaped character
-      case CharLiter(c, _)  => ListBuffer(Mov(R1, ImmChar(c)))
-      case StrLiter(str, _) => transStrLiter(str)
-      case PairLiter(_)     => ListBuffer(Ldr(R1, ImmMem(0)))
+      case CharLiter(c, _)  => instructions += Mov(reg, ImmChar(c))
+      case StrLiter(str, _) => transStrLiter(str, reg)
+      case PairLiter(_)     => instructions += Ldr(reg, ImmMem(0))
       // TODO: track variable location
       case Ident(s, _)          => ListBuffer.empty[Instruction]
       case ArrayElem(id, es, _) => transArrayElem(es)
@@ -313,7 +336,7 @@ object CodeGenerator {
 
   private def getFreeReg(): Reg = {
     if (freeRegs.isEmpty) {
-      //todo: free up regs?
+      // TODO: free up regs?
       return R0
     }
     val reg = freeRegs(0)
@@ -337,8 +360,9 @@ object CodeGenerator {
       case CharT          => CHAR_SIZE
       case StringT        => STR_SIZE
       case ArrayT(innerT) => ARRAY_SIZE
-      case _: PairType    => -1
-      case _              => -1
+      // CODEME
+      case _: PairType => -1
+      case _           => -1
     }
   }
 
