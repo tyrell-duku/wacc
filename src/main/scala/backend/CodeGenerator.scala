@@ -165,8 +165,8 @@ object CodeGenerator {
                       Ldr(elemReg, ImmChar(c))
                     )
                   case StringT =>
-                    val StrLiter(s, _) = rawList(index)
-                    val label = dataTable.addDataEntry(s)
+                    val StrLiter(str, pos) = rawList(index)
+                    val label = dataTable.addDataEntry(StrLiter(str, pos))
 
                     instructions ++= ListBuffer[Instruction](
                       Ldr(elemReg, DataLabel(label))
@@ -209,7 +209,7 @@ object CodeGenerator {
   }
 
   private def transStrLiter(
-      str: List[Character],
+      str: StrLiter,
       reg: Reg
   ): Unit = {
     val curLabel = dataTable.addDataEntry(str)
@@ -349,9 +349,9 @@ object CodeGenerator {
       case IntLiter(n, _)  => instructions += Ldr(reg, ImmMem(n))
       case BoolLiter(b, _) => instructions += Mov(reg, ImmInt(boolToInt(b)))
       // TODO: escaped character
-      case CharLiter(c, _)  => instructions += Mov(reg, ImmChar(c))
-      case StrLiter(str, _) => transStrLiter(str, reg)
-      case PairLiter(_)     => instructions += Ldr(reg, ImmMem(0))
+      case CharLiter(c, _) => instructions += Mov(reg, ImmChar(c))
+      case str: StrLiter   => transStrLiter(str, reg)
+      case PairLiter(_)    => instructions += Ldr(reg, ImmMem(0))
       // TODO: track variable location
       case id: Ident =>
         val (index, _) = varTable.apply(id)
