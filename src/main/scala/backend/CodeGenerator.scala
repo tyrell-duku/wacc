@@ -239,9 +239,11 @@ object CodeGenerator {
   /* Translates unary operator OP to the internal representation. */
   private def transUnOp(op: UnOp, reg: Reg): Unit = {
     op match {
-      case Chr(e, _)        => transExp(e, reg)
-      case Len(e, pos)      => ListBuffer.empty
-      case Negation(e, pos) => ListBuffer.empty
+      case Chr(e, _)   => transExp(e, reg)
+      case Len(e, pos) => ListBuffer.empty
+      case Negation(e, _) =>
+        transExp(e, reg)
+        instructions += NegInstr(reg, reg)
       case Not(e, _) =>
         transExp(e, reg)
         instructions += Eor(reg, reg, ImmInt(1))
