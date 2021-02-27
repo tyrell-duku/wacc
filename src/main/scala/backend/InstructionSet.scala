@@ -80,7 +80,7 @@ package object InstructionSet {
   }
 
   case class StrB(rd: Reg, add: Address) extends Instruction {
-    override def toString: String = "STRB"
+    override def toString: String = "STRB " + rd + ", " + add
   }
 
   case object Ltorg extends Instruction {
