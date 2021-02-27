@@ -357,9 +357,12 @@ object CodeGenerator {
       case PairLiter(_)    => instructions += Ldr(reg, ImmMem(0))
       // TODO: track variable location
       case id: Ident =>
-        val (index, _) = varTable.apply(id)
+        val (index, t) = varTable.apply(id)
         instructions += InstructionSet.Sub(SP, SP, ImmInt(index))
-        instructions += Ldr(reg, RegAdd(SP))
+        t match {
+          case CharT | BoolT => instructions += LdrB(reg, RegAdd(SP))
+          case _             => instructions += Ldr(reg, RegAdd(SP))
+        }
         instructions += InstructionSet.Add(SP, SP, ImmInt(index))
       case ArrayElem(id, es, _) => transArrayElem(es)
       case e: UnOp              => transUnOp(e, reg)
