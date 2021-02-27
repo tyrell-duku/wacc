@@ -36,7 +36,7 @@ object ARMPrinter {
 
   def printData(data: Data, fileWriter: FileWriter): Unit = {
     val Data(Label(label), s) = data
-    fileWriter.write(tab + label + "\n")
+    fileWriter.write(tab + label + ":\n")
     fileWriter.write(tab2 + ".word " + s.length() + "\n")
     fileWriter.write(tab2 + ".ascii \"" + s + "\"" + "\n")
   }
