@@ -237,15 +237,16 @@ object CodeGenerator {
   }
 
   /* Translates unary operator OP to the internal representation. */
-  private def transUnOp(op: UnOp, reg: Reg): ListBuffer[Instruction] = {
+  private def transUnOp(op: UnOp, reg: Reg): Unit = {
     op match {
-      case Chr(e, pos)      => ListBuffer.empty
+      case Chr(e, _)        => ListBuffer.empty
       case Len(e, pos)      => ListBuffer.empty
       case Negation(e, pos) => ListBuffer.empty
-      case Not(e, pos) =>
+      case Not(e, _) =>
         transExp(e, reg)
         instructions += Eor(reg, reg, ImmInt(1))
-      case Ord(e, pos) => ListBuffer.empty
+      case Ord(e, _) =>
+        transExp(e, reg)
     }
   }
 
@@ -330,8 +331,8 @@ object CodeGenerator {
       // TODO: track variable location
       case Ident(s, _)          => ListBuffer.empty[Instruction]
       case ArrayElem(id, es, _) => transArrayElem(es)
-      case e: UnOp              => ListBuffer.empty[Instruction]
-      case e: BinOp             => ListBuffer.empty[Instruction]
+      case e: UnOp              => transUnOp(e, reg)
+      case e: BinOp             => transBinOp(e, reg)
     }
   }
 
