@@ -51,7 +51,8 @@ object CodeGenerator {
     var toAdd =
       ListBuffer(
         Ldr(resultReg, ImmMem(0)),
-        Pop(ListBuffer(PC))
+        Pop(ListBuffer(PC)),
+        Ltorg
       )
     instructions ++= toAdd
     (dataTable.table.toList, List((Label("main"), instructions.toList)))
