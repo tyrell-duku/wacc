@@ -16,6 +16,9 @@ package object InstructionSet {
   case class Mul(rd: Reg, rm: Reg, rs: Reg) extends Instruction {
     override def toString: String = "MUL " + rd + ", " + rm + ", " + rs
   }
+  case class NegInstr(rd: Reg, rm: Reg) extends Instruction {
+    override def toString: String = "NEG " + rd + ", " + rm
+  }
 
   // comparison
   case class Cmp(rn: Reg, op2: Operand) extends Instruction {
