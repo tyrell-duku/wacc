@@ -328,7 +328,9 @@ object CodeGenerator {
       case StrLiter(str, _) => transStrLiter(str, reg)
       case PairLiter(_)     => instructions += Ldr(reg, ImmMem(0))
       // TODO: track variable location
-      case Ident(s, _)          => ListBuffer.empty[Instruction]
+      case id: Ident =>
+        val (index, _) = varTable.apply(id)
+        instructions += LdrOffset(reg, SP, index)
       case ArrayElem(id, es, _) => transArrayElem(es)
       case e: UnOp              => ListBuffer.empty[Instruction]
       case e: BinOp             => ListBuffer.empty[Instruction]
