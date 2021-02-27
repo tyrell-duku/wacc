@@ -29,6 +29,9 @@ package object InstructionSet {
   case class Or(rd: Reg, rn: Reg, op2: Operand) extends Instruction {
     override def toString: String = "OR " + rd + ", " + rn + ", " + op2
   }
+  case class Eor(rd: Reg, rn: Reg, op2: Operand) extends Instruction {
+    override def toString: String = "EOR " + rd + ", " + rn + ", " + op2
+  }
 
   // Branching
   case class Branch(label: Label) extends Instruction {
@@ -58,6 +61,11 @@ package object InstructionSet {
     override def toString: String = "MOV " + rd + ", " + op2
   }
 
+  case class MovCond(cond: Condition, rd: Reg, op2: Operand)
+      extends Instruction {
+    override def toString: String = "MOV" + cond + " " + rd + ", " + op2
+  }
+
   // Branching
   case class Str(rd: Reg, add: Address) extends Instruction {
     override def toString: String = "STR " + rd + ", " + add
@@ -65,6 +73,10 @@ package object InstructionSet {
 
   case class StrB(rd: Reg, add: Address) extends Instruction {
     override def toString: String = "STRB"
+  }
+
+  case object Ltorg extends Instruction {
+    override def toString: String = ".ltorg"
   }
 
   case class Label(s: String) {

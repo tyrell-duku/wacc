@@ -1,27 +1,25 @@
 package backend
 
-case class MetaData(string: String)
+import scala.collection.mutable.ListBuffer
+import InstructionSet.Data
+import InstructionSet.Label
+import frontend.Rules.Character
 
 class DataTable {
-  var map = Map.empty[String, MetaData]
+  var table = ListBuffer.empty[Data]
   val stringDataSkeleton = "msg_"
   var dataCount = 0
 
-  def addDataEntry(string: List[Character]) = {
-    map += (getNextLabel() -> MetaData(string.toString()))
+  def addDataEntry(string: List[Character]): Label = {
+    val msgLabel = Label(getNextLabel())
+    table += Data(msgLabel, string.toString())
+    msgLabel
   }
 
   private def getNextLabel(): String = {
+    val nextLabel = stringDataSkeleton + dataCount.toString()
     dataCount += 1
-    stringDataSkeleton + dataCount.toString()
-  }
-
-  def getCurrLabel(): String = {
-    stringDataSkeleton + dataCount.toString()
-  }
-
-  override def toString() = {
-    map.toString()
+    nextLabel
   }
 
 }
