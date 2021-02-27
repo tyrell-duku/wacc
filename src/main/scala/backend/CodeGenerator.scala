@@ -68,13 +68,51 @@ object CodeGenerator {
       case Free(e)          =>
       case Return(e)        =>
       case Exit(e)          => transExit(e)
-      case Print(e)         =>
+      case Print(e)         => transPrint(e)
       case PrintLn(e)       =>
       case If(cond, s1, s2) =>
       case While(cond, s)   =>
       case Begin(s)         =>
       case Seq(statList)    => statList.map(transStat)
       case _                =>
+    }
+  }
+
+  private def getExprType(e: Expr): Type = {
+    e match {
+      case IntLiter(_, _)  => IntT
+      case BoolLiter(_, _) => BoolT
+      case CharLiter(_, _) => CharT
+      case StrLiter(_, _)  => StringT
+      case PairLiter(_)    => Pair(null, null)
+      case id: Ident =>
+        val (index, t) = varTable.apply(id)
+        t
+      case ArrayElem(id, _, _) =>
+        val (index, ArrayT(t)) = varTable.apply(id)
+        t
+      case Not(_, _)      => BoolT
+      case Negation(_, _) => IntT
+      case Len(_, _)      => IntT
+      case Ord(_, _)      => IntT
+      case Chr(_, _)      => CharT
+      case _: ArithOps    => IntT
+      case _: ComparOps   => BoolT
+      case _: EqOps       => BoolT
+      case _: LogicalOps  => BoolT
+    }
+  }
+
+  private def transPrint(e: Expr): Unit = {
+    val t = getExprType(e)
+    t match {
+      case CharT =>
+        val freeReg = getFreeReg()
+        transExp(e, freeReg)
+        instructions += Mov(resultReg, freeReg)
+        instructions += BranchLink(Label("putchar"))
+      case IntT  =>
+      case BoolT =>
     }
   }
 
