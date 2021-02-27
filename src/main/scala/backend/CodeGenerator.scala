@@ -289,7 +289,18 @@ object CodeGenerator {
         transExp(r, rReg)
         instructions += InstructionSet.Mul(reg, reg, rReg)
         addUnusedReg(rReg)
-      case Div(lExpr, rExpr, _) => ListBuffer.empty
+      case Div(l, r, _) =>
+        val rReg = getFreeReg()
+        // TODO: make sure R0 and R1 are free
+        transExp(l, reg)
+        transExp(r, rReg)
+        // Needs to be in R0 and R1 for "__aeabi_idiv"
+        instructions += Mov(reg, R0)
+        instructions += Mov(rReg, R1)
+        // Divide function
+        instructions += BranchLink(Label("__aeabi_idiv"))
+        addUnusedReg(rReg)
+        instructions += Mov(reg, R0)
       case Mod(lExpr, rExpr, _) => ListBuffer.empty
       case Plus(l, r, _) =>
         val rReg = getFreeReg()
