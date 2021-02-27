@@ -321,7 +321,7 @@ object CodeGenerator {
   private def transExp(e: Expr, reg: Reg): Unit = {
     // TODO: Determine free registers
     e match {
-      case IntLiter(n, _)  => instructions += Mov(reg, ImmInt(n))
+      case IntLiter(n, _)  => instructions += Ldr(reg, ImmMem(n))
       case BoolLiter(b, _) => instructions += Mov(reg, ImmInt(boolToInt(b)))
       // TODO: escaped character
       case CharLiter(c, _)  => instructions += Mov(reg, ImmChar(c))
