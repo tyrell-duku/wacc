@@ -2,7 +2,6 @@ package backend
 
 import InstructionSet._
 import frontend.Rules._
-
 import scala.collection.mutable.ListBuffer
 
 object CodeGenerator {
@@ -16,10 +15,10 @@ object CodeGenerator {
   final val resultReg: Reg = R0
   freeRegs -= resultReg
 
-  val dataTable = new DataTable()
-
   var varTable = Map.empty[Ident, (Int, Type)]
   var currentSP = 0
+
+  private val dataTable = new DataTable
 
   private val INT_SIZE = 4
   private val CHAR_SIZE = 1
@@ -83,7 +82,7 @@ object CodeGenerator {
       e: Expr
   ): Unit = {
     val freeReg = getFreeReg()
-    transExp(e, freeReg)
+    transExp(e)
     instructions ++= ListBuffer[Instruction](
       Mov(R0, freeReg),
       BranchLink(Label("exit"))
@@ -110,7 +109,7 @@ object CodeGenerator {
     t match {
       case IntT | CharT | BoolT | StringT =>
         aRHS match {
-          case ex: Expr          => transExp(ex, freeReg)
+          case ex: Expr          => transExp(ex)
           case p: PairElem       =>
           case Call(id, args, _) =>
           case _                 => ListBuffer.empty[Instruction]
@@ -209,11 +208,107 @@ object CodeGenerator {
     }
   }
 
-  private def transExp(
-      e: Expr,
-      resultReg: Reg
-  ): ListBuffer[Instruction] = {
-    ListBuffer.empty[Instruction]
+  private def transStrLiter(str: List[Character]): ListBuffer[Instruction] = {
+    val curLabel = dataTable.addDataEntry(str)
+    ListBuffer(Ldr(R1, DataLabel(curLabel)))
+  }
+
+  private def transArrayElem(es: List[Expr]): ListBuffer[Instruction] = {
+    // TODO: symbol table from semanticChecker required
+    val st = null
+    val length = es.length
+    val typeSize = getBaseTypeSize(es(0).getType(st))
+    val lb = ListBuffer.empty[Instruction]
+
+    lb += Ldr(R4, ImmMem(4 + typeSize * length))
+    lb += BranchLink(Label("malloc"))
+    lb += Mov(R4, R0)
+
+    for (i <- 1 to length) {
+      lb += Ldr(R5, ImmMem(0))
+      lb += StrOffset(R5, R4, typeSize * i)
+    }
+
+    lb += Str(R5, RegAdd(R4))
+    lb
+  }
+
+  /* Translates unary operator to the internal representation. */
+  private def transUnOp(op: UnOp): ListBuffer[Instruction] = {
+    op match {
+      case Chr(e, pos)      => ListBuffer.empty
+      case Len(e, pos)      => ListBuffer.empty
+      case Negation(e, pos) => ListBuffer.empty
+      case Not(e, pos) =>
+        transExp(e) ++ ListBuffer(Eor(R4, R4, ImmInt(1)))
+      case Ord(e, pos) => ListBuffer.empty
+    }
+  }
+
+  /* Changes a comparison operator to the Condition equivalent.
+     Returns null when not a comparison operator. */
+  private def rulesCmpToInstrCmp(cmp: BinOp): Condition = {
+    cmp match {
+      case GT(lExpr, rExpr, pos)       => backend.GT
+      case GTE(lExpr, rExpr, pos)      => backend.GTE
+      case LT(lExpr, rExpr, pos)       => backend.LT
+      case LTE(lExpr, rExpr, pos)      => backend.LTE
+      case Equal(lExpr, rExpr, pos)    => backend.EQ
+      case NotEqual(lExpr, rExpr, pos) => backend.NE
+      case _                           => null // Undefined
+    }
+  }
+
+  /* Translates a comparator operator to the internal representation. */
+  private def transCond(op: BinOp): ListBuffer[Instruction] = {
+    val lb = transExp(op.lExpr) ++ transExp(op.rExpr)
+    val cmp = rulesCmpToInstrCmp(op)
+    lb += Cmp(R4, R5)
+    lb += MovCond(cmp, R4, ImmInt(1))
+    lb += MovCond(cmp.oppositeCmp, R4, ImmInt(0))
+    lb += Mov(R0, R4)
+    lb
+  }
+
+  /* Translates a binary operator to the internal representation. */
+  private def transBinOp(op: BinOp): ListBuffer[Instruction] = {
+    // TODO: determine result register for l & r
+    op match {
+      case frontend.Rules.Mul(l, r, _) =>
+        transExp(l) ++ transExp(r) += InstructionSet.Mul(R0, R1, R2)
+      case Div(lExpr, rExpr, _) => ListBuffer.empty
+      case Mod(lExpr, rExpr, _) => ListBuffer.empty
+      case Plus(l, r, _) =>
+        transExp(l) ++ transExp(r) += Add(R0, R1, R2)
+      case frontend.Rules.Sub(l, r, _) =>
+        transExp(l) ++ transExp(r) += InstructionSet.Sub(R0, R1, R2)
+      case frontend.Rules.And(l, r, _) =>
+        transExp(l) ++ transExp(r) += backend.InstructionSet.And(R5, R5, R6)
+      case frontend.Rules.Or(l, r, _) =>
+        transExp(l) ++ transExp(r) += backend.InstructionSet.Or(R5, R5, R6)
+      // Comparison binary operators
+      case cmpOp => transCond(cmpOp)
+    }
+  }
+
+  /* Translates an expression operator to the internal representation. */
+  private def transExp(e: Expr): ListBuffer[Instruction] = {
+    // TODO: Determine free registers
+    e match {
+      case IntLiter(n, _) => ListBuffer(Mov(R1, ImmInt(n)))
+      case BoolLiter(b, _) =>
+        return ListBuffer
+          .empty[Instruction] // return ListBuffer(Mov(R1, ImmInt(n)))
+      // TODO: escaped character
+      case CharLiter(c, _)  => ListBuffer(Mov(R1, ImmChar(c)))
+      case StrLiter(str, _) => transStrLiter(str)
+      case PairLiter(_)     => ListBuffer(Ldr(R1, ImmMem(0)))
+      // TODO: track variable location
+      case Ident(s, _)          => ListBuffer.empty[Instruction]
+      case ArrayElem(id, es, _) => transArrayElem(es)
+      case e: UnOp              => ListBuffer.empty[Instruction]
+      case e: BinOp             => ListBuffer.empty[Instruction]
+    }
   }
 
   private def getFreeReg(): Reg = {
