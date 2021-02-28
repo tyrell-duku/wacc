@@ -127,11 +127,14 @@ object CodeGenerator {
         funcTable.addEntry(boolPrintInstrs)
 
       case StringT =>
-        instructions += BranchLink(Label("p_print_string"))
         dataTable.addDataEntryWithLabel("msg_string", "%.*s\\0")
+        instructions += BranchLink(Label("p_print_string"))
         funcTable.addEntry(stringPrintInstrs)
       case Pair(null, null) =>
-      case _                =>
+        dataTable.addDataEntryWithLabel("msg_reference", "%p\\0")
+        instructions += BranchLink(Label("p_print_reference"))
+        funcTable.addEntry(referencePrintInstrs)
+      case _ =>
     }
     addUnusedReg(freeReg)
   }
