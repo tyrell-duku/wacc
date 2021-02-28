@@ -18,6 +18,9 @@ object CodeGenerator {
   var varTable = Map.empty[Ident, (Int, Type)]
   var currentSP = 0
 
+  private val labelTable = ListBuffer.empty[(Label, ListBuffer[Instruction])]
+  private var labelCounter = 0
+
   private val dataTable = new DataTable
 
   private val INT_SIZE = 4
@@ -58,6 +61,27 @@ object CodeGenerator {
     (dataTable.table.toList, List((Label("main"), instructions.toList)))
   }
 
+  private def assignLabel(): Label = {
+    val nextLabel = Label("L" + labelCounter)
+    labelCounter += 1
+    nextLabel
+  }
+
+  private def transIf(cond: Expr, s1: Stat, s2: Stat): Unit = {
+    val reg = getFreeReg()
+    transExp(cond, reg)
+    // check if condition is false
+    instructions += Cmp(reg, ImmInt(0))
+    val elseBranch = assignLabel()
+    // labelTable += (elseBranch, transStat(s2))
+    instructions += BranchEq(elseBranch)
+    // statement if the condition was true
+    transStat(s1)
+    val afterLabel = assignLabel()
+    Branch(afterLabel)
+    // labelTable += (afterLabel, null)
+  }
+
   private def transStat(
       stat: Stat
   ): Unit = {
@@ -70,7 +94,7 @@ object CodeGenerator {
       case Exit(e)          => transExit(e)
       case Print(e)         =>
       case PrintLn(e)       =>
-      case If(cond, s1, s2) =>
+      case If(cond, s1, s2) => transIf(cond, s1, s2)
       case While(cond, s)   =>
       case Begin(s)         =>
       case Seq(statList)    => statList.map(transStat)
