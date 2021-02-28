@@ -25,6 +25,7 @@ object CodeGenerator {
   private val BOOL_SIZE = 1
   private val STR_SIZE = 4
   private val ARRAY_SIZE = 4
+  private val MAX_INT_IMM = 1024
 
   private def saveRegs(
       regsNotInUse: ListBuffer[Reg]
@@ -102,9 +103,26 @@ object CodeGenerator {
     assignRHS(t, aRHS, currentSP)
   }
 
+  private def subtractSP(): Unit = {
+    var curSp = currentSP
+    while (curSp > MAX_INT_IMM) {
+      curSp -= MAX_INT_IMM
+      instructions += InstructionSet.Sub(SP, SP, ImmInt(MAX_INT_IMM))
+    }
+    instructions += InstructionSet.Sub(SP, SP, ImmInt(curSp))
+  }
+
+  private def addSP(): Unit = {
+    var curSp = currentSP
+    while (curSp > MAX_INT_IMM) {
+      curSp -= MAX_INT_IMM
+      instructions += InstructionSet.Add(SP, SP, ImmInt(MAX_INT_IMM))
+    }
+    instructions += InstructionSet.Add(SP, SP, ImmInt(curSp))
+  }
+
   private def assignRHS(t: Type, aRHS: AssignRHS, spIndex: Int): Unit = {
-    val spOffset = ImmInt(spIndex)
-    instructions += InstructionSet.Sub(SP, SP, spOffset)
+    subtractSP()
     val freeReg = getFreeReg()
     t match {
       case IntT | CharT | BoolT | StringT =>
@@ -120,7 +138,7 @@ object CodeGenerator {
         } else {
           instructions += Str(freeReg, RegAdd(SP))
         }
-        instructions += Add(SP, SP, spOffset)
+        addSP()
       case ArrayT(t) =>
         aRHS match {
           case ArrayLiter(arr, _) =>
