@@ -3,6 +3,7 @@ package backend
 import InstructionSet._
 import frontend.Rules._
 import scala.collection.mutable.ListBuffer
+import PrintInstrs._
 
 object CodeGenerator {
   private var instructions: ListBuffer[Instruction] =
@@ -19,6 +20,7 @@ object CodeGenerator {
   var currentSP = 0
 
   private val dataTable = new DataTable
+  private val funcTable = new FuncTable
 
   private val INT_SIZE = 4
   private val CHAR_SIZE = 1
@@ -56,7 +58,9 @@ object CodeGenerator {
         Ltorg
       )
     instructions ++= toAdd
-    (dataTable.table.toList, List((Label("main"), instructions.toList)))
+    val funcList =
+      ListBuffer((Label("main"), instructions.toList)) ++ funcTable.table
+    (dataTable.table.toList, funcList.toList)
   }
 
   private def transStat(
@@ -69,14 +73,74 @@ object CodeGenerator {
       case Free(e)          =>
       case Return(e)        =>
       case Exit(e)          => transExit(e)
-      case Print(e)         =>
-      case PrintLn(e)       =>
+      case Print(e)         => transPrint(e, false)
+      case PrintLn(e)       => transPrint(e, true)
       case If(cond, s1, s2) =>
       case While(cond, s)   =>
       case Begin(s)         =>
       case Seq(statList)    => statList.map(transStat)
       case _                =>
     }
+  }
+
+  private def getExprType(e: Expr): Type = {
+    e match {
+      case IntLiter(_, _)  => IntT
+      case BoolLiter(_, _) => BoolT
+      case CharLiter(_, _) => CharT
+      case StrLiter(_, _)  => StringT
+      case PairLiter(_)    => Pair(null, null)
+      case id: Ident =>
+        val (index, t) = varTable.apply(id)
+        t
+      case ArrayElem(id, _, _) =>
+        val (index, ArrayT(t)) = varTable.apply(id)
+        t
+      case Not(_, _)      => BoolT
+      case Negation(_, _) => IntT
+      case Len(_, _)      => IntT
+      case Ord(_, _)      => IntT
+      case Chr(_, _)      => CharT
+      case _: ArithOps    => IntT
+      case _: ComparOps   => BoolT
+      case _: EqOps       => BoolT
+      case _: LogicalOps  => BoolT
+    }
+  }
+
+  private def transPrint(e: Expr, isNewLine: Boolean): Unit = {
+    val t = getExprType(e)
+    val freeReg = getFreeReg()
+    transExp(e, freeReg)
+    instructions += Mov(resultReg, freeReg)
+    t match {
+      case CharT =>
+        instructions += BranchLink(Label("putchar"))
+      case IntT =>
+        dataTable.addDataEntryWithLabel("msg_int", "%d\\0")
+        instructions += BranchLink(Label("p_print_int"))
+        funcTable.addEntry(intPrintInstrs)
+      case BoolT =>
+        dataTable.addDataEntryWithLabel("msg_true", "true\\0")
+        dataTable.addDataEntryWithLabel("msg_false", "false\\0")
+        instructions += BranchLink(Label("p_print_bool"))
+        funcTable.addEntry(boolPrintInstrs)
+      case StringT =>
+        dataTable.addDataEntryWithLabel("msg_string", "%.*s\\0")
+        instructions += BranchLink(Label("p_print_string"))
+        funcTable.addEntry(stringPrintInstrs)
+      case Pair(null, null) =>
+        dataTable.addDataEntryWithLabel("msg_reference", "%p\\0")
+        instructions += BranchLink(Label("p_print_reference"))
+        funcTable.addEntry(referencePrintInstrs)
+      case _ =>
+    }
+    if (isNewLine) {
+      instructions += BranchLink(Label("p_print_ln"))
+      dataTable.addDataEntryWithLabel("msg_new_line", "\\0")
+      funcTable.addEntry(newLinePrintInstrs)
+    }
+    addUnusedReg(freeReg)
   }
 
   private def transExit(
