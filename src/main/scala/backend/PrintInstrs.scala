@@ -51,4 +51,19 @@ object PrintInstrs {
       Pop(ListBuffer(PC))
     )
   )
+
+  val referencePrintInstrs: (Label, List[Instruction]) =
+    (
+      Label("p_print_reference"),
+      List[Instruction](
+        Push(ListBuffer(LR)),
+        Mov(R1, resultReg),
+        Ldr(resultReg, DataLabel(Label("msg_reference"))),
+        Add(resultReg, resultReg, ImmInt(4)),
+        BranchLink(Label("printf")),
+        Mov(resultReg, ImmInt(0)),
+        BranchLink(Label("fflush")),
+        Pop(ListBuffer(PC))
+      )
+    )
 }
