@@ -3,6 +3,7 @@ package backend
 import InstructionSet._
 import frontend.Rules._
 import scala.collection.mutable.ListBuffer
+import PrintInstrs._
 
 object CodeGenerator {
   private var instructions: ListBuffer[Instruction] =
@@ -19,8 +20,7 @@ object CodeGenerator {
   var currentSP = 0
 
   private val dataTable = new DataTable
-  private val funcTable: ListBuffer[(Label, List[Instruction])] =
-    ListBuffer.empty[(Label, List[Instruction])]
+  private val funcTable = new FuncTable
 
   private val INT_SIZE = 4
   private val CHAR_SIZE = 1
@@ -57,7 +57,9 @@ object CodeGenerator {
         Ltorg
       )
     instructions ++= toAdd
-    val funcList = ListBuffer((Label("main"), instructions.toList)) ++ funcTable
+    println(funcTable.table)
+    val funcList =
+      ListBuffer((Label("main"), instructions.toList)) ++ funcTable.table
     (dataTable.table.toList, funcList.toList)
   }
 
@@ -117,43 +119,16 @@ object CodeGenerator {
       case IntT =>
         dataTable.addDataEntryWithLabel("msg_int", "%d\\0")
         instructions += BranchLink(Label("p_print_int"))
-        val intPrintInstrs: (Label, List[Instruction]) = (
-          Label("p_print_int"),
-          List[Instruction](
-            Push(ListBuffer(LR)),
-            Mov(R1, resultReg),
-            Ldr(resultReg, DataLabel(Label("msg_int"))),
-            Add(resultReg, resultReg, ImmInt(4)),
-            BranchLink(Label("printf")),
-            Mov(resultReg, ImmInt(0)),
-            BranchLink(Label("fflush")),
-            Pop(ListBuffer(resultReg))
-          )
-        )
-        funcTable += intPrintInstrs
+        funcTable.addEntry(intPrintInstrs)
       case BoolT =>
         dataTable.addDataEntryWithLabel("msg_true", "true\\0")
         dataTable.addDataEntryWithLabel("msg_false", "false\\0")
         instructions += BranchLink(Label("p_print_bool"))
-
-        val boolPrintInstrs: (Label, List[Instruction]) = (
-          Label("p_print_bool"),
-          List[Instruction](
-            Push(ListBuffer(LR)),
-            Cmp(resultReg, ImmInt(0)),
-            LdrCond(backend.NE, resultReg, DataLabel(Label("msg_true"))),
-            LdrCond(backend.EQ, resultReg, DataLabel(Label("msg_false"))),
-            Add(resultReg, resultReg, ImmInt(4)),
-            BranchLink(Label("printf")),
-            Mov(resultReg, ImmInt(0)),
-            BranchLink(Label("fflush")),
-            Pop(ListBuffer(resultReg))
-          )
-        )
-        funcTable += boolPrintInstrs
+        funcTable.addEntry(boolPrintInstrs)
 
       case StringT          =>
       case Pair(null, null) =>
+      case _                =>
     }
     addUnusedReg(freeReg)
   }
