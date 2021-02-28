@@ -57,7 +57,6 @@ object CodeGenerator {
         Ltorg
       )
     instructions ++= toAdd
-    println(funcTable.table)
     val funcList =
       ListBuffer((Label("main"), instructions.toList)) ++ funcTable.table
     (dataTable.table.toList, funcList.toList)
@@ -73,8 +72,8 @@ object CodeGenerator {
       case Free(e)          =>
       case Return(e)        =>
       case Exit(e)          => transExit(e)
-      case Print(e)         => transPrint(e)
-      case PrintLn(e)       =>
+      case Print(e)         => transPrint(e, false)
+      case PrintLn(e)       => transPrint(e, true)
       case If(cond, s1, s2) =>
       case While(cond, s)   =>
       case Begin(s)         =>
@@ -108,7 +107,7 @@ object CodeGenerator {
     }
   }
 
-  private def transPrint(e: Expr): Unit = {
+  private def transPrint(e: Expr, isNewLine: Boolean): Unit = {
     val t = getExprType(e)
     val freeReg = getFreeReg()
     transExp(e, freeReg)
@@ -125,7 +124,6 @@ object CodeGenerator {
         dataTable.addDataEntryWithLabel("msg_false", "false\\0")
         instructions += BranchLink(Label("p_print_bool"))
         funcTable.addEntry(boolPrintInstrs)
-
       case StringT =>
         dataTable.addDataEntryWithLabel("msg_string", "%.*s\\0")
         instructions += BranchLink(Label("p_print_string"))
@@ -135,6 +133,11 @@ object CodeGenerator {
         instructions += BranchLink(Label("p_print_reference"))
         funcTable.addEntry(referencePrintInstrs)
       case _ =>
+    }
+    if (isNewLine) {
+      instructions += BranchLink(Label("p_print_ln"))
+      dataTable.addDataEntryWithLabel("msg_new_line", "\\0")
+      funcTable.addEntry(newLinePrintInstrs)
     }
     addUnusedReg(freeReg)
   }
