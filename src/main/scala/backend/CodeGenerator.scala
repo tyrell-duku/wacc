@@ -19,6 +19,8 @@ object CodeGenerator {
   var currentSP = 0
 
   private val dataTable = new DataTable
+  private val funcTable: ListBuffer[(Label, List[Instruction])] =
+    ListBuffer.empty[(Label, List[Instruction])]
 
   private val INT_SIZE = 4
   private val CHAR_SIZE = 1
@@ -55,7 +57,8 @@ object CodeGenerator {
         Ltorg
       )
     instructions ++= toAdd
-    (dataTable.table.toList, List((Label("main"), instructions.toList)))
+    val funcList = ListBuffer((Label("main"), instructions.toList)) ++ funcTable
+    (dataTable.table.toList, funcList.toList)
   }
 
   private def transStat(
@@ -105,14 +108,36 @@ object CodeGenerator {
 
   private def transPrint(e: Expr): Unit = {
     val t = getExprType(e)
+    val freeReg = getFreeReg()
+    transExp(e, freeReg)
+    instructions += Mov(resultReg, freeReg)
     t match {
       case CharT =>
-        val freeReg = getFreeReg()
-        transExp(e, freeReg)
-        instructions += Mov(resultReg, freeReg)
         instructions += BranchLink(Label("putchar"))
-      case IntT  =>
+      case IntT =>
       case BoolT =>
+        dataTable.addDataEntryWithLabel("msg_true", "true\\0")
+        dataTable.addDataEntryWithLabel("msg_false", "false\\0")
+        instructions += BranchLink(Label("p_print_bool"))
+
+        val boolPrintInstrs: (Label, List[Instruction]) = (
+          Label("p_print_bool"),
+          List[Instruction](
+            Push(ListBuffer(LR)),
+            Cmp(resultReg, ImmInt(0)),
+            LdrCond(backend.NE, resultReg, DataLabel(Label("msg_true"))),
+            LdrCond(backend.EQ, resultReg, DataLabel(Label("msg_false"))),
+            Add(resultReg, resultReg, ImmInt(4)),
+            BranchLink(Label("printf")),
+            Mov(resultReg, ImmInt(0)),
+            BranchLink(Label("fflush")),
+            Pop(ListBuffer(resultReg))
+          )
+        )
+        funcTable += boolPrintInstrs
+
+      case StringT          =>
+      case Pair(null, null) =>
     }
   }
 
