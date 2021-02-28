@@ -34,14 +34,22 @@ object ARMPrinter {
     fileWriter.close()
   }
 
-  def printData(data: Data, fileWriter: FileWriter): Unit = {
+  private def printData(data: Data, fileWriter: FileWriter): Unit = {
     val Data(Label(label), s) = data
     fileWriter.write(tab + label + ":\n")
-    fileWriter.write(tab2 + ".word " + s.length() + "\n")
+    fileWriter.write(tab2 + ".word " + getStringSize(s) + "\n")
     fileWriter.write(tab2 + ".ascii \"" + s + "\"" + "\n")
   }
 
-  def printInstrs(
+  private def getStringSize(s: String) = {
+    var size = s.length()
+    if (s.contains("\\0")) {
+      size -= 1
+    }
+    size
+  }
+
+  private def printInstrs(
       label: Label,
       instr: List[Instruction],
       fileWriter: FileWriter
