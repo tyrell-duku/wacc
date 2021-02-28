@@ -115,6 +115,22 @@ object CodeGenerator {
       case CharT =>
         instructions += BranchLink(Label("putchar"))
       case IntT =>
+        dataTable.addDataEntryWithLabel("msg_int", "%d\\0")
+        instructions += BranchLink(Label("p_print_int"))
+        val intPrintInstrs: (Label, List[Instruction]) = (
+          Label("p_print_int"),
+          List[Instruction](
+            Push(ListBuffer(LR)),
+            Mov(R1, resultReg),
+            Ldr(resultReg, DataLabel(Label("msg_int"))),
+            Add(resultReg, resultReg, ImmInt(4)),
+            BranchLink(Label("printf")),
+            Mov(resultReg, ImmInt(0)),
+            BranchLink(Label("fflush")),
+            Pop(ListBuffer(resultReg))
+          )
+        )
+        funcTable += intPrintInstrs
       case BoolT =>
         dataTable.addDataEntryWithLabel("msg_true", "true\\0")
         dataTable.addDataEntryWithLabel("msg_false", "false\\0")
@@ -139,6 +155,7 @@ object CodeGenerator {
       case StringT          =>
       case Pair(null, null) =>
     }
+    addUnusedReg(freeReg)
   }
 
   private def transExit(
