@@ -15,7 +15,7 @@ object CodeGenerator {
   var varTable = Map.empty[Ident, (Int, Type)]
   var currentSP = 0
 
-  private val labelTable = ListBuffer.empty[(Label, ListBuffer[Instruction])]
+  private val labelTable = ListBuffer.empty[(Label, List[Instruction])]
   private var labelCounter = 0
 
   private val dataTable = new DataTable
@@ -56,7 +56,8 @@ object CodeGenerator {
         Ltorg
       )
     instructions ++= toAdd
-    (dataTable.table.toList, List((Label("main"), instructions.toList)))
+    (Label("main"), instructions.toList) +=: labelTable
+    (dataTable.table.toList, labelTable.toList)
   }
 
   private def assignLabel(): Label = {
@@ -76,12 +77,13 @@ object CodeGenerator {
     // check if condition is false
     instructions += Cmp(reg, ImmInt(0))
     val elseBranch = assignLabel()
-    // labelTable += (elseBranch, transStat(s2))
+    labelTable += ((elseBranch, transStat(s2).toList))
     instructions += BranchEq(elseBranch)
     // statement if the condition was true
     instructions ++= transStat(s1)
     val afterLabel = assignLabel()
     Branch(afterLabel)
+    // TODO: determine second label
     // labelTable += (afterLabel, null)
     instructions
   }
