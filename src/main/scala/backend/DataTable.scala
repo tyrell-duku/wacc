@@ -18,14 +18,27 @@ class DataTable {
 
   def addDataEntryWithLabel(label: String, string: String): Label = {
     val msgLabel = Label(label)
-    table += Data(msgLabel, string)
-    msgLabel
+    if (!containsLabel(msgLabel)) {
+      table += Data(msgLabel, string)
+      msgLabel
+    }
+    null
   }
 
   private def getNextLabel(): String = {
     val nextLabel = stringDataSkeleton + dataCount.toString()
     dataCount += 1
     nextLabel
+  }
+
+  private def containsLabel(label: Label): Boolean = {
+    for (d <- table) {
+      val Data(l, _) = d
+      if (l == label) {
+        return true
+      }
+    }
+    false
   }
 
 }
