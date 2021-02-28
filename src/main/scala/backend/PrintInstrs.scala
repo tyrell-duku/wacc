@@ -66,4 +66,18 @@ object PrintInstrs {
         Pop(ListBuffer(PC))
       )
     )
+
+  val newLinePrintInstrs: (Label, List[Instruction]) =
+    (
+      Label("p_print_ln"),
+      List[Instruction](
+        Push(ListBuffer(LR)),
+        Ldr(resultReg, DataLabel(Label("msg_new_line"))),
+        Add(resultReg, resultReg, ImmInt(4)),
+        BranchLink(Label("puts")),
+        Mov(resultReg, ImmInt(0)),
+        BranchLink(Label("fflush")),
+        Pop(ListBuffer(PC))
+      )
+    )
 }
