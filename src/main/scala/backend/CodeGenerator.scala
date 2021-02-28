@@ -126,7 +126,10 @@ object CodeGenerator {
         instructions += BranchLink(Label("p_print_bool"))
         funcTable.addEntry(boolPrintInstrs)
 
-      case StringT          =>
+      case StringT =>
+        instructions += BranchLink(Label("p_print_string"))
+        dataTable.addDataEntryWithLabel("msg_string", "%.*s\\0")
+        funcTable.addEntry(stringPrintInstrs)
       case Pair(null, null) =>
       case _                =>
     }
