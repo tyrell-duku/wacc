@@ -16,6 +16,12 @@ class DataTable {
     msgLabel
   }
 
+  def addDataEntryWithLabel(label: String, string: String): Label = {
+    val msgLabel = Label(label)
+    table += Data(msgLabel, string)
+    msgLabel
+  }
+
   private def getNextLabel(): String = {
     val nextLabel = stringDataSkeleton + dataCount.toString()
     dataCount += 1
