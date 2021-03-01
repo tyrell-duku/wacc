@@ -285,8 +285,13 @@ object CodeGenerator {
   /* Translates unary operator OP to the internal representation. */
   private def transUnOp(op: UnOp, reg: Reg): Unit = {
     op match {
-      case Chr(e, _)   => transExp(e, reg)
-      case Len(e, pos) => ListBuffer.empty
+      case Chr(e, _) => transExp(e, reg)
+      case Len(id: Ident, _) =>
+        val (index, _) = varTable.apply(id)
+        instructions += InstructionSet.Sub(SP, SP, ImmInt(index))
+        instructions += Ldr(reg, RegAdd(SP))
+        instructions += Ldr(reg, RegAdd(reg))
+        instructions += InstructionSet.Add(SP, SP, ImmInt(index))
       case Negation(e, _) =>
         transExp(e, reg)
         instructions += NegInstr(reg, reg)
@@ -295,6 +300,7 @@ object CodeGenerator {
         instructions += Eor(reg, reg, ImmInt(1))
       case Ord(e, _) =>
         transExp(e, reg)
+      case _ => // throw error?
     }
   }
 
