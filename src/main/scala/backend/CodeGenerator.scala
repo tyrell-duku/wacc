@@ -196,87 +196,48 @@ object CodeGenerator {
           case Call(id, args, _) =>
           case _                 => ListBuffer.empty[Instruction]
         }
-
         if (t == CharT || t == BoolT) {
           instructions += StrB(freeReg, RegAdd(SP))
         } else {
           instructions += Str(freeReg, RegAdd(SP))
         }
-        addSP()
       case ArrayT(t) =>
-        aRHS match {
-          case ArrayLiter(arr, _) =>
-            instructions ++= ListBuffer[Instruction](
-              InstructionSet.Sub(SP, SP, ImmInt(ARRAY_SIZE))
-            )
-            var rawList = List.empty[Expr]
-            if (!arr.isEmpty) {
-              rawList = arr.get
-            }
-
-            val baseTSize = getBaseTypeSize(t)
-            var rawSize = 4 + (rawList.size * baseTSize)
-            val arrayReg = getFreeReg()
-            val tempReg = getFreeReg()
-            val elemReg = getFreeReg()
-
-            instructions ++= ListBuffer[Instruction](
-              Ldr(arrayReg, ImmMem(rawSize)),
-              BranchLink(Label("malloc")),
-              Mov(tempReg, arrayReg)
-            )
-
-            if (rawSize == 4) {
-              instructions ++= ListBuffer[Instruction](
-                Ldr(elemReg, ImmMem(0))
-              )
-            } else {
-
-              for (index <- 0 until rawList.size) {
-                t match {
-                  case IntT =>
-                    val IntLiter(i, _) = rawList(index)
-                    instructions ++= ListBuffer[Instruction](
-                      Ldr(elemReg, ImmMem(i))
-                    )
-                  case BoolT =>
-                    val BoolLiter(b, _) = rawList(index)
-                    instructions ++= ListBuffer[Instruction](
-                      Ldr(elemReg, ImmMem(boolToInt(b)))
-                    )
-                  case CharT =>
-                    val CharLiter(c, _) = rawList(index)
-                    instructions ++= ListBuffer[Instruction](
-                      Ldr(elemReg, ImmChar(c))
-                    )
-                  case StringT =>
-                    val StrLiter(str, pos) = rawList(index)
-                    val label = dataTable.addDataEntry(StrLiter(str, pos))
-
-                    instructions ++= ListBuffer[Instruction](
-                      Ldr(elemReg, DataLabel(label))
-                    )
-                  case ArrayT(_) =>
-                  case _         =>
-                }
-
-                instructions ++= ListBuffer[Instruction](
-                  StrOffset(elemReg, tempReg, 4 + (index * baseTSize))
-                )
-              }
-            }
-
-            instructions ++= ListBuffer[Instruction](
-              Ldr(elemReg, ImmMem(rawList.size)),
-              Str(elemReg, RegAdd(tempReg)),
-              Str(tempReg, RegAdd(SP)),
-              Add(SP, SP, ImmInt(ARRAY_SIZE))
-            )
-          case _ => ListBuffer.empty[Instruction]
+        val ArrayLiter(opArr, _) = aRHS
+        val arr = opArr match {
+          case Some(arr) => arr
+          case None      => List.empty[Expr]
         }
+
+        val listSize = arr.size
+        val baseTypeSize = getBaseTypeSize(t)
+        val sizeToMalloc = 4 + (listSize * baseTypeSize)
+        instructions += Ldr(R0, ImmMem(sizeToMalloc))
+        instructions += BranchLink(Label("malloc"))
+        instructions += Mov(freeReg, R0)
+        val nextFreeReg = getFreeReg()
+
+        if (t == CharT || t == BoolT) {
+          for (i <- 0 until listSize) {
+            transExp(arr(i), nextFreeReg)
+            instructions += StrB(nextFreeReg, RegisterOffset(freeReg, i + 4))
+          }
+        } else {
+          for (i <- 0 until listSize) {
+            transExp(arr(i), nextFreeReg)
+            instructions += Str(
+              nextFreeReg,
+              RegisterOffset(freeReg, (i + 1) * 4)
+            )
+          }
+        }
+        instructions += Ldr(nextFreeReg, ImmMem(listSize))
+        instructions += Str(nextFreeReg, RegAdd(freeReg))
+        instructions += Str(freeReg, RegAdd(SP))
+
       case _: PairType => ListBuffer.empty[Instruction]
       case _           => ListBuffer.empty[Instruction]
     }
+    addSP()
     addUnusedReg(freeReg)
   }
 
