@@ -30,7 +30,7 @@ package object InstructionSet {
     override def toString: String = "AND " + rd + ", " + rn + ", " + op2
   }
   case class Or(rd: Reg, rn: Reg, op2: Operand) extends Instruction {
-    override def toString: String = "OR " + rd + ", " + rn + ", " + op2
+    override def toString: String = "ORR " + rd + ", " + rn + ", " + op2
   }
   case class Eor(rd: Reg, rn: Reg, op2: Operand) extends Instruction {
     override def toString: String = "EOR " + rd + ", " + rn + ", " + op2

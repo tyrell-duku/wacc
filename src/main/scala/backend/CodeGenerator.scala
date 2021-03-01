@@ -370,8 +370,8 @@ object CodeGenerator {
         transExp(l, reg)
         transExp(r, rReg)
         // Needs to be in R0 and R1 for "__aeabi_idivmod"
-        instructions += Mov(reg, R0)
-        instructions += Mov(rReg, R1)
+        instructions += Mov(R0, reg)
+        instructions += Mov(R1, rReg)
         // Mod function
         instructions += BranchLink(Label("__aeabi_idivmod"))
         addUnusedReg(rReg)
