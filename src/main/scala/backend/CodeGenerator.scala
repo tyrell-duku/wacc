@@ -15,6 +15,9 @@ object CodeGenerator {
   var freeRegs = allRegs
   final val resultReg: Reg = R0
   freeRegs -= resultReg
+  freeRegs -= R1
+  freeRegs -= R2
+  freeRegs -= R3
 
   var varTable = Map.empty[Ident, (Int, Type)]
   var currentSP = 0
@@ -355,8 +358,8 @@ object CodeGenerator {
         transExp(l, reg)
         transExp(r, rReg)
         // Needs to be in R0 and R1 for "__aeabi_idiv"
-        instructions += Mov(reg, R0)
-        instructions += Mov(rReg, R1)
+        instructions += Mov(R0, reg)
+        instructions += Mov(R1, rReg)
         // Divide function
         instructions += BranchLink(Label("__aeabi_idiv"))
         addUnusedReg(rReg)
