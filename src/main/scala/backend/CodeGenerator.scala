@@ -132,7 +132,10 @@ object CodeGenerator {
         dataTable.addDataEntryWithLabel("msg_reference", "%p\\0")
         instructions += BranchLink(Label("p_print_reference"))
         funcTable.addEntry(referencePrintInstrs)
-      case _ =>
+      case ArrayT(CharT) =>
+        dataTable.addDataEntryWithLabel("msg_string", "%.*s\\0")
+        instructions += BranchLink(Label("p_print_string"))
+        funcTable.addEntry(stringPrintInstrs)
     }
     if (isNewLine) {
       instructions += BranchLink(Label("p_print_ln"))
@@ -188,9 +191,6 @@ object CodeGenerator {
       case ArrayT(t) =>
         aRHS match {
           case ArrayLiter(arr, _) =>
-            instructions ++= ListBuffer[Instruction](
-              InstructionSet.Sub(SP, SP, ImmInt(ARRAY_SIZE))
-            )
             var rawList = List.empty[Expr]
             if (!arr.isEmpty) {
               rawList = arr.get
@@ -215,33 +215,7 @@ object CodeGenerator {
             } else {
 
               for (index <- 0 until rawList.size) {
-                t match {
-                  case IntT =>
-                    val IntLiter(i, _) = rawList(index)
-                    instructions ++= ListBuffer[Instruction](
-                      Ldr(elemReg, ImmMem(i))
-                    )
-                  case BoolT =>
-                    val BoolLiter(b, _) = rawList(index)
-                    instructions ++= ListBuffer[Instruction](
-                      Ldr(elemReg, ImmMem(boolToInt(b)))
-                    )
-                  case CharT =>
-                    val CharLiter(c, _) = rawList(index)
-                    instructions ++= ListBuffer[Instruction](
-                      Ldr(elemReg, ImmChar(c))
-                    )
-                  case StringT =>
-                    val StrLiter(str, pos) = rawList(index)
-                    val label = dataTable.addDataEntry(StrLiter(str, pos))
-
-                    instructions ++= ListBuffer[Instruction](
-                      Ldr(elemReg, DataLabel(label))
-                    )
-                  case ArrayT(_) =>
-                  case _         =>
-                }
-
+                transExp(rawList(index), elemReg)
                 instructions ++= ListBuffer[Instruction](
                   StrOffset(elemReg, tempReg, 4 + (index * baseTSize))
                 )
