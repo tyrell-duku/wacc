@@ -317,9 +317,9 @@ object CodeGenerator {
   private def rulesCmpToInstrCmp(cmp: BinOp): Condition = {
     cmp match {
       case GT(lExpr, rExpr, pos)       => backend.GT
-      case GTE(lExpr, rExpr, pos)      => backend.GTE
+      case GTE(lExpr, rExpr, pos)      => backend.GE
       case LT(lExpr, rExpr, pos)       => backend.LT
-      case LTE(lExpr, rExpr, pos)      => backend.LTE
+      case LTE(lExpr, rExpr, pos)      => backend.LE
       case Equal(lExpr, rExpr, pos)    => backend.EQ
       case NotEqual(lExpr, rExpr, pos) => backend.NE
       case _                           => null // Undefined
