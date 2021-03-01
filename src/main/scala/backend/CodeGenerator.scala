@@ -51,6 +51,7 @@ object CodeGenerator {
     // instructions += funcCode
     instructions = ListBuffer(Push(ListBuffer(LR)))
     transStat(stat)
+    addSP()
     var toAdd =
       ListBuffer(
         Ldr(resultReg, ImmMem(0)),
@@ -137,6 +138,7 @@ object CodeGenerator {
         dataTable.addDataEntryWithLabel("msg_string", "%.*s\\0")
         instructions += BranchLink(Label("p_print_string"))
         funcTable.addEntry(stringPrintInstrs)
+      case _ =>
     }
     if (isNewLine) {
       instructions += BranchLink(Label("p_print_ln"))
@@ -166,8 +168,9 @@ object CodeGenerator {
 
     currentSP += getBaseTypeSize(t)
     varTable += (id -> (currentSP, t))
+    instructions += InstructionSet.Sub(SP, SP, ImmInt(getBaseTypeSize(t)))
 
-    assignRHS(t, aRHS, currentSP)
+    assignRHS(t, aRHS, 0)
   }
 
   private def subtractSP(): Unit = {
@@ -188,8 +191,7 @@ object CodeGenerator {
     instructions += InstructionSet.Add(SP, SP, ImmInt(curSp))
   }
 
-  private def assignRHS(t: Type, aRHS: AssignRHS, spIndex: Int): Unit = {
-    subtractSP()
+  private def assignRHS(t: Type, aRHS: AssignRHS, spOffset: Int): Unit = {
     val freeReg = getFreeReg()
     t match {
       case IntT | CharT | BoolT | StringT =>
@@ -201,11 +203,10 @@ object CodeGenerator {
         }
 
         if (t == CharT || t == BoolT) {
-          instructions += StrB(freeReg, RegAdd(SP))
+          instructions += StrB(freeReg, RegisterOffset(SP, spOffset))
         } else {
-          instructions += Str(freeReg, RegAdd(SP))
+          instructions += Str(freeReg, RegisterOffset(SP, spOffset))
         }
-        addSP()
       case ArrayT(t) =>
         aRHS match {
           case ArrayLiter(arr, _) =>
@@ -262,7 +263,7 @@ object CodeGenerator {
       case elem: PairElem =>
       case id: Ident =>
         val (index, t) = varTable.apply(id)
-        assignRHS(t, aRHS, index)
+        assignRHS(t, aRHS, currentSP - index)
       case arrayElem: ArrayElem =>
     }
   }
@@ -414,12 +415,12 @@ object CodeGenerator {
       // TODO: track variable location
       case id: Ident =>
         val (index, t) = varTable.apply(id)
-        instructions += InstructionSet.Sub(SP, SP, ImmInt(index))
+        val spOffset = currentSP - index
         t match {
-          case CharT | BoolT => instructions += LdrB(reg, RegAdd(SP))
-          case _             => instructions += Ldr(reg, RegAdd(SP))
+          case CharT | BoolT =>
+            instructions += LdrB(reg, RegisterOffset(SP, spOffset))
+          case _ => instructions += Ldr(reg, RegisterOffset(SP, spOffset))
         }
-        instructions += InstructionSet.Add(SP, SP, ImmInt(index))
       case ArrayElem(id, es, _) => transArrayElem(es)
       case e: UnOp              => transUnOp(e, reg)
       case e: BinOp             => transBinOp(e, reg)
