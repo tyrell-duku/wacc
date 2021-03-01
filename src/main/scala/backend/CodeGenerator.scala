@@ -238,6 +238,7 @@ object CodeGenerator {
         instructions += Ldr(nextFreeReg, ImmMem(listSize))
         instructions += Str(nextFreeReg, RegAdd(freeReg))
         instructions += Str(freeReg, RegAdd(SP))
+        addUnusedReg(nextFreeReg)
 
       case _: PairType => ListBuffer.empty[Instruction]
       case _           => ListBuffer.empty[Instruction]
@@ -272,20 +273,25 @@ object CodeGenerator {
     val spOffset = currentSP - index
     instructions += InstructionSet.Add(reg, SP, ImmInt(spOffset))
     val nextReg = getFreeReg()
-    transExp(es(0), nextReg)
-    instructions += Ldr(reg, RegAdd(reg))
+    for (exp <- es) {
+      transExp(exp, nextReg)
+      instructions += Ldr(reg, RegAdd(reg))
 
-    //TODO: Out of bounds check
+      //TODO: Out of bounds check
 
-    instructions += Add(reg, reg, ImmInt(INT_SIZE))
+      instructions += Add(reg, reg, ImmInt(INT_SIZE))
+      if (t == CharT || t == BoolT) {
+        instructions += Add(reg, reg, nextReg)
+      } else {
+        instructions += Add(reg, reg, LSL(nextReg, ImmInt(2)))
+      }
+    }
+    addUnusedReg(nextReg)
     if (t == CharT || t == BoolT) {
-      instructions += Add(reg, reg, nextReg)
       instructions += LdrB(reg, RegAdd(reg))
     } else {
-      instructions += Add(reg, reg, LSL(nextReg, ImmInt(2)))
       instructions += Ldr(reg, RegAdd(reg))
     }
-
   }
 
   /* Translates unary operator OP to the internal representation. */
