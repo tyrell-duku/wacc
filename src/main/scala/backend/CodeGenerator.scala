@@ -242,7 +242,6 @@ object CodeGenerator {
       case _: PairType => ListBuffer.empty[Instruction]
       case _           => ListBuffer.empty[Instruction]
     }
-    addSP()
     addUnusedReg(freeReg)
   }
 
@@ -267,24 +266,26 @@ object CodeGenerator {
     instructions += Ldr(reg, DataLabel(curLabel))
   }
 
-  private def transArrayElem(es: List[Expr]): Unit = {
-    // TODO: symbol table from semanticChecker required
-    val st = null
-    val length = es.length
-    val typeSize = getBaseTypeSize(es(0).getType(st))
-    val lb = ListBuffer.empty[Instruction]
+  private def transArrayElem(id: Ident, es: List[Expr], reg: Reg): Unit = {
+    val (index, t) = varTable.apply(id)
+    val baseTypeSize = getBaseTypeSize(t)
+    val spOffset = currentSP - index
+    instructions += InstructionSet.Add(reg, SP, ImmInt(spOffset))
+    val nextReg = getFreeReg()
+    transExp(es(0), nextReg)
+    instructions += Ldr(reg, RegAdd(reg))
 
-    lb += Ldr(R4, ImmMem(4 + typeSize * length))
-    lb += BranchLink(Label("malloc"))
-    lb += Mov(R4, R0)
+    //TODO: Out of bounds check
 
-    for (i <- 1 to length) {
-      lb += Ldr(R5, ImmMem(0))
-      lb += StrOffset(R5, R4, typeSize * i)
+    instructions += Add(reg, reg, ImmInt(INT_SIZE))
+    if (t == CharT || t == BoolT) {
+      instructions += Add(reg, reg, nextReg)
+      instructions += LdrB(reg, RegAdd(reg))
+    } else {
+      instructions += Add(reg, reg, LSL(nextReg, ImmInt(2)))
+      instructions += Ldr(reg, RegAdd(reg))
     }
 
-    lb += Str(R5, RegAdd(R4))
-    instructions ++= lb
   }
 
   /* Translates unary operator OP to the internal representation. */
@@ -418,7 +419,7 @@ object CodeGenerator {
             instructions += LdrB(reg, RegisterOffset(SP, spOffset))
           case _ => instructions += Ldr(reg, RegisterOffset(SP, spOffset))
         }
-      case ArrayElem(id, es, _) => transArrayElem(es)
+      case ArrayElem(id, es, _) => transArrayElem(id, es, reg)
       case e: UnOp              => transUnOp(e, reg)
       case e: BinOp             => transBinOp(e, reg)
     }
