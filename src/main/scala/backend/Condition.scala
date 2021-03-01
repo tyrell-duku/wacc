@@ -10,14 +10,14 @@ case object NE extends Condition {
   override val oppositeCmp: Condition = EQ
 }
 case object LT extends Condition {
-  override val oppositeCmp: Condition = GTE
+  override val oppositeCmp: Condition = GE
 }
-case object LTE extends Condition {
+case object LE extends Condition {
   override val oppositeCmp: Condition = GT
 }
 case object GT extends Condition {
-  override val oppositeCmp: Condition = LTE
+  override val oppositeCmp: Condition = LE
 }
-case object GTE extends Condition {
+case object GE extends Condition {
   override val oppositeCmp: Condition = LT
 }
