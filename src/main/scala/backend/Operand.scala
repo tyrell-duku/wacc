@@ -12,8 +12,8 @@ sealed case class ImmChar(c: Character) extends Operand with LoadOperand {
 }
 
 sealed trait Address
-sealed case class Offset(n: Int) extends Address {
-  override def toString: String = "[" + n + "]"
+sealed case class RegisterOffset(r: Reg, n: Int) extends Address {
+  override def toString: String = "[" + r + ", #" + n + "]"
 }
 
 sealed case class RegAdd(r: Reg) extends Address with LoadOperand {
