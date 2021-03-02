@@ -78,7 +78,7 @@ object CodeGenerator {
       case Print(e)         => instructions ++= transPrint(e, false)
       case PrintLn(e)       => instructions ++= transPrint(e, true)
       case If(cond, s1, s2) => transIf(cond, s1, s2, instructions)
-      // case While(cond, s)   => instructions ++= ListBuffer.empty[Instruction]
+      case While(cond, s)   => transWhile(cond, s, instructions)
       case Seq(statList) =>
         var nextInstructions = instructions
         for (s <- statList) {
@@ -199,6 +199,30 @@ object CodeGenerator {
     currentLabel = afterLabel
 
     instructions
+  }
+
+  private def transWhile(
+      cond: Expr,
+      s: Stat,
+      curInstrs: ListBuffer[Instruction]
+  ): ListBuffer[Instruction] = {
+    val instructions = ListBuffer.empty[Instruction]
+    val afterLabel = assignLabel()
+    curInstrs += Branch(afterLabel)
+    userFuncTable.addEntry(currentLabel, curInstrs.toList)
+    currentLabel = afterLabel
+
+    val insideWhile = assignLabel()
+    userFuncTable.addEntry(
+      insideWhile,
+      transStat(s, ListBuffer.empty[Instruction]).toList
+    )
+
+    val reg = getFreeReg()
+    instructions ++= transExp(cond, reg)
+    // check if condition is true
+    instructions += Cmp(reg, ImmInt(1))
+    instructions += BranchEq(insideWhile)
   }
 
   private def transExit(
