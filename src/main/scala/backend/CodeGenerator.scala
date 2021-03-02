@@ -4,6 +4,7 @@ import InstructionSet._
 import frontend.Rules._
 import scala.collection.mutable.ListBuffer
 import PrintInstrs._
+import ReadInstructions._
 
 object CodeGenerator {
   final val allRegs: ListBuffer[Reg] =
@@ -64,6 +65,71 @@ object CodeGenerator {
     (dataTable.table.toList, funcList.toList)
   }
 
+  /* Translates read identifiers to the internal representation.
+     Only types int and char are semantically valid. */
+  private def transReadIdent(ident: Ident): ListBuffer[Instruction] = {
+    val instructions = ListBuffer.empty[Instruction]
+    val freeReg = getFreeReg()
+    val (spIndex, identType) = varTable(ident)
+    val spOffset = currentSP - spIndex
+    instructions += InstructionSet.Add(
+      freeReg,
+      SP,
+      ImmInt(spOffset)
+    )
+    // variable must be in R0 for the branch
+    instructions += Mov(R0, freeReg)
+    // pattern matching for which read label to use
+    identType match {
+      case CharT =>
+        instructions += BranchLink(Label("p_read_char"))
+        funcTable.addEntry(charRead(dataTable.addDataEntry(" %c\\0")))
+      case IntT =>
+        instructions += BranchLink(Label("p_read_int"))
+        funcTable.addEntry(intRead(dataTable.addDataEntry("%d\\0")))
+      // Semantically incorrect
+      case _ => ListBuffer.empty[Instruction]
+    }
+    instructions
+  }
+
+  /* Translates read array-elems to the internal representation. */
+  def transReadArrayElem(ae: ArrayElem): ListBuffer[Instruction] = {
+    val ArrayElem(ident, exprs, _) = ae
+    val instructions = ListBuffer.empty[Instruction]
+    val resultReg = getFreeReg()
+
+    // Handles nested arrays
+    val (_, instrs) = transArrayElem(ident, exprs, resultReg)
+    instructions ++= instrs
+    // value must be in R0 for branch
+    instructions += Mov(R0, resultReg)
+
+    // Gets base type of the arrayElem
+    val t = getExprType(ae)
+    t match {
+      case CharT =>
+        instructions += BranchLink(Label("p_read_char"))
+        funcTable.addEntry(charRead(dataTable.addDataEntry(" %c\\0")))
+      case IntT =>
+        instructions += BranchLink(Label("p_read_int"))
+        funcTable.addEntry(charRead(dataTable.addDataEntry("%d\\0")))
+      // Semantically incorrect
+      case _ =>
+    }
+    instructions
+  }
+
+  /* Translates read statements to the internal representation. */
+  private def transRead(lhs: AssignLHS): ListBuffer[Instruction] = {
+    lhs match {
+      case ident: Ident  => transReadIdent(ident)
+      case ae: ArrayElem => transReadArrayElem(ae)
+      // CODEME
+      case _: PairElem => ListBuffer.empty[Instruction]
+    }
+  }
+
   private def transStat(
       stat: Stat,
       instructions: ListBuffer[Instruction]
@@ -71,7 +137,7 @@ object CodeGenerator {
     stat match {
       case EqIdent(t, i, r) => instructions ++= transEqIdent(t, i, r)
       case EqAssign(l, r)   => instructions ++= transEqAssign(l, r)
-      // case Read(lhs)        => instructions ++= ListBuffer.empty[Instruction]
+      case Read(lhs)        => instructions ++= transRead(lhs)
       // case Free(e)          => instructions ++= ListBuffer.empty[Instruction]
       // case Return(e)        => instructions ++= ListBuffer.empty[Instruction]
       case Exit(e)          => instructions ++= transExit(e)
