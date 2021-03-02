@@ -5,6 +5,7 @@ import frontend.Rules._
 import scala.collection.mutable.ListBuffer
 import PrintInstrs._
 import ReadInstructions._
+import RuntimeErrors._
 
 object CodeGenerator {
   final val allRegs: ListBuffer[Reg] =
@@ -46,6 +47,39 @@ object CodeGenerator {
   ): Instruction = {
     val regsToPush = allRegs.filter(r => !regsNotInUse.contains(r)).reverse
     new Pop(regsToPush)
+  }
+
+  private def addRuntimeError(err: RuntimeError) {
+    funcTable.addEntry(throwRuntimeError())
+    err match {
+      case ArrayBounds =>
+        funcTable.addEntry(
+          checkArrayBounds(
+            Label("ArrayIndexOutOfBoundsError: negative index\\n\\0"),
+            Label("ArrayIndexOutOfBoundsError: index too large\\n\\0")
+          )
+        )
+      case DivideByZero =>
+        funcTable.addEntry(
+          checkDivideByZero(
+            Label("DivideByZeroError: divide or modulo by zero\n\\0")
+          )
+        )
+      case Overflow =>
+        funcTable.addEntry(
+          throwOverflowError(
+            Label(
+              "OverflowError: the result is too small/large to store in a 4-byte signed-integer.\n"
+            )
+          )
+        )
+      case FreePair =>
+        funcTable.addEntry(
+          free_pair(
+            Label("NullReferenceError: dereference a null reference\n\\0")
+          )
+        )
+    }
   }
 
   def transProg(
@@ -477,7 +511,8 @@ object CodeGenerator {
       instructions ++= transExp(exp, nextReg)
       instructions += Ldr(reg, RegAdd(reg))
 
-      //TODO: Out of bounds check
+      instructions += BranchLink(Label("p_check_array_bounds"))
+      addRuntimeError(ArrayBounds)
 
       instructions += Add(reg, reg, ImmInt(INT_SIZE))
       if (t == CharT || t == BoolT) {
