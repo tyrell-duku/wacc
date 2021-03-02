@@ -173,16 +173,14 @@ object CodeGenerator {
     varTable += (id -> (currentSP, t))
     instructions += InstructionSet.Sub(SP, SP, ImmInt(getBaseTypeSize(t)))
 
-    assignRHS(t, aRHS, 0)
-  }
-
-  private def subtractSP(): Unit = {
-    var curSp = currentSP
-    while (curSp > MAX_INT_IMM) {
-      curSp -= MAX_INT_IMM
-      instructions += InstructionSet.Sub(SP, SP, ImmInt(MAX_INT_IMM))
+    val freeReg = getFreeReg()
+    val isByte = assignRHS(t, aRHS, freeReg)
+    if (isByte) {
+      instructions += StrB(freeReg, RegAdd(SP))
+    } else {
+      instructions += Str(freeReg, RegAdd(SP))
     }
-    instructions += InstructionSet.Sub(SP, SP, ImmInt(curSp))
+    addUnusedReg(freeReg)
   }
 
   private def addSP(): Unit = {
@@ -194,8 +192,7 @@ object CodeGenerator {
     instructions += InstructionSet.Add(SP, SP, ImmInt(curSp))
   }
 
-  private def assignRHS(t: Type, aRHS: AssignRHS, spOffset: Int): Unit = {
-    val freeReg = getFreeReg()
+  private def assignRHS(t: Type, aRHS: AssignRHS, freeReg: Reg): Boolean = {
     t match {
       case IntT | CharT | BoolT | StringT =>
         aRHS match {
@@ -204,11 +201,8 @@ object CodeGenerator {
           case Call(id, args, _) =>
           case _                 => ListBuffer.empty[Instruction]
         }
-        if (t == CharT || t == BoolT) {
-          instructions += StrB(freeReg, RegisterOffset(SP, spOffset))
-        } else {
-          instructions += Str(freeReg, RegisterOffset(SP, spOffset))
-        }
+        t == CharT || t == BoolT
+
       case ArrayT(t) =>
         val ArrayLiter(opArr, _) = aRHS
         val arr = opArr match {
@@ -240,26 +234,39 @@ object CodeGenerator {
         }
         instructions += Ldr(nextFreeReg, ImmMem(listSize))
         instructions += Str(nextFreeReg, RegAdd(freeReg))
-        instructions += Str(freeReg, RegAdd(SP))
         addUnusedReg(nextFreeReg)
+        false
 
-      case _: PairType => ListBuffer.empty[Instruction]
-      case _           => ListBuffer.empty[Instruction]
+      case _: PairType => false
+      case _           => false
     }
-    addUnusedReg(freeReg)
   }
 
   private def transEqAssign(
       aLHS: AssignLHS,
       aRHS: AssignRHS
   ): Unit = {
+    val freeReg = getFreeReg()
+
     aLHS match {
       case elem: PairElem =>
       case id: Ident =>
         val (index, t) = varTable.apply(id)
-        assignRHS(t, aRHS, currentSP - index)
-      case arrayElem: ArrayElem =>
+        val isByte = assignRHS(t, aRHS, freeReg)
+        val spOffset = currentSP - index
+
+        if (isByte) {
+          instructions += StrB(freeReg, RegisterOffset(SP, spOffset))
+        } else {
+          instructions += Str(freeReg, RegisterOffset(SP, spOffset))
+        }
+
+      case ae @ ArrayElem(id, es, _) =>
+        assignRHS(getExprType(ae), aRHS, freeReg)
+        storeArrayElem(id, es, freeReg)
+
     }
+    addUnusedReg(freeReg)
   }
 
   private def transStrLiter(
@@ -270,13 +277,38 @@ object CodeGenerator {
     instructions += Ldr(reg, DataLabel(curLabel))
   }
 
-  private def transArrayElem(id: Ident, es: List[Expr], reg: Reg): Unit = {
-    val (index, t) = varTable.apply(id)
+  private def loadArrayElem(id: Ident, es: List[Expr], reg: Reg): Unit = {
+    val isByte = transArrayElem(id, es, reg)
+
+    if (isByte) {
+      instructions += LdrB(reg, RegAdd(reg))
+    } else {
+      instructions += Ldr(reg, RegAdd(reg))
+    }
+  }
+
+  private def storeArrayElem(id: Ident, es: List[Expr], reg: Reg): Unit = {
+    val freeReg = getFreeReg()
+    val isByte = transArrayElem(id, es, freeReg)
+
+    if (isByte) {
+      instructions += StrB(reg, RegAdd(freeReg))
+    } else {
+      instructions += Str(reg, RegAdd(freeReg))
+    }
+
+    addUnusedReg(freeReg)
+  }
+
+  private def transArrayElem(id: Ident, es: List[Expr], reg: Reg): Boolean = {
+    var (index, t) = varTable.apply(id)
+
     val baseTypeSize = getBaseTypeSize(t)
     val spOffset = currentSP - index
     instructions += InstructionSet.Add(reg, SP, ImmInt(spOffset))
     val nextReg = getFreeReg()
     for (exp <- es) {
+      t = t match { case ArrayT(inner) => inner }
       transExp(exp, nextReg)
       instructions += Ldr(reg, RegAdd(reg))
 
@@ -290,11 +322,7 @@ object CodeGenerator {
       }
     }
     addUnusedReg(nextReg)
-    if (t == CharT || t == BoolT) {
-      instructions += LdrB(reg, RegAdd(reg))
-    } else {
-      instructions += Ldr(reg, RegAdd(reg))
-    }
+    t == CharT || t == BoolT
   }
 
   /* Translates unary operator OP to the internal representation. */
@@ -428,7 +456,7 @@ object CodeGenerator {
             instructions += LdrB(reg, RegisterOffset(SP, spOffset))
           case _ => instructions += Ldr(reg, RegisterOffset(SP, spOffset))
         }
-      case ArrayElem(id, es, _) => transArrayElem(id, es, reg)
+      case ArrayElem(id, es, _) => loadArrayElem(id, es, reg)
       case e: UnOp              => transUnOp(e, reg)
       case e: BinOp             => transBinOp(e, reg)
     }
