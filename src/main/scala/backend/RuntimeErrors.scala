@@ -59,4 +59,22 @@ object RuntimeErrors {
       )
     )
   }
+
+  def free_pair(label: Label): (Label, List[Instruction]) = {
+    (
+      Label("p_free_pair"),
+      List[Instruction](
+        Push(ListBuffer(LR)),
+        Cmp(R0, ImmInt(0)),
+        LdrEQ(R0, label),
+        BranchLink(Label("free")),
+        Ldr(R0, RegAdd(SP)),
+        Ldr(R0, RegisterOffset(SP, 4)),
+        BranchLink(Label("free")),
+        Pop(ListBuffer(R0)),
+        BranchLink(Label("free")),
+        Pop(ListBuffer(PC))
+      )
+    )
+  }
 }
