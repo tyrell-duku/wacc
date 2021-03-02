@@ -92,10 +92,13 @@ object CodeGenerator {
       case StrLiter(_, _)  => StringT
       case PairLiter(_)    => Pair(null, null)
       case id: Ident =>
-        val (index, t) = varTable.apply(id)
+        val (_, t) = varTable.apply(id)
         t
-      case ArrayElem(id, _, _) =>
-        val (index, ArrayT(t)) = varTable.apply(id)
+      case ArrayElem(id, es, _) =>
+        var (_, t) = varTable.apply(id)
+        for (_ <- es) {
+          t = t match { case ArrayT(inner) => inner }
+        }
         t
       case Not(_, _)      => BoolT
       case Negation(_, _) => IntT
