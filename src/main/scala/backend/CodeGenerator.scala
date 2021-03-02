@@ -4,6 +4,7 @@ import InstructionSet._
 import frontend.Rules._
 import scala.collection.mutable.ListBuffer
 import PrintInstrs._
+import ReadInstructions._
 
 object CodeGenerator {
   final val allRegs: ListBuffer[Reg] =
@@ -64,9 +65,37 @@ object CodeGenerator {
     (dataTable.table.toList, funcList.toList)
   }
 
+  /* Translates read identifiers to the internal representation.
+     Only types int and char are semantically valid. */
+  private def transReadIdent(ident: Ident): ListBuffer[Instruction] = {
+    val instructions = ListBuffer.empty[Instruction]
+    val freeReg = getFreeReg()
+    val (spIndex, identType) = varTable(ident)
+    val spOffset = currentSP - spIndex
+    instructions += InstructionSet.Add(
+      freeReg,
+      SP,
+      ImmInt(spOffset)
+    )
+    // variable must be in R0 for the branch
+    instructions += Mov(R0, freeReg)
+    // pattern matching for which read label to use
+    identType match {
+      case CharT =>
+        instructions += BranchLink(Label("p_read_char"))
+        funcTable.addEntry(charRead(dataTable.addDataEntry(" %c\\0")))
+      case IntT =>
+        instructions += BranchLink(Label("p_read_int"))
+        funcTable.addEntry(intRead(dataTable.addDataEntry("%d\\0")))
+      // Semantically incorrect
+      case _ => ListBuffer.empty[Instruction]
+    }
+    instructions
+  }
+
   private def transRead(lhs: AssignLHS): ListBuffer[Instruction] = {
     lhs match {
-      case Ident(s, pos)             => ListBuffer.empty[Instruction]
+      case ident: Ident              => transReadIdent(ident)
       case ArrayElem(id, exprs, pos) => ListBuffer.empty[Instruction]
       // CODEME
       case _: PairElem => ListBuffer.empty[Instruction]
