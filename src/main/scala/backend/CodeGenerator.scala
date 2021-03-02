@@ -3,6 +3,7 @@ package backend
 import InstructionSet._
 import frontend.Rules._
 import scala.collection.mutable.ListBuffer
+import PrintInstrs._
 
 object CodeGenerator {
   final val allRegs: ListBuffer[Reg] =
@@ -11,6 +12,9 @@ object CodeGenerator {
   var freeRegs = allRegs
   final val resultReg: Reg = R0
   freeRegs -= resultReg
+  freeRegs -= R1
+  freeRegs -= R2
+  freeRegs -= R3
 
   var varTable = Map.empty[Ident, (Int, Type)]
   var currentSP = 0
@@ -19,12 +23,14 @@ object CodeGenerator {
   private var labelCounter = 0
 
   private val dataTable = new DataTable
+  private val funcTable = new FuncTable
 
   private val INT_SIZE = 4
   private val CHAR_SIZE = 1
   private val BOOL_SIZE = 1
   private val STR_SIZE = 4
   private val ARRAY_SIZE = 4
+  private val MAX_INT_IMM = 1024
 
   private def saveRegs(
       regsNotInUse: ListBuffer[Reg]
@@ -45,48 +51,47 @@ object CodeGenerator {
   ): (List[Data], List[(Label, List[Instruction])]) = {
     val Program(funcs, stat) = prog
     val instructions = ListBuffer.empty[Instruction]
-    // val funcCode = funcs.map(transFunc)
-    // instructions += funcCode
     instructions += Push(ListBuffer(LR))
     instructions ++= transStat(stat)
-    var toAdd =
-      ListBuffer(
-        Ldr(resultReg, ImmMem(0)),
-        Pop(ListBuffer(PC)),
-        Ltorg
-      )
+    var toAdd = addSP() ++ ListBuffer(
+      Ldr(resultReg, ImmMem(0)),
+      Pop(ListBuffer(PC)),
+      Ltorg
+    )
     instructions ++= toAdd
-    (Label("main"), instructions.toList) +=: labelTable
-    (dataTable.table.toList, labelTable.toList)
+    val funcList =
+      ListBuffer((Label("main"), instructions.toList)) ++ funcTable.table
+    (dataTable.table.toList, funcList.toList)
+
   }
 
-  private def assignLabel(): Label = {
-    val nextLabel = Label("L" + labelCounter)
-    labelCounter += 1
-    nextLabel
-  }
+  // private def assignLabel(): Label = {
+  //   val nextLabel = Label("L" + labelCounter)
+  //   labelCounter += 1
+  //   nextLabel
+  // }
 
-  private def transIf(
-      cond: Expr,
-      s1: Stat,
-      s2: Stat
-  ): ListBuffer[Instruction] = {
-    val instructions = ListBuffer.empty[Instruction]
-    val reg = getFreeReg()
-    instructions ++= transExp(cond, reg)
-    // check if condition is false
-    instructions += Cmp(reg, ImmInt(0))
-    val elseBranch = assignLabel()
-    labelTable += ((elseBranch, transStat(s2).toList))
-    instructions += BranchEq(elseBranch)
-    // statement if the condition was true
-    instructions ++= transStat(s1)
-    val afterLabel = assignLabel()
-    Branch(afterLabel)
-    // TODO: determine second label
-    // labelTable += (afterLabel, null)
-    instructions
-  }
+  // private def transIf(
+  //     cond: Expr,
+  //     s1: Stat,
+  //     s2: Stat
+  // ): ListBuffer[Instruction] = {
+  //   val instructions = ListBuffer.empty[Instruction]
+  //   val reg = getFreeReg()
+  //   instructions ++= transExp(cond, reg)
+  //   // check if condition is false
+  //   instructions += Cmp(reg, ImmInt(0))
+  //   val elseBranch = assignLabel()
+  //   labelTable += ((elseBranch, transStat(s2).toList))
+  //   instructions += BranchEq(elseBranch)
+  //   // statement if the condition was true
+  //   instructions ++= transStat(s1)
+  //   val afterLabel = assignLabel()
+  //   Branch(afterLabel)
+  //   // TODO: determine second label
+  //   // labelTable += (afterLabel, null)
+  //   instructions
+  // }
 
   private def transStat(
       stat: Stat
@@ -98,9 +103,9 @@ object CodeGenerator {
       case Free(e)          => ListBuffer.empty[Instruction]
       case Return(e)        => ListBuffer.empty[Instruction]
       case Exit(e)          => transExit(e)
-      case Print(e)         => ListBuffer.empty[Instruction]
-      case PrintLn(e)       => ListBuffer.empty[Instruction]
-      case If(cond, s1, s2) => transIf(cond, s1, s2)
+      case Print(e)         => transPrint(e, false)
+      case PrintLn(e)       => transPrint(e, true)
+      case If(cond, s1, s2) => ListBuffer.empty[Instruction]
       case While(cond, s)   => ListBuffer.empty[Instruction]
       case Begin(s)         => ListBuffer.empty[Instruction]
       case Seq(statList) =>
@@ -109,6 +114,74 @@ object CodeGenerator {
         instructions
       case _ => ListBuffer.empty[Instruction]
     }
+  }
+
+  private def getExprType(e: Expr): Type = {
+    e match {
+      case IntLiter(_, _)  => IntT
+      case BoolLiter(_, _) => BoolT
+      case CharLiter(_, _) => CharT
+      case StrLiter(_, _)  => StringT
+      case PairLiter(_)    => Pair(null, null)
+      case id: Ident =>
+        val (index, t) = varTable.apply(id)
+        t
+      case ArrayElem(id, _, _) =>
+        val (index, ArrayT(t)) = varTable.apply(id)
+        t
+      case Not(_, _)      => BoolT
+      case Negation(_, _) => IntT
+      case Len(_, _)      => IntT
+      case Ord(_, _)      => IntT
+      case Chr(_, _)      => CharT
+      case _: ArithOps    => IntT
+      case _: ComparOps   => BoolT
+      case _: EqOps       => BoolT
+      case _: LogicalOps  => BoolT
+    }
+  }
+
+  private def transPrint(
+      e: Expr,
+      isNewLine: Boolean
+  ): ListBuffer[Instruction] = {
+    val t = getExprType(e)
+    val freeReg = getFreeReg()
+    val instrs = transExp(e, freeReg)
+    instrs += Mov(resultReg, freeReg)
+    t match {
+      case CharT =>
+        instrs += BranchLink(Label("putchar"))
+      case IntT =>
+        dataTable.addDataEntryWithLabel("msg_int", "%d\\0")
+        instrs += BranchLink(Label("p_print_int"))
+        funcTable.addEntry(intPrintInstrs)
+      case BoolT =>
+        dataTable.addDataEntryWithLabel("msg_true", "true\\0")
+        dataTable.addDataEntryWithLabel("msg_false", "false\\0")
+        instrs += BranchLink(Label("p_print_bool"))
+        funcTable.addEntry(boolPrintInstrs)
+      case StringT =>
+        dataTable.addDataEntryWithLabel("msg_string", "%.*s\\0")
+        instrs += BranchLink(Label("p_print_string"))
+        funcTable.addEntry(stringPrintInstrs)
+      case Pair(null, null) =>
+        dataTable.addDataEntryWithLabel("msg_reference", "%p\\0")
+        instrs += BranchLink(Label("p_print_reference"))
+        funcTable.addEntry(referencePrintInstrs)
+      case ArrayT(CharT) =>
+        dataTable.addDataEntryWithLabel("msg_string", "%.*s\\0")
+        instrs += BranchLink(Label("p_print_string"))
+        funcTable.addEntry(stringPrintInstrs)
+      case _ =>
+    }
+    if (isNewLine) {
+      instrs += BranchLink(Label("p_print_ln"))
+      dataTable.addDataEntryWithLabel("msg_new_line", "\\0")
+      funcTable.addEntry(newLinePrintInstrs)
+    }
+    addUnusedReg(freeReg)
+    instrs
   }
 
   private def transExit(
@@ -131,39 +204,59 @@ object CodeGenerator {
   ): ListBuffer[Instruction] = {
     currentSP += getBaseTypeSize(t)
     varTable += (id -> (currentSP, t))
-    assignRHS(t, aRHS, currentSP)
+
+    val instructions = ListBuffer.empty[Instruction]
+    instructions += InstructionSet.Sub(SP, SP, ImmInt(getBaseTypeSize(t)))
+    instructions ++= assignRHS(t, aRHS, 0)
+    instructions
+  }
+
+  private def subtractSP(): ListBuffer[Instruction] = {
+    var curSp = currentSP
+    val instrs = ListBuffer.empty[Instruction]
+    while (curSp > MAX_INT_IMM) {
+      curSp -= MAX_INT_IMM
+      instrs += InstructionSet.Sub(SP, SP, ImmInt(MAX_INT_IMM))
+    }
+    instrs += InstructionSet.Sub(SP, SP, ImmInt(curSp))
+    instrs
+  }
+
+  private def addSP(): ListBuffer[Instruction] = {
+    var curSp = currentSP
+    val instrs = ListBuffer.empty[Instruction]
+    while (curSp > MAX_INT_IMM) {
+      curSp -= MAX_INT_IMM
+      instrs += InstructionSet.Add(SP, SP, ImmInt(MAX_INT_IMM))
+    }
+    instrs += InstructionSet.Add(SP, SP, ImmInt(curSp))
+    instrs
   }
 
   private def assignRHS(
       t: Type,
       aRHS: AssignRHS,
-      spIndex: Int
+      spOffset: Int
   ): ListBuffer[Instruction] = {
-    val instructions = ListBuffer.empty[Instruction]
-    val spOffset = ImmInt(spIndex)
-    instructions += InstructionSet.Sub(SP, SP, spOffset)
     val freeReg = getFreeReg()
+    val instructions = ListBuffer.empty[Instruction]
     t match {
       case IntT | CharT | BoolT | StringT =>
         aRHS match {
-          case ex: Expr          => transExp(ex, freeReg)
+          case ex: Expr          => instructions ++= transExp(ex, freeReg)
           case p: PairElem       =>
           case Call(id, args, _) =>
           case _                 => ListBuffer.empty[Instruction]
         }
 
         if (t == CharT || t == BoolT) {
-          instructions += StrB(freeReg, RegAdd(SP))
+          instructions += StrB(freeReg, RegisterOffset(SP, spOffset))
         } else {
-          instructions += Str(freeReg, RegAdd(SP))
+          instructions += Str(freeReg, RegisterOffset(SP, spOffset))
         }
-        instructions += Add(SP, SP, spOffset)
       case ArrayT(t) =>
         aRHS match {
           case ArrayLiter(arr, _) =>
-            instructions ++= ListBuffer[Instruction](
-              InstructionSet.Sub(SP, SP, ImmInt(ARRAY_SIZE))
-            )
             var rawList = List.empty[Expr]
             if (!arr.isEmpty) {
               rawList = arr.get
@@ -188,33 +281,7 @@ object CodeGenerator {
             } else {
 
               for (index <- 0 until rawList.size) {
-                t match {
-                  case IntT =>
-                    val IntLiter(i, _) = rawList(index)
-                    instructions ++= ListBuffer[Instruction](
-                      Ldr(elemReg, ImmMem(i))
-                    )
-                  case BoolT =>
-                    val BoolLiter(b, _) = rawList(index)
-                    instructions ++= ListBuffer[Instruction](
-                      Ldr(elemReg, ImmMem(boolToInt(b)))
-                    )
-                  case CharT =>
-                    val CharLiter(c, _) = rawList(index)
-                    instructions ++= ListBuffer[Instruction](
-                      Ldr(elemReg, ImmChar(c))
-                    )
-                  case StringT =>
-                    val StrLiter(str, pos) = rawList(index)
-                    val label = dataTable.addDataEntry(StrLiter(str, pos))
-
-                    instructions ++= ListBuffer[Instruction](
-                      Ldr(elemReg, DataLabel(label))
-                    )
-                  case ArrayT(_) =>
-                  case _         =>
-                }
-
+                instructions ++= transExp(rawList(index), elemReg)
                 instructions ++= ListBuffer[Instruction](
                   StrOffset(elemReg, tempReg, 4 + (index * baseTSize))
                 )
@@ -240,13 +307,15 @@ object CodeGenerator {
       aLHS: AssignLHS,
       aRHS: AssignRHS
   ): ListBuffer[Instruction] = {
+    val instructions = ListBuffer.empty[Instruction]
     aLHS match {
       case elem: PairElem => ListBuffer.empty[Instruction]
       case id: Ident =>
         val (index, t) = varTable.apply(id)
-        assignRHS(t, aRHS, index)
+        instructions ++= assignRHS(t, aRHS, index)
       case arrayElem: ArrayElem => ListBuffer.empty[Instruction]
     }
+    instructions
   }
 
   private def transStrLiter(
@@ -293,9 +362,9 @@ object CodeGenerator {
   private def rulesCmpToInstrCmp(cmp: BinOp): Condition = {
     cmp match {
       case GT(lExpr, rExpr, pos)       => backend.GT
-      case GTE(lExpr, rExpr, pos)      => backend.GTE
+      case GTE(lExpr, rExpr, pos)      => backend.GE
       case LT(lExpr, rExpr, pos)       => backend.LT
-      case LTE(lExpr, rExpr, pos)      => backend.LTE
+      case LTE(lExpr, rExpr, pos)      => backend.LE
       case Equal(lExpr, rExpr, pos)    => backend.EQ
       case NotEqual(lExpr, rExpr, pos) => backend.NE
       case _                           => null // Undefined
@@ -334,8 +403,8 @@ object CodeGenerator {
         instructions ++= transExp(l, reg)
         instructions ++= transExp(r, rReg)
         // Needs to be in R0 and R1 for "__aeabi_idiv"
-        instructions += Mov(reg, R0)
-        instructions += Mov(rReg, R1)
+        instructions += Mov(R0, reg)
+        instructions += Mov(R1, rReg)
         // Divide function
         instructions += BranchLink(Label("__aeabi_idiv"))
         addUnusedReg(rReg)
@@ -346,8 +415,8 @@ object CodeGenerator {
         instructions ++= transExp(l, reg)
         instructions ++= transExp(r, rReg)
         // Needs to be in R0 and R1 for "__aeabi_idivmod"
-        instructions += Mov(reg, R0)
-        instructions += Mov(rReg, R1)
+        instructions += Mov(R0, reg)
+        instructions += Mov(R1, rReg)
         // Mod function
         instructions += BranchLink(Label("__aeabi_idivmod"))
         addUnusedReg(rReg)
@@ -396,12 +465,12 @@ object CodeGenerator {
       // TODO: track variable location
       case id: Ident =>
         val (index, t) = varTable.apply(id)
-        instructions += InstructionSet.Sub(SP, SP, ImmInt(index))
+        val spOffset = currentSP - index
         t match {
-          case CharT | BoolT => instructions += LdrB(reg, RegAdd(SP))
-          case _             => instructions += Ldr(reg, RegAdd(SP))
+          case CharT | BoolT =>
+            instructions += LdrB(reg, RegisterOffset(SP, spOffset))
+          case _ => instructions += Ldr(reg, RegisterOffset(SP, spOffset))
         }
-        instructions += InstructionSet.Add(SP, SP, ImmInt(index))
       case ArrayElem(id, es, _) => instructions ++= transArrayElem(es)
       case e: UnOp              => instructions ++= transUnOp(e, reg)
       case e: BinOp             => instructions ++= transBinOp(e, reg)

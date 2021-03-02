@@ -30,7 +30,7 @@ package object InstructionSet {
     override def toString: String = "AND " + rd + ", " + rn + ", " + op2
   }
   case class Or(rd: Reg, rn: Reg, op2: Operand) extends Instruction {
-    override def toString: String = "OR " + rd + ", " + rn + ", " + op2
+    override def toString: String = "ORR " + rd + ", " + rn + ", " + op2
   }
   case class Eor(rd: Reg, rn: Reg, op2: Operand) extends Instruction {
     override def toString: String = "EOR " + rd + ", " + rn + ", " + op2
@@ -65,6 +65,11 @@ package object InstructionSet {
   case class LdrOffset(rd: Reg, regAdd: Reg, offset: Int) extends Instruction {
     override def toString: String =
       "LDR " + rd + ", " + "[" + regAdd + ", #" + offset + "]"
+  }
+
+  case class LdrCond(cond: Condition, rd: Reg, op2: LoadOperand)
+      extends Instruction {
+    override def toString: String = "LDR" + cond + " " + rd + ", " + op2
   }
 
   case class StrOffset(rd: Reg, regAdd: Reg, offset: Int) extends Instruction {
