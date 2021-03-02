@@ -64,6 +64,15 @@ object CodeGenerator {
     (dataTable.table.toList, funcList.toList)
   }
 
+  private def transRead(lhs: AssignLHS): ListBuffer[Instruction] = {
+    lhs match {
+      case Ident(s, pos)             => ListBuffer.empty[Instruction]
+      case ArrayElem(id, exprs, pos) => ListBuffer.empty[Instruction]
+      // CODEME
+      case _: PairElem => ListBuffer.empty[Instruction]
+    }
+  }
+
   private def transStat(
       stat: Stat,
       instructions: ListBuffer[Instruction]
@@ -71,7 +80,7 @@ object CodeGenerator {
     stat match {
       case EqIdent(t, i, r) => instructions ++= transEqIdent(t, i, r)
       case EqAssign(l, r)   => instructions ++= transEqAssign(l, r)
-      // case Read(lhs)        => instructions ++= ListBuffer.empty[Instruction]
+      case Read(lhs)        => instructions ++= transRead(lhs)
       // case Free(e)          => instructions ++= ListBuffer.empty[Instruction]
       // case Return(e)        => instructions ++= ListBuffer.empty[Instruction]
       case Exit(e)          => instructions ++= transExit(e)
