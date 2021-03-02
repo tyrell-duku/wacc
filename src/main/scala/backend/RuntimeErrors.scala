@@ -36,4 +36,17 @@ object RuntimeErrors {
       )
     )
   }
+
+  def checkDivideByZero(label: Label): (Label, List[Instruction]) = {
+    (
+      Label("p_check_divide_by_zero"),
+      List[Instruction](
+        Push(ListBuffer(LR)),
+        Cmp(R1, ImmInt(0)),
+        LdrEQ(R0, label),
+        BranchLinkEQ(Label("p_check_divide_by_zero")),
+        Pop(ListBuffer(PC))
+      )
+    )
+  }
 }
