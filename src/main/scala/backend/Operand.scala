@@ -7,6 +7,10 @@ sealed case class ImmInt(n: Int) extends Operand {
   override def toString: String = "#" + n
 }
 
+case class LSL(r: Reg, n: ImmInt) extends Operand {
+  override def toString: String = r + ", LSL " + n
+}
+
 sealed case class ImmChar(c: Character) extends Operand with LoadOperand {
   override def toString: String = "#'" + c + "'"
 }

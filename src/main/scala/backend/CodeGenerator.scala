@@ -89,6 +89,12 @@ object CodeGenerator {
     }
   }
 
+  private def getInnerType(t: Type) = t match {
+    case ArrayT(inner) => inner
+    // invalid case, will never enter
+    case _ => null
+  }
+
   private def getExprType(e: Expr): Type = {
     e match {
       case IntLiter(_, _)  => IntT
@@ -97,10 +103,13 @@ object CodeGenerator {
       case StrLiter(_, _)  => StringT
       case PairLiter(_)    => Pair(null, null)
       case id: Ident =>
-        val (index, t) = varTable.apply(id)
+        val (_, t) = varTable.apply(id)
         t
-      case ArrayElem(id, _, _) =>
-        val (index, ArrayT(t)) = varTable.apply(id)
+      case ArrayElem(id, es, _) =>
+        var (_, t) = varTable.apply(id)
+        for (_ <- es) {
+          t = getInnerType(t)
+        }
         t
       case Not(_, _)      => BoolT
       case Negation(_, _) => IntT
@@ -210,24 +219,23 @@ object CodeGenerator {
       id: Ident,
       aRHS: AssignRHS
   ): ListBuffer[Instruction] = {
+    val instructions = ListBuffer.empty[Instruction]
     currentSP += getBaseTypeSize(t)
     varTable += (id -> (currentSP, t))
 
-    val instructions = ListBuffer.empty[Instruction]
     instructions += InstructionSet.Sub(SP, SP, ImmInt(getBaseTypeSize(t)))
-    instructions ++= assignRHS(t, aRHS, 0)
-    instructions
-  }
 
-  private def subtractSP(): ListBuffer[Instruction] = {
-    var curSp = currentSP
-    val instrs = ListBuffer.empty[Instruction]
-    while (curSp > MAX_INT_IMM) {
-      curSp -= MAX_INT_IMM
-      instrs += InstructionSet.Sub(SP, SP, ImmInt(MAX_INT_IMM))
+    val freeReg = getFreeReg()
+    val (isByte, instrs) = assignRHS(t, aRHS, freeReg)
+    instructions ++= instrs
+    if (isByte) {
+      instructions += StrB(freeReg, RegAdd(SP))
+    } else {
+      instructions += Str(freeReg, RegAdd(SP))
     }
-    instrs += InstructionSet.Sub(SP, SP, ImmInt(curSp))
-    instrs
+
+    addUnusedReg(freeReg)
+    instructions
   }
 
   private def addSP(): ListBuffer[Instruction] = {
@@ -244,9 +252,8 @@ object CodeGenerator {
   private def assignRHS(
       t: Type,
       aRHS: AssignRHS,
-      spOffset: Int
-  ): ListBuffer[Instruction] = {
-    val freeReg = getFreeReg()
+      freeReg: Reg
+  ): (Boolean, ListBuffer[Instruction]) = {
     val instructions = ListBuffer.empty[Instruction]
     t match {
       case IntT | CharT | BoolT | StringT =>
@@ -256,59 +263,41 @@ object CodeGenerator {
           case Call(id, args, _) =>
           case _                 => ListBuffer.empty[Instruction]
         }
+      case ArrayT(t) =>
+        val ArrayLiter(opArr, _) = aRHS
+        val arr = opArr match {
+          case Some(arr) => arr
+          case None      => List.empty[Expr]
+        }
+
+        val listSize = arr.size
+        val baseTypeSize = getBaseTypeSize(t)
+        val sizeToMalloc = 4 + (listSize * baseTypeSize)
+        instructions += Ldr(R0, ImmMem(sizeToMalloc))
+        instructions += BranchLink(Label("malloc"))
+        instructions += Mov(freeReg, R0)
+        val nextFreeReg = getFreeReg()
 
         if (t == CharT || t == BoolT) {
-          instructions += StrB(freeReg, RegisterOffset(SP, spOffset))
+          for (i <- 0 until listSize) {
+            instructions ++= transExp(arr(i), nextFreeReg)
+            instructions += StrB(nextFreeReg, RegisterOffset(freeReg, i + 4))
+          }
         } else {
-          instructions += Str(freeReg, RegisterOffset(SP, spOffset))
-        }
-      case ArrayT(t) =>
-        aRHS match {
-          case ArrayLiter(arr, _) =>
-            var rawList = List.empty[Expr]
-            if (!arr.isEmpty) {
-              rawList = arr.get
-            }
-
-            val baseTSize = getBaseTypeSize(t)
-            var rawSize = 4 + (rawList.size * baseTSize)
-            val arrayReg = getFreeReg()
-            val tempReg = getFreeReg()
-            val elemReg = getFreeReg()
-
-            instructions ++= ListBuffer[Instruction](
-              Ldr(arrayReg, ImmMem(rawSize)),
-              BranchLink(Label("malloc")),
-              Mov(tempReg, arrayReg)
+          for (i <- 0 until listSize) {
+            instructions ++= transExp(arr(i), nextFreeReg)
+            instructions += Str(
+              nextFreeReg,
+              RegisterOffset(freeReg, (i + 1) * 4)
             )
-
-            if (rawSize == 4) {
-              instructions ++= ListBuffer[Instruction](
-                Ldr(elemReg, ImmMem(0))
-              )
-            } else {
-
-              for (index <- 0 until rawList.size) {
-                instructions ++= transExp(rawList(index), elemReg)
-                instructions ++= ListBuffer[Instruction](
-                  StrOffset(elemReg, tempReg, 4 + (index * baseTSize))
-                )
-              }
-            }
-
-            instructions ++= ListBuffer[Instruction](
-              Ldr(elemReg, ImmMem(rawList.size)),
-              Str(elemReg, RegAdd(tempReg)),
-              Str(tempReg, RegAdd(SP)),
-              Add(SP, SP, ImmInt(ARRAY_SIZE))
-            )
-          case _ => ListBuffer.empty[Instruction]
+          }
         }
-      case _: PairType => ListBuffer.empty[Instruction]
-      case _           => ListBuffer.empty[Instruction]
+        instructions += Ldr(nextFreeReg, ImmMem(listSize))
+        instructions += Str(nextFreeReg, RegAdd(freeReg))
+        addUnusedReg(nextFreeReg)
+      case _ =>
     }
-    addUnusedReg(freeReg)
-    instructions
+    (t == CharT || t == BoolT, instructions)
   }
 
   private def transEqAssign(
@@ -316,13 +305,28 @@ object CodeGenerator {
       aRHS: AssignRHS
   ): ListBuffer[Instruction] = {
     val instructions = ListBuffer.empty[Instruction]
+    val freeReg = getFreeReg()
     aLHS match {
       case elem: PairElem => ListBuffer.empty[Instruction]
       case id: Ident =>
         val (index, t) = varTable.apply(id)
-        instructions ++= assignRHS(t, aRHS, currentSP - index)
-      case arrayElem: ArrayElem => ListBuffer.empty[Instruction]
+        val (isByte, instrs) = assignRHS(t, aRHS, freeReg)
+        instructions ++= instrs
+        val spOffset = currentSP - index
+
+        if (isByte) {
+          instructions += StrB(freeReg, RegisterOffset(SP, spOffset))
+        } else {
+          instructions += Str(freeReg, RegisterOffset(SP, spOffset))
+        }
+
+      case ae @ ArrayElem(id, es, _) =>
+        val (_, instrs) = assignRHS(getExprType(ae), aRHS, freeReg)
+        instructions ++= instrs
+        instructions ++= storeArrayElem(id, es, freeReg)
+
     }
+    addUnusedReg(freeReg)
     instructions
   }
 
@@ -334,34 +338,82 @@ object CodeGenerator {
     ListBuffer(Ldr(reg, DataLabel(curLabel)))
   }
 
-  private def transArrayElem(es: List[Expr]): ListBuffer[Instruction] = {
-    // TODO: symbol table from semanticChecker required
-    val st = null
-    val length = es.length
-    val typeSize = getBaseTypeSize(es(0).getType(st))
-    val lb = ListBuffer.empty[Instruction]
+  private def loadArrayElem(
+      id: Ident,
+      es: List[Expr],
+      reg: Reg
+  ): ListBuffer[Instruction] = {
+    val (isByte, instructions) = transArrayElem(id, es, reg)
 
-    lb += Ldr(R4, ImmMem(4 + typeSize * length))
-    lb += BranchLink(Label("malloc"))
-    lb += Mov(R4, R0)
+    if (isByte) {
+      instructions += LdrB(reg, RegAdd(reg))
+    } else {
+      instructions += Ldr(reg, RegAdd(reg))
+    }
+  }
 
-    for (i <- 1 to length) {
-      lb += Ldr(R5, ImmMem(0))
-      lb += StrOffset(R5, R4, typeSize * i)
+  private def storeArrayElem(
+      id: Ident,
+      es: List[Expr],
+      reg: Reg
+  ): ListBuffer[Instruction] = {
+    val freeReg = getFreeReg()
+    val (isByte, instructions) = transArrayElem(id, es, freeReg)
+
+    if (isByte) {
+      instructions += StrB(reg, RegAdd(freeReg))
+    } else {
+      instructions += Str(reg, RegAdd(freeReg))
     }
 
-    lb += Str(R5, RegAdd(R4))
-    lb
+    addUnusedReg(freeReg)
+    instructions
+  }
+
+  private def transArrayElem(
+      id: Ident,
+      es: List[Expr],
+      reg: Reg
+  ): (Boolean, ListBuffer[Instruction]) = {
+    var (index, t) = varTable.apply(id)
+    val instructions = ListBuffer.empty[Instruction]
+
+    val baseTypeSize = getBaseTypeSize(t)
+    val spOffset = currentSP - index
+    instructions += InstructionSet.Add(reg, SP, ImmInt(spOffset))
+    val nextReg = getFreeReg()
+    for (exp <- es) {
+      t = getInnerType(t)
+      instructions ++= transExp(exp, nextReg)
+      instructions += Ldr(reg, RegAdd(reg))
+
+      //TODO: Out of bounds check
+
+      instructions += Add(reg, reg, ImmInt(INT_SIZE))
+      if (t == CharT || t == BoolT) {
+        instructions += Add(reg, reg, nextReg)
+      } else {
+        instructions += Add(reg, reg, LSL(nextReg, ImmInt(2)))
+      }
+    }
+    addUnusedReg(nextReg)
+    (t == CharT || t == BoolT, instructions)
   }
 
   /* Translates unary operator OP to the internal representation. */
   private def transUnOp(op: UnOp, reg: Reg): ListBuffer[Instruction] = {
     op match {
-      case Chr(e, _)      => transExp(e, reg)
-      case Len(e, pos)    => ListBuffer.empty
+      case Chr(e, _) => transExp(e, reg)
+      case Len(id: Ident, _) =>
+        val (index, _) = varTable.apply(id)
+        ListBuffer(
+          Ldr(reg, RegisterOffset(SP, currentSP - index)),
+          Ldr(reg, RegAdd(reg))
+        )
       case Negation(e, _) => transExp(e, reg) += NegInstr(reg, reg)
       case Not(e, _)      => transExp(e, reg) += Eor(reg, reg, ImmInt(1))
       case Ord(e, _)      => transExp(e, reg)
+      case _              => ListBuffer.empty[Instruction]
     }
   }
 
@@ -479,7 +531,7 @@ object CodeGenerator {
             instructions += LdrB(reg, RegisterOffset(SP, spOffset))
           case _ => instructions += Ldr(reg, RegisterOffset(SP, spOffset))
         }
-      case ArrayElem(id, es, _) => instructions ++= transArrayElem(es)
+      case ArrayElem(id, es, _) => instructions ++= loadArrayElem(id, es, reg)
       case e: UnOp              => instructions ++= transUnOp(e, reg)
       case e: BinOp             => instructions ++= transBinOp(e, reg)
     }
