@@ -331,10 +331,8 @@ object CodeGenerator {
       case Chr(e, _) => transExp(e, reg)
       case Len(id: Ident, _) =>
         val (index, _) = varTable.apply(id)
-        instructions += InstructionSet.Sub(SP, SP, ImmInt(index))
-        instructions += Ldr(reg, RegAdd(SP))
+        instructions += Ldr(reg, RegisterOffset(SP, currentSP - index))
         instructions += Ldr(reg, RegAdd(reg))
-        instructions += InstructionSet.Add(SP, SP, ImmInt(index))
       case Negation(e, _) =>
         transExp(e, reg)
         instructions += NegInstr(reg, reg)
