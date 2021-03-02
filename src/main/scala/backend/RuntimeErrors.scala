@@ -4,6 +4,12 @@ import InstructionSet._
 import frontend.Rules._
 import scala.collection.mutable.ListBuffer
 
+sealed trait RuntimeError
+case object ArrayBounds extends RuntimeError
+case object DivideByZero extends RuntimeError
+case object Overflow extends RuntimeError
+case object FreePair extends RuntimeError
+
 object RuntimeErrors {
 
   def throwRuntimeError(): (Label, List[Instruction]) = {
