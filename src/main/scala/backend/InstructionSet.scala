@@ -44,6 +44,10 @@ package object InstructionSet {
     override def toString: String = "BL " + label
   }
 
+  case class BranchEq(label: Label) extends Instruction {
+    override def toString: String = "BEQ " + label
+  }
+
   // Creating labels
   case class Push(rs: ListBuffer[Reg]) extends Instruction {
     override def toString: String = "PUSH " + "{" + rs.mkString(", ") + "}"
