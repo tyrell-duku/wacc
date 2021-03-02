@@ -263,8 +263,9 @@ object CodeGenerator {
     curInstrs += Branch(afterLabel)
 
     userFuncTable.addEntry(currentLabel, curInstrs.toList)
+    currentLabel = elseBranch
     userFuncTable.addEntry(
-      elseBranch,
+      currentLabel,
       transStat(s2, ListBuffer.empty[Instruction]).toList
     )
     currentLabel = afterLabel
@@ -281,13 +282,13 @@ object CodeGenerator {
     val afterLabel = assignLabel()
     curInstrs += Branch(afterLabel)
     userFuncTable.addEntry(currentLabel, curInstrs.toList)
-    currentLabel = afterLabel
 
     val insideWhile = assignLabel()
-    userFuncTable.addEntry(
-      insideWhile,
-      transStat(s, ListBuffer.empty[Instruction]).toList
-    )
+    currentLabel = insideWhile
+    val transInnerWhile = transStat(s, ListBuffer.empty[Instruction]).toList
+    userFuncTable.addEntry(currentLabel, transInnerWhile)
+
+    currentLabel = afterLabel
 
     val reg = getFreeReg()
     instructions ++= transExp(cond, reg)
