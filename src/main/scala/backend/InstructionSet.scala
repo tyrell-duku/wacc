@@ -47,6 +47,10 @@ package object InstructionSet {
   case class BranchLinkLT(label: Label) extends Instruction {
     override def toString: String = "BLLT " + label
   }
+  // Branch Link Equal
+  case class BranchLinkEQ(label: Label) extends Instruction {
+    override def toString: String = "BLQ " + label
+  }
   case class BranchEq(label: Label) extends Instruction {
     override def toString: String = "BEQ " + label
   }
@@ -67,6 +71,10 @@ package object InstructionSet {
   }
   case class LdrB(rd: Reg, op2: LoadOperand) extends Instruction {
     override def toString: String = "LDRB " + rd + ", " + op2
+  }
+  // LDR Equal
+  case class LdrEQ(rd: Reg, label: Label) extends Instruction {
+    override def toString: String = "LDREQ " + rd + "= " + label
   }
   // LDR Less Than
   case class LdrLT(rd: Reg, op2: LoadOperand) extends Instruction {
