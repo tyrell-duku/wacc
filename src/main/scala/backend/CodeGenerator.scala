@@ -18,11 +18,12 @@ object CodeGenerator {
 
   var varTable = Map.empty[Ident, (Int, Type)]
   var currentSP = 0
+  private var currentLabel = Label("main")
 
-  private val labelTable = ListBuffer.empty[(Label, List[Instruction])]
   private var labelCounter = 0
 
   private val dataTable = new DataTable
+  private val userFuncTable = new FuncTable
   private val funcTable = new FuncTable
 
   private val INT_SIZE = 4
@@ -50,68 +51,41 @@ object CodeGenerator {
       prog: Program
   ): (List[Data], List[(Label, List[Instruction])]) = {
     val Program(funcs, stat) = prog
-    val instructions = ListBuffer.empty[Instruction]
-    instructions += Push(ListBuffer(LR))
-    instructions ++= transStat(stat)
+    val instructions = transStat(stat, ListBuffer(Push(ListBuffer(LR))))
     var toAdd = addSP() ++ ListBuffer(
       Ldr(resultReg, ImmMem(0)),
       Pop(ListBuffer(PC)),
       Ltorg
     )
     instructions ++= toAdd
-    val funcList =
-      ListBuffer((Label("main"), instructions.toList)) ++ funcTable.table
-    (dataTable.table.toList, funcList.toList)
+    userFuncTable.addEntry(currentLabel, instructions.toList)
+    val funcList = userFuncTable.table ++ funcTable.table
 
+    (dataTable.table.toList, funcList.toList)
   }
 
-  // private def assignLabel(): Label = {
-  //   val nextLabel = Label("L" + labelCounter)
-  //   labelCounter += 1
-  //   nextLabel
-  // }
-
-  // private def transIf(
-  //     cond: Expr,
-  //     s1: Stat,
-  //     s2: Stat
-  // ): ListBuffer[Instruction] = {
-  //   val instructions = ListBuffer.empty[Instruction]
-  //   val reg = getFreeReg()
-  //   instructions ++= transExp(cond, reg)
-  //   // check if condition is false
-  //   instructions += Cmp(reg, ImmInt(0))
-  //   val elseBranch = assignLabel()
-  //   labelTable += ((elseBranch, transStat(s2).toList))
-  //   instructions += BranchEq(elseBranch)
-  //   // statement if the condition was true
-  //   instructions ++= transStat(s1)
-  //   val afterLabel = assignLabel()
-  //   Branch(afterLabel)
-  //   // TODO: determine second label
-  //   // labelTable += (afterLabel, null)
-  //   instructions
-  // }
-
   private def transStat(
-      stat: Stat
+      stat: Stat,
+      instructions: ListBuffer[Instruction]
   ): ListBuffer[Instruction] = {
     stat match {
-      case EqIdent(t, i, r) => transEqIdent(t, i, r)
-      case EqAssign(l, r)   => transEqAssign(l, r)
+      case EqIdent(t, i, r) => instructions ++= transEqIdent(t, i, r)
+      case EqAssign(l, r)   => instructions ++= transEqAssign(l, r)
       case Read(lhs)        => ListBuffer.empty[Instruction]
       case Free(e)          => ListBuffer.empty[Instruction]
       case Return(e)        => ListBuffer.empty[Instruction]
-      case Exit(e)          => transExit(e)
-      case Print(e)         => transPrint(e, false)
-      case PrintLn(e)       => transPrint(e, true)
-      case If(cond, s1, s2) => ListBuffer.empty[Instruction]
+      case Exit(e)          => instructions ++= transExit(e)
+      case Print(e)         => instructions ++= transPrint(e, false)
+      case PrintLn(e)       => instructions ++= transPrint(e, true)
+      case If(cond, s1, s2) => transIf(cond, s1, s2, instructions)
       case While(cond, s)   => ListBuffer.empty[Instruction]
       case Begin(s)         => ListBuffer.empty[Instruction]
       case Seq(statList) =>
-        val instructions = ListBuffer.empty[Instruction]
-        statList.foreach(stat => instructions ++= transStat(stat))
-        instructions
+        var nextInstructions = instructions
+        for (s <- statList) {
+          nextInstructions = transStat(s, nextInstructions)
+        }
+        nextInstructions
       case _ => ListBuffer.empty[Instruction]
     }
   }
@@ -182,6 +156,41 @@ object CodeGenerator {
     }
     addUnusedReg(freeReg)
     instrs
+  }
+
+  private def assignLabel(): Label = {
+    val nextLabel = Label("L" + labelCounter)
+    labelCounter += 1
+    nextLabel
+  }
+
+  private def transIf(
+      cond: Expr,
+      s1: Stat,
+      s2: Stat,
+      curInstrs: ListBuffer[Instruction]
+  ): ListBuffer[Instruction] = {
+    val instructions = ListBuffer.empty[Instruction]
+    val reg = getFreeReg()
+    curInstrs ++= transExp(cond, reg)
+    // check if condition is false
+    curInstrs += Cmp(reg, ImmInt(0))
+    val elseBranch = assignLabel()
+    curInstrs += BranchEq(elseBranch)
+    // statement if the condition was true
+    curInstrs ++= transStat(s1, ListBuffer.empty[Instruction])
+
+    val afterLabel = assignLabel()
+    curInstrs += Branch(afterLabel)
+
+    userFuncTable.addEntry(currentLabel, curInstrs.toList)
+    userFuncTable.addEntry(
+      elseBranch,
+      transStat(s2, ListBuffer.empty[Instruction]).toList
+    )
+    currentLabel = afterLabel
+
+    instructions
   }
 
   private def transExit(
