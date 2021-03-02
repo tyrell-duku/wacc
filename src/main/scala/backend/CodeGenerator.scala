@@ -320,7 +320,7 @@ object CodeGenerator {
       case elem: PairElem => ListBuffer.empty[Instruction]
       case id: Ident =>
         val (index, t) = varTable.apply(id)
-        instructions ++= assignRHS(t, aRHS, index)
+        instructions ++= assignRHS(t, aRHS, currentSP - index)
       case arrayElem: ArrayElem => ListBuffer.empty[Instruction]
     }
     instructions
