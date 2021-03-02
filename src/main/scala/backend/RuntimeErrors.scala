@@ -49,4 +49,14 @@ object RuntimeErrors {
       )
     )
   }
+
+  def throwOverflowError(label: Label): (Label, List[Instruction]) = {
+    (
+      Label("p_throw_overflow_error"),
+      List[Instruction](
+        Ldr(R0, DataLabel(label)),
+        BranchLink(Label("p_throw_runtime_error"))
+      )
+    )
+  }
 }
