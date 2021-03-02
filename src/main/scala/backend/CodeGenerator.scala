@@ -221,6 +221,11 @@ object CodeGenerator {
         dataTable.addDataEntryWithLabel("msg_string", "%.*s\\0")
         instrs += BranchLink(Label("p_print_string"))
         funcTable.addEntry(stringPrintInstrs)
+      case ArrayT(_) =>
+        dataTable.addDataEntryWithLabel("msg_reference", "%p\\0")
+        instrs += BranchLink(Label("p_print_reference"))
+        funcTable.addEntry(referencePrintInstrs)
+
       case _ =>
     }
     if (isNewLine) {
