@@ -93,10 +93,38 @@ object CodeGenerator {
     instructions
   }
 
+  /* Translates read array-elems to the internal representation. */
+  def transReadArrayElem(ae: ArrayElem): ListBuffer[Instruction] = {
+    val ArrayElem(ident, exprs, _) = ae
+    val instructions = ListBuffer.empty[Instruction]
+    val resultReg = getFreeReg()
+
+    // Handles nested arrays
+    val (_, instrs) = transArrayElem(ident, exprs, resultReg)
+    instructions ++= instrs
+    // value must be in R0 for branch
+    instructions += Mov(R0, resultReg)
+
+    // Gets base type of the arrayElem
+    val t = getExprType(ae)
+    t match {
+      case CharT =>
+        instructions += BranchLink(Label("p_read_char"))
+        funcTable.addEntry(charRead(dataTable.addDataEntry(" %c\\0")))
+      case IntT =>
+        instructions += BranchLink(Label("p_read_int"))
+        funcTable.addEntry(charRead(dataTable.addDataEntry("%d\\0")))
+      // Semantically incorrect
+      case _ =>
+    }
+    instructions
+  }
+
+  /* Translates read statements to the internal representation. */
   private def transRead(lhs: AssignLHS): ListBuffer[Instruction] = {
     lhs match {
-      case ident: Ident              => transReadIdent(ident)
-      case ArrayElem(id, exprs, pos) => ListBuffer.empty[Instruction]
+      case ident: Ident  => transReadIdent(ident)
+      case ae: ArrayElem => transReadArrayElem(ae)
       // CODEME
       case _: PairElem => ListBuffer.empty[Instruction]
     }
