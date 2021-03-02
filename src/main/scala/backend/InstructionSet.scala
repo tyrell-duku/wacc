@@ -43,9 +43,16 @@ package object InstructionSet {
   case class BranchLink(label: Label) extends Instruction {
     override def toString: String = "BL " + label
   }
-
+  // Branch Link Less Than
+  case class BranchLinkLT(label: Label) extends Instruction {
+    override def toString: String = "BLLT " + label
+  }
   case class BranchEq(label: Label) extends Instruction {
     override def toString: String = "BEQ " + label
+  }
+  // Branch Link Carry Set
+  case class BranchLinkCS(label: Label) extends Instruction {
+    override def toString: String = "BLCS " + label
   }
 
   // Creating labels
@@ -61,7 +68,14 @@ package object InstructionSet {
   case class LdrB(rd: Reg, op2: LoadOperand) extends Instruction {
     override def toString: String = "LDRB " + rd + ", " + op2
   }
-
+  // LDR Less Than
+  case class LdrLT(rd: Reg, op2: LoadOperand) extends Instruction {
+    override def toString: String = "LDRLT " + rd + ", " + op2
+  }
+  // LDR Carry Set
+  case class LdrCS(rd: Reg, label: Label) extends Instruction {
+    override def toString: String = "LDRCS " + rd + ", " + label
+  }
   case class LdrOffset(rd: Reg, regAdd: Reg, offset: Int) extends Instruction {
     override def toString: String =
       "LDR " + rd + ", " + "[" + regAdd + ", #" + offset + "]"
