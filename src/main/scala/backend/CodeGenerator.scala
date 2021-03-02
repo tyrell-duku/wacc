@@ -71,22 +71,21 @@ object CodeGenerator {
     stat match {
       case EqIdent(t, i, r) => instructions ++= transEqIdent(t, i, r)
       case EqAssign(l, r)   => instructions ++= transEqAssign(l, r)
-      case Read(lhs)        => ListBuffer.empty[Instruction]
-      case Free(e)          => ListBuffer.empty[Instruction]
-      case Return(e)        => ListBuffer.empty[Instruction]
+      // case Read(lhs)        => instructions ++= ListBuffer.empty[Instruction]
+      // case Free(e)          => instructions ++= ListBuffer.empty[Instruction]
+      // case Return(e)        => instructions ++= ListBuffer.empty[Instruction]
       case Exit(e)          => instructions ++= transExit(e)
       case Print(e)         => instructions ++= transPrint(e, false)
       case PrintLn(e)       => instructions ++= transPrint(e, true)
       case If(cond, s1, s2) => transIf(cond, s1, s2, instructions)
-      case While(cond, s)   => ListBuffer.empty[Instruction]
-      case Begin(s)         => ListBuffer.empty[Instruction]
+      // case While(cond, s)   => instructions ++= ListBuffer.empty[Instruction]
       case Seq(statList) =>
         var nextInstructions = instructions
         for (s <- statList) {
           nextInstructions = transStat(s, nextInstructions)
         }
         nextInstructions
-      case _ => ListBuffer.empty[Instruction]
+      case _ => instructions
     }
   }
 
