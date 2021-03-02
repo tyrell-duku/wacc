@@ -11,8 +11,12 @@ class DataTable {
   var dataCount = 0
 
   def addDataEntry(string: StrLiter): Label = {
+    addDataEntry(string.toString())
+  }
+
+  def addDataEntry(string: String): Label = {
     val msgLabel = Label(getNextLabel())
-    table += Data(msgLabel, string.toString())
+    table += Data(msgLabel, string)
     msgLabel
   }
 
