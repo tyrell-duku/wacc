@@ -78,11 +78,11 @@ package object InstructionSet {
   }
   // LDR Less Than
   case class LdrLT(rd: Reg, op2: LoadOperand) extends Instruction {
-    override def toString: String = "LDRLT " + rd + ", " + op2
+    override def toString: String = "LDRLT " + rd + "= " + op2
   }
   // LDR Carry Set
   case class LdrCS(rd: Reg, label: Label) extends Instruction {
-    override def toString: String = "LDRCS " + rd + ", " + label
+    override def toString: String = "LDRCS " + rd + "= " + label
   }
   case class LdrOffset(rd: Reg, regAdd: Reg, offset: Int) extends Instruction {
     override def toString: String =
