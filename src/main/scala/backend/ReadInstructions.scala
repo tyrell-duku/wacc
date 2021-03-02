@@ -13,6 +13,7 @@ object ReadInstructions {
       Label("p_read_char"),
       List[Instruction](
         Push(ListBuffer(LR)),
+        Mov(R1, resultReg),
         Ldr(resultReg, DataLabel(label)),
         Add(resultReg, resultReg, ImmInt(4)),
         BranchLink(Label("scanf")),
@@ -25,6 +26,7 @@ object ReadInstructions {
     (
       Label("p_read_int"),
       List[Instruction](
+        Push(ListBuffer(LR)),
         Mov(R1, resultReg),
         Ldr(resultReg, DataLabel(label)),
         Add(resultReg, resultReg, ImmInt(4)),
