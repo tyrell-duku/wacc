@@ -52,6 +52,9 @@ object CodeGenerator {
       prog: Program
   ): (List[Data], List[(Label, List[Instruction])]) = {
     val Program(funcs, stat) = prog
+    for (f <- funcs) {
+      transFunc(f)
+    }
     val instructions = transStat(stat, ListBuffer(Push(ListBuffer(LR))))
     var toAdd = addSP() ++ ListBuffer(
       Ldr(resultReg, ImmMem(0)),
@@ -63,6 +66,29 @@ object CodeGenerator {
     val funcList = userFuncTable.table ++ funcTable.table
 
     (dataTable.table.toList, funcList.toList)
+  }
+
+  private def transFunc(func: Func): Unit = {
+    val Func(t, Ident(id, _), ps, s) = func
+    println("gets here")
+    ps match {
+      case None =>
+      case Some(paramList) =>
+        val ParamList(plist) = paramList
+        var currSp = 0
+        for (param <- plist) {
+          val Param(t, i) = param
+          varTable += (i -> (currSp + getBaseTypeSize(t), t))
+        }
+    }
+
+    val instrs = ListBuffer(Push(ListBuffer(LR))) ++ transStat(
+      s,
+      ListBuffer.empty[Instruction]
+    )
+    userFuncTable.addEntry(Label(id), instrs.toList)
+    varTable = Map.empty[Ident, (Int, Type)]
+
   }
 
   /* Translates read identifiers to the internal representation.
@@ -130,6 +156,16 @@ object CodeGenerator {
     }
   }
 
+  private def transReturn(e: Expr): ListBuffer[Instruction] = {
+    val reg = getFreeReg()
+    transExp(e, reg) ++ ListBuffer(
+      Mov(resultReg, reg),
+      Pop(ListBuffer(PC)),
+      Pop(ListBuffer(PC)),
+      Ltorg
+    )
+  }
+
   private def transStat(
       stat: Stat,
       instructions: ListBuffer[Instruction]
@@ -139,7 +175,7 @@ object CodeGenerator {
       case EqAssign(l, r)   => instructions ++= transEqAssign(l, r)
       case Read(lhs)        => instructions ++= transRead(lhs)
       // case Free(e)          => instructions ++= ListBuffer.empty[Instruction]
-      // case Return(e)        => instructions ++= ListBuffer.empty[Instruction]
+      case Return(e)        => instructions ++= transReturn(e)
       case Exit(e)          => instructions ++= transExit(e)
       case Print(e)         => instructions ++= transPrint(e, false)
       case PrintLn(e)       => instructions ++= transPrint(e, true)
