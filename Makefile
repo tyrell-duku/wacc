@@ -12,6 +12,7 @@ rules:
 
 clean:
 	sbt clean
+	rm -rf *.s
 
 test:
 	sbt test
