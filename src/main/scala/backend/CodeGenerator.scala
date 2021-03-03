@@ -95,6 +95,15 @@ object CodeGenerator {
             )
           )
         )
+      case NullPointer =>
+        funcTable.addEntry(
+          checkNullPointer(
+            dataTable.addDataEntryWithLabel(
+              "msg_null_reference",
+              "NullReferenceError: dereference a null reference\\n\\0"
+            )
+          )
+        )
     }
   }
 
@@ -506,6 +515,17 @@ object CodeGenerator {
     instructions
   }
 
+  private def isByte(t: Type): Boolean = {
+    t == BoolT || t == CharT
+  }
+
+  private def pairIsByte(idType: Type, fst: Boolean): Boolean = {
+    idType match {
+      case Pair(PairElemT(x), PairElemT(y)) => if (fst) isByte(x) else isByte(y)
+      case _                                => false
+    }
+  }
+
   private def transPairElem(
       id: Ident,
       fst: Boolean,
@@ -519,7 +539,7 @@ object CodeGenerator {
     instructions += Mov(R0, freeReg)
     // Runtime error
     instructions += BranchLink(Label("p_check_null_pointer"))
-    // TODO: null dereference check
+    addRuntimeError(NullPointer)
     if (fst) {
       // For Fst
       instructions += Ldr(freeReg, RegAdd(freeReg))
@@ -527,12 +547,12 @@ object CodeGenerator {
       // For Snd
       instructions += Ldr(freeReg, RegisterOffset(freeReg, PAIR_SIZE))
     }
-    if (idType == BoolT || idType == CharT) {
+    if (pairIsByte(idType, fst)) {
       instructions += LdrSB(freeReg, RegAdd(freeReg))
-      instructions += StrB(freeReg, RegAdd(SP))
+      // instructions += StrB(freeReg, RegAdd(SP))
     } else {
       instructions += Ldr(freeReg, RegAdd(freeReg))
-      instructions += Str(freeReg, RegAdd(SP))
+      // instructions += Str(freeReg, RegAdd(SP))
     }
     instructions
   }
