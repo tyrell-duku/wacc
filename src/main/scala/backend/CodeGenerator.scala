@@ -699,6 +699,9 @@ object CodeGenerator {
         // Needs to be in R0 and R1 for "__aeabi_idiv"
         instructions += Mov(R0, reg)
         instructions += Mov(R1, rReg)
+        // Runtime error check
+        instructions += BranchLink(Label("p_check_divide_by_zero"))
+        addRuntimeError(DivideByZero)
         // Divide function
         instructions += BranchLink(Label("__aeabi_idiv"))
         addUnusedReg(rReg)
