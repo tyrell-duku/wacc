@@ -66,7 +66,7 @@ object RuntimeErrors {
     )
   }
 
-  def free_pair(label: Label): (Label, List[Instruction]) = {
+  def freePair(label: Label): (Label, List[Instruction]) = {
     (
       Label("p_free_pair"),
       List[Instruction](
