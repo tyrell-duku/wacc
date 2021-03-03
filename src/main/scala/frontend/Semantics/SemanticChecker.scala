@@ -28,7 +28,9 @@ class SemanticChecker {
 
   // Performs analysis on program P, returning a list of all semantic errors
   // that have occured (if any).
-  def progAnalysis(p: Program): mutable.ListBuffer[SemanticError] = {
+  def progAnalysis(
+      p: Program
+  ): (SymbolTable, mutable.ListBuffer[SemanticError]) = {
     val Program(funcs, stat) = p
     val globalTable: SymbolTable =
       SymbolTable(null, null, new mutable.HashMap[Ident, Meta])
@@ -40,8 +42,8 @@ class SemanticChecker {
     }
 
     statAnalysis(stat, globalTable)
-    // semErrors.reverse
-    semErrors
+
+    (globalTable, semErrors)
   }
 
   // Analyses a single function F by adding its parameters to STABLE
