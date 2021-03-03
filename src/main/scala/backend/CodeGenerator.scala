@@ -521,6 +521,9 @@ object CodeGenerator {
       instructions ++= transExp(exp, nextReg)
       instructions += Ldr(reg, RegAdd(reg))
 
+      // Values must be in R0 & R1 for branch
+      instructions += Mov(R0, nextReg)
+      instructions += Mov(R1, reg)
       instructions += BranchLink(Label("p_check_array_bounds"))
       addRuntimeError(ArrayBounds)
 
