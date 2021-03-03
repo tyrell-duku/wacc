@@ -686,11 +686,10 @@ object CodeGenerator {
         instructions ++= transExp(l, reg)
         instructions ++= transExp(r, rReg)
         // Runtime error check
+        instructions += InstructionSet.SMul(reg, rReg, reg, rReg)
         instructions += Cmp(rReg, ASR(reg, ImmInt(31)))
         instructions += BranchLinkNE(Label("p_throw_overflow_error"))
         addRuntimeError(Overflow)
-        // TODO: use SMULL
-        instructions += InstructionSet.Mul(reg, reg, rReg)
         addUnusedReg(rReg)
       case Div(l, r, _) =>
         val rReg = getFreeReg()
