@@ -469,26 +469,37 @@ object CodeGenerator {
       rhs: AssignRHS,
       freeReg: Reg
   ): ListBuffer[Instruction] = {
-    val Pair(fstType, sndType) = p
-    val Newpair(fst, snd, _) = rhs
     val instructions = ListBuffer.empty[Instruction]
     val nextFreeReg = getFreeReg()
-    // Every pair requires 8 bytes
-    instructions += Ldr(R0, ImmMem(8))
-    instructions += BranchLink(Label("malloc"))
-    instructions += Mov(freeReg, R0)
-    instructions ++= transExp(fst, nextFreeReg)
-    // Size of fst rhs
-    instructions += Ldr(R0, ImmMem(getPairElemTypeSize(fstType)))
-    instructions += BranchLink(Label("malloc"))
-    instructions += StrB(nextFreeReg, RegAdd(R0))
-    instructions += Str(R0, RegAdd(freeReg))
-    instructions ++= transExp(snd, nextFreeReg)
-    // Size of snd rhs
-    instructions += Ldr(R0, ImmMem(getPairElemTypeSize(sndType)))
-    instructions += BranchLink(Label("malloc"))
-    instructions += StrB(nextFreeReg, RegAdd(R0))
-    instructions += Str(R0, RegisterOffset(freeReg, 4))
+    val Pair(fstType, sndType) = p
+    // val Newpair(fst, snd, _) = rhs
+    rhs match {
+      case Newpair(fst, snd, _) =>
+        // Every pair requires 8 bytes
+        instructions += Ldr(R0, ImmMem(2 * PAIR_SIZE))
+        instructions += BranchLink(Label("malloc"))
+        instructions += Mov(freeReg, R0)
+        instructions ++= transExp(fst, nextFreeReg)
+        // Size of fst rhs
+        instructions += Ldr(R0, ImmMem(getPairElemTypeSize(fstType)))
+        instructions += BranchLink(Label("malloc"))
+        instructions += StrB(nextFreeReg, RegAdd(R0))
+        instructions += Str(R0, RegAdd(freeReg))
+        instructions ++= transExp(snd, nextFreeReg)
+        // Size of snd rhs
+        instructions += Ldr(R0, ImmMem(getPairElemTypeSize(sndType)))
+        instructions += BranchLink(Label("malloc"))
+        instructions += StrB(nextFreeReg, RegAdd(R0))
+        instructions += Str(R0, RegisterOffset(freeReg, PAIR_SIZE))
+      case ident: Ident =>
+        val (spIndex, _) = varTable(ident)
+        instructions += Ldr(
+          freeReg,
+          RegisterOffset(SP, currentSP - spIndex)
+        )
+      // Semantically incorrect
+      case _ => instructions
+    }
     instructions
   }
 
@@ -545,8 +556,8 @@ object CodeGenerator {
         instructions += Ldr(nextFreeReg, ImmMem(listSize))
         instructions += Str(nextFreeReg, RegAdd(freeReg))
         addUnusedReg(nextFreeReg)
-      case p: Pair => (false, instructions ++= assignRHSPair(p, aRHS, freeReg))
-      case _       =>
+      case p: Pair => instructions ++= assignRHSPair(p, aRHS, freeReg)
+      case _       => instructions
     }
     (t == CharT || t == BoolT, instructions)
   }
