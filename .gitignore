@@ -1,20 +1,23 @@
-#ignore generated binary files and auto-generated ANTLR code
-bin
-src/antlr
-
 #ignore Java class files
 *.class
 
 #ignore other junk files
 *~
-.idea
-.bsp
+.idea/
+.bsp/
 *.iml
-project
-*.bloop
-*.metals
-*.scalafmt.conf
 *.vscode
 
 #ignore Scala files
-target
+target/
+project/
+*.scalafmt.conf
+
+#ignore scala metals files
+.metals/
+.bloop/
+.ammonite/
+metals.sbt
+
+#ignore assembly files
+*.s
