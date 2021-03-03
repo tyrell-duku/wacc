@@ -50,7 +50,7 @@ object RuntimeErrors {
         Push(ListBuffer(LR)),
         Cmp(R1, ImmInt(0)),
         LdrEQ(R0, DataLabel(label)),
-        BranchLinkEQ(Label("p_check_divide_by_zero")),
+        BranchLinkEQ(Label("p_throw_runtime_error")),
         Pop(ListBuffer(PC))
       )
     )

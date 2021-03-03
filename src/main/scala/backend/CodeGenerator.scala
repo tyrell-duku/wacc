@@ -699,6 +699,9 @@ object CodeGenerator {
         // Needs to be in R0 and R1 for "__aeabi_idiv"
         instructions += Mov(R0, reg)
         instructions += Mov(R1, rReg)
+        // Runtime error check
+        instructions += BranchLink(Label("p_check_divide_by_zero"))
+        addRuntimeError(DivideByZero)
         // Divide function
         instructions += BranchLink(Label("__aeabi_idiv"))
         addUnusedReg(rReg)
@@ -724,7 +727,7 @@ object CodeGenerator {
         val rReg = getFreeReg()
         instructions ++= transExp(l, reg)
         instructions ++= transExp(r, rReg)
-        instructions += Add(reg, reg, rReg)
+        instructions += AddS(reg, reg, rReg)
         // Runtime error check
         instructions += BranchLinkVS(Label("p_throw_overflow_error"))
         addRuntimeError(Overflow)
