@@ -72,7 +72,7 @@ object CodeGenerator {
           checkDivideByZero(
             dataTable.addDataEntryWithLabel(
               "msg_divide_by_zero",
-              "DivideByZeroError: divide or modulo by zero\n\\0"
+              "DivideByZeroError: divide or modulo by zero\\n\\0"
             )
           )
         )
@@ -81,7 +81,7 @@ object CodeGenerator {
           throwOverflowError(
             dataTable.addDataEntryWithLabel(
               "msg_overflow",
-              "OverflowError: the result is too small/large to store in a 4-byte signed-integer.\n"
+              "OverflowError: the result is too small/large to store in a 4-byte signed-integer.\\n"
             )
           )
         )
@@ -90,7 +90,7 @@ object CodeGenerator {
           free_pair(
             dataTable.addDataEntryWithLabel(
               "msg_null_refernce",
-              "NullReferenceError: dereference a null reference\n\\0"
+              "NullReferenceError: dereference a null reference\\n\\0"
             )
           )
         )
