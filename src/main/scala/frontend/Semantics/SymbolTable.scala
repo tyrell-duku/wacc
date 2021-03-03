@@ -39,20 +39,37 @@ case class SymbolTable(
   }
 
   // Returns Type of id if is a variable else gives the return type of the function id
-  def lookupAll(id: Ident): Type = {
+  def lookupAll(id: Ident): (Int, Type) = {
     var curSymbol = this
     while (curSymbol != null) {
       val d = curSymbol.varMap
       if (d.contains(id)) {
-        return d.apply(id)._2
+        return d.apply(id)
       }
       curSymbol = curSymbol.parent
+    }
+    null
+  }
+
+  def lookupAllType(id: Ident): Type = {
+    val isVar = lookupAll(id)
+    if (isVar != null) {
+      return isVar._2
     }
     val t = funcMap.get(id)
     if (t.isEmpty) {
       return null
     }
     t.get.t
+  }
+
+  // throw error
+  def apply(id: Ident) : (Int, Type) = {
+    lookupAll(id)
+  }
+
+  def add(id: Ident, n: Int, t: Type): Unit = {
+    varMap.addOne(id, (n, t))
   }
 
   def add(id: Ident, t: Type): Unit = {
