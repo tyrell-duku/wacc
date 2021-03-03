@@ -490,15 +490,18 @@ class CodeGenerator(var sTable: SymbolTable) {
         val pList = aList.reverse
         for (e <- pList) {
           val t = getExprType(e)
+
           instrs ++= transExp(e, reg)
           if (t == CharT || t == BoolT) {
             instrs += StrBOffsetIndex(reg, SP, -getBaseTypeSize(t))
           } else {
             instrs += StrOffsetIndex(reg, SP, -getBaseTypeSize(t))
           }
+          currentSP += getBaseTypeSize(t)
           totalOff += getBaseTypeSize(t)
         }
     }
+    currentSP -= totalOff
     (instrs, totalOff)
   }
 
@@ -774,7 +777,7 @@ class CodeGenerator(var sTable: SymbolTable) {
         val rReg = getFreeReg()
         instructions ++= transExp(l, reg)
         instructions ++= transExp(r, rReg)
-        instructions += InstructionSet.Sub(reg, reg, rReg)
+        instructions += SubS(reg, reg, rReg)
         // Runtime error check
         instructions += BranchLinkVS(Label("p_throw_overflow_error"))
         addRuntimeError(Overflow)
