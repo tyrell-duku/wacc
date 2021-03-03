@@ -357,10 +357,9 @@ object CodeGenerator {
 
     userFuncTable.addEntry(currentLabel, curInstrs.toList)
     currentLabel = elseBranch
-    userFuncTable.addEntry(
-      currentLabel,
-      transStat(s2, ListBuffer.empty[Instruction]).toList
-    )
+    val res = transStat(s2, ListBuffer.empty[Instruction])
+    userFuncTable.addEntry(currentLabel, (res ++ addSP()).toList)
+
     currentLabel = afterLabel
 
     instructions
@@ -436,6 +435,7 @@ object CodeGenerator {
       instrs += InstructionSet.Add(SP, SP, ImmInt(MAX_INT_IMM))
     }
     instrs += InstructionSet.Add(SP, SP, ImmInt(curSp))
+    currentSP = 0
     instrs
   }
 
@@ -449,18 +449,19 @@ object CodeGenerator {
       case None =>
       case Some(argList) =>
         val ArgList(aList) = argList
-        for (e <- aList) {
+        val pList = aList.reverse
+        for (e <- pList) {
           val t = getExprType(e)
+          instrs ++= transExp(e, reg)
           if (t == CharT || t == BoolT) {
             instrs += StrBOffsetIndex(reg, SP, -getBaseTypeSize(t))
           } else {
             instrs += StrOffsetIndex(reg, SP, -getBaseTypeSize(t))
           }
           totalOff += getBaseTypeSize(t)
-          instrs ++= transExp(e, reg)
         }
     }
-    (instrs.reverse, totalOff)
+    (instrs, totalOff)
   }
 
   private def assignRHS(
