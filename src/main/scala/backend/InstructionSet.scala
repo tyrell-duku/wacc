@@ -60,7 +60,7 @@ package object InstructionSet {
   }
   // Branch Link Equal
   case class BranchLinkEQ(label: Label) extends Instruction {
-    override def toString: String = "BLQ " + label
+    override def toString: String = "BLEQ " + label
   }
   case class BranchEq(label: Label) extends Instruction {
     override def toString: String = "BEQ " + label
