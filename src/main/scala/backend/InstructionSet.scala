@@ -43,6 +43,14 @@ package object InstructionSet {
   case class BranchLink(label: Label) extends Instruction {
     override def toString: String = "BL " + label
   }
+  // Branch Link Not Equal
+  case class BranchLinkNE(label: Label) extends Instruction {
+    override def toString: String = "BLNE " + label
+  }
+  // Branch Link Overflow
+  case class BranchLinkVS(label: Label) extends Instruction {
+    override def toString: String = "BLVS " + label
+  }
   // Branch Link Less Than
   case class BranchLinkLT(label: Label) extends Instruction {
     override def toString: String = "BLLT " + label
