@@ -120,7 +120,7 @@ class CodeGenerator(var sTable: SymbolTable) {
   }
 
   private def transFunc(func: Func): Unit = {
-
+    sTable = sTable.getNextScope
     val Func(t, Ident(id, _), ps, s) = func
     currentLabel = Label("f_" + id)
     ps match {
@@ -130,14 +130,14 @@ class CodeGenerator(var sTable: SymbolTable) {
         var currSp = 4
         var prevSize = 0
         for (param <- plist) {
-          val Param(t, i) = param
+          val Param(t, id) = param
           currSp += prevSize
           prevSize = getBaseTypeSize(t)
-          varTable += (i -> (-currSp, t))
+          sTable.add(id, -currSp, t)
         }
     }
 
-    sTable = sTable.getNextScope
+
     val instrs = transStat(s, ListBuffer(Push(ListBuffer(LR))))
     sTable = sTable.getPrevScope
 
@@ -150,7 +150,7 @@ class CodeGenerator(var sTable: SymbolTable) {
   private def transReadIdent(ident: Ident): ListBuffer[Instruction] = {
     val instructions = ListBuffer.empty[Instruction]
     val freeReg = getFreeReg()
-    val (spIndex, identType) = varTable(ident)
+    val (spIndex, identType) = sTable(ident)
     val spOffset = currentSP - spIndex
     instructions += InstructionSet.Add(
       freeReg,
@@ -271,10 +271,10 @@ class CodeGenerator(var sTable: SymbolTable) {
       case StrLiter(_, _)  => StringT
       case PairLiter(_)    => Pair(null, null)
       case id: Ident =>
-        val (_, t) = varTable.apply(id)
+        val (_, t) = sTable(id)
         t
       case ArrayElem(id, es, _) =>
-        var (_, t) = varTable.apply(id)
+        var (_, t) = sTable(id)
         for (_ <- es) {
           t = getInnerType(t)
         }
@@ -428,7 +428,7 @@ class CodeGenerator(var sTable: SymbolTable) {
   ): ListBuffer[Instruction] = {
     val instructions = ListBuffer.empty[Instruction]
     currentSP += getBaseTypeSize(t)
-    varTable += (id -> (currentSP, t))
+    sTable.add(id, currentSP, t)
 
     instructions += InstructionSet.Sub(SP, SP, ImmInt(getBaseTypeSize(t)))
 
@@ -547,7 +547,7 @@ class CodeGenerator(var sTable: SymbolTable) {
     aLHS match {
       case elem: PairElem => ListBuffer.empty[Instruction]
       case id: Ident =>
-        val (index, t) = varTable.apply(id)
+        val (index, t) = sTable(id)
         val (isByte, instrs) = assignRHS(t, aRHS, freeReg)
         instructions ++= instrs
         val spOffset = currentSP - index
@@ -613,7 +613,7 @@ class CodeGenerator(var sTable: SymbolTable) {
       es: List[Expr],
       reg: Reg
   ): (Boolean, ListBuffer[Instruction]) = {
-    var (index, t) = varTable.apply(id)
+    var (index, t) = sTable(id)
     val instructions = ListBuffer.empty[Instruction]
 
     val baseTypeSize = getBaseTypeSize(t)
@@ -647,7 +647,7 @@ class CodeGenerator(var sTable: SymbolTable) {
     op match {
       case Chr(e, _) => transExp(e, reg)
       case Len(id: Ident, _) =>
-        val (index, _) = varTable.apply(id)
+        val (index, _) = sTable(id)
         ListBuffer(
           Ldr(reg, RegisterOffset(SP, currentSP - index)),
           Ldr(reg, RegAdd(reg))
@@ -788,7 +788,7 @@ class CodeGenerator(var sTable: SymbolTable) {
       case PairLiter(_)    => instructions += Ldr(reg, ImmMem(0))
       // TODO: track variable location
       case id: Ident =>
-        val (index, t) = varTable.apply(id)
+        val (index, t) = sTable(id)
         val spOffset = currentSP - index
         t match {
           case CharT | BoolT =>
