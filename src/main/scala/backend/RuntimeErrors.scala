@@ -68,7 +68,7 @@ object RuntimeErrors {
 
   def free_pair(label: Label): (Label, List[Instruction]) = {
     (
-      Label("p_free_pair"),
+      Label("p_check_null_pointer"),
       List[Instruction](
         Push(ListBuffer(LR)),
         Cmp(R0, ImmInt(0)),
