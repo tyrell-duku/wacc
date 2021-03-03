@@ -36,7 +36,7 @@ object RuntimeErrors {
         BranchLinkLT(Label("p_throw_runtime_error")),
         Ldr(R1, RegAdd(R1)),
         Cmp(R0, R1),
-        LdrCS(R0, label2),
+        LdrCS(R0, DataLabel(label2)),
         BranchLinkCS(Label("p_throw_runtime_error")),
         Pop(ListBuffer(PC))
       )
@@ -49,7 +49,7 @@ object RuntimeErrors {
       List[Instruction](
         Push(ListBuffer(LR)),
         Cmp(R1, ImmInt(0)),
-        LdrEQ(R0, label),
+        LdrEQ(R0, DataLabel(label)),
         BranchLinkEQ(Label("p_check_divide_by_zero")),
         Pop(ListBuffer(PC))
       )
@@ -72,7 +72,7 @@ object RuntimeErrors {
       List[Instruction](
         Push(ListBuffer(LR)),
         Cmp(R0, ImmInt(0)),
-        LdrEQ(R0, label),
+        LdrEQ(R0, DataLabel(label)),
         BranchLink(Label("free")),
         Ldr(R0, RegAdd(SP)),
         Ldr(R0, RegisterOffset(SP, 4)),
