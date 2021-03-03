@@ -535,10 +535,15 @@ object CodeGenerator {
           Ldr(reg, RegisterOffset(SP, currentSP - index)),
           Ldr(reg, RegAdd(reg))
         )
-      case Negation(e, _) => transExp(e, reg) += NegInstr(reg, reg)
-      case Not(e, _)      => transExp(e, reg) += Eor(reg, reg, ImmInt(1))
-      case Ord(e, _)      => transExp(e, reg)
-      case _              => ListBuffer.empty[Instruction]
+      case Negation(e, _) =>
+        addRuntimeError(Overflow)
+        transExp(e, reg) ++= ListBuffer(
+          NegInstr(reg, reg),
+          BranchLinkVS(Label("p_throw_overflow_error"))
+        )
+      case Not(e, _) => transExp(e, reg) += Eor(reg, reg, ImmInt(1))
+      case Ord(e, _) => transExp(e, reg)
+      case _         => ListBuffer.empty[Instruction]
     }
   }
 
@@ -580,6 +585,11 @@ object CodeGenerator {
         val rReg = getFreeReg()
         instructions ++= transExp(l, reg)
         instructions ++= transExp(r, rReg)
+        // Runtime error check
+        instructions += Cmp(rReg, ASR(reg, ImmInt(31)))
+        instructions += BranchLinkNE(Label("p_throw_overflow_error"))
+        addRuntimeError(Overflow)
+        // TODO: use SMULL
         instructions += InstructionSet.Mul(reg, reg, rReg)
         addUnusedReg(rReg)
       case Div(l, r, _) =>
@@ -615,12 +625,18 @@ object CodeGenerator {
         instructions ++= transExp(l, reg)
         instructions ++= transExp(r, rReg)
         instructions += Add(reg, reg, rReg)
+        // Runtime error check
+        instructions += BranchLinkVS(Label("p_throw_overflow_error"))
+        addRuntimeError(Overflow)
         addUnusedReg(rReg)
       case frontend.Rules.Sub(l, r, _) =>
         val rReg = getFreeReg()
         instructions ++= transExp(l, reg)
         instructions ++= transExp(r, rReg)
         instructions += InstructionSet.Sub(reg, reg, rReg)
+        // Runtime error check
+        instructions += BranchLinkVS(Label("p_throw_overflow_error"))
+        addRuntimeError(Overflow)
         addUnusedReg(rReg)
       case frontend.Rules.And(l, r, _) =>
         val rReg = getFreeReg()
