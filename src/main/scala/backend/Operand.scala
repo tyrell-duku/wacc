@@ -11,6 +11,10 @@ case class LSL(r: Reg, n: ImmInt) extends Operand {
   override def toString: String = r + ", LSL " + n
 }
 
+case class ASR(r: Reg, n: ImmInt) extends Operand {
+  override def toString: String = r + ", ASR " + n
+}
+
 sealed case class ImmChar(c: Character) extends Operand with LoadOperand {
   override def toString: String = "#'" + c + "'"
 }

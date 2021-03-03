@@ -43,9 +43,28 @@ package object InstructionSet {
   case class BranchLink(label: Label) extends Instruction {
     override def toString: String = "BL " + label
   }
-
+  // Branch Link Not Equal
+  case class BranchLinkNE(label: Label) extends Instruction {
+    override def toString: String = "BLNE " + label
+  }
+  // Branch Link Overflow
+  case class BranchLinkVS(label: Label) extends Instruction {
+    override def toString: String = "BLVS " + label
+  }
+  // Branch Link Less Than
+  case class BranchLinkLT(label: Label) extends Instruction {
+    override def toString: String = "BLLT " + label
+  }
+  // Branch Link Equal
+  case class BranchLinkEQ(label: Label) extends Instruction {
+    override def toString: String = "BLQ " + label
+  }
   case class BranchEq(label: Label) extends Instruction {
     override def toString: String = "BEQ " + label
+  }
+  // Branch Link Carry Set
+  case class BranchLinkCS(label: Label) extends Instruction {
+    override def toString: String = "BLCS " + label
   }
 
   // Creating labels
@@ -61,7 +80,18 @@ package object InstructionSet {
   case class LdrB(rd: Reg, op2: LoadOperand) extends Instruction {
     override def toString: String = "LDRB " + rd + ", " + op2
   }
-
+  // LDR Equal
+  case class LdrEQ(rd: Reg, op2: LoadOperand) extends Instruction {
+    override def toString: String = "LDREQ " + rd + ", " + op2
+  }
+  // LDR Less Than
+  case class LdrLT(rd: Reg, op2: LoadOperand) extends Instruction {
+    override def toString: String = "LDRLT " + rd + ", " + op2
+  }
+  // LDR Carry Set
+  case class LdrCS(rd: Reg, op2: LoadOperand) extends Instruction {
+    override def toString: String = "LDRCS " + rd + ", " + op2
+  }
   case class LdrOffset(rd: Reg, regAdd: Reg, offset: Int) extends Instruction {
     override def toString: String =
       "LDR " + rd + ", " + "[" + regAdd + ", #" + offset + "]"

@@ -24,7 +24,7 @@ class DataTable {
     val msgLabel = Label(label)
     if (!containsLabel(msgLabel)) {
       table += Data(msgLabel, string)
-      msgLabel
+      return msgLabel
     }
     null
   }

@@ -5,6 +5,7 @@ import frontend.Rules._
 import scala.collection.mutable.ListBuffer
 import PrintInstrs._
 import ReadInstructions._
+import RuntimeErrors._
 
 object CodeGenerator {
   final val allRegs: ListBuffer[Reg] =
@@ -46,6 +47,54 @@ object CodeGenerator {
   ): Instruction = {
     val regsToPush = allRegs.filter(r => !regsNotInUse.contains(r)).reverse
     new Pop(regsToPush)
+  }
+
+  private def addRuntimeError(err: RuntimeError) {
+    funcTable.addEntry(throwRuntimeError())
+    funcTable.addEntry(stringPrintInstrs)
+    dataTable.addDataEntryWithLabel("msg_string", "%.*s\\0")
+    err match {
+      case ArrayBounds =>
+        funcTable.addEntry(
+          checkArrayBounds(
+            dataTable.addDataEntryWithLabel(
+              "msg_neg_index",
+              "ArrayIndexOutOfBoundsError: negative index\\n\\0"
+            ),
+            dataTable.addDataEntryWithLabel(
+              "msg_index_too_large",
+              "ArrayIndexOutOfBoundsError: index too large\\n\\0"
+            )
+          )
+        )
+      case DivideByZero =>
+        funcTable.addEntry(
+          checkDivideByZero(
+            dataTable.addDataEntryWithLabel(
+              "msg_divide_by_zero",
+              "DivideByZeroError: divide or modulo by zero\\n\\0"
+            )
+          )
+        )
+      case Overflow =>
+        funcTable.addEntry(
+          throwOverflowError(
+            dataTable.addDataEntryWithLabel(
+              "msg_overflow",
+              "OverflowError: the result is too small/large to store in a 4-byte signed-integer.\\n"
+            )
+          )
+        )
+      case FreePair =>
+        funcTable.addEntry(
+          free_pair(
+            dataTable.addDataEntryWithLabel(
+              "msg_null_refernce",
+              "NullReferenceError: dereference a null reference\\n\\0"
+            )
+          )
+        )
+    }
   }
 
   def transProg(
@@ -559,7 +608,11 @@ object CodeGenerator {
       instructions ++= transExp(exp, nextReg)
       instructions += Ldr(reg, RegAdd(reg))
 
-      //TODO: Out of bounds check
+      // Values must be in R0 & R1 for branch
+      instructions += Mov(R0, nextReg)
+      instructions += Mov(R1, reg)
+      instructions += BranchLink(Label("p_check_array_bounds"))
+      addRuntimeError(ArrayBounds)
 
       instructions += Add(reg, reg, ImmInt(INT_SIZE))
       if (t == CharT || t == BoolT) {
@@ -582,10 +635,15 @@ object CodeGenerator {
           Ldr(reg, RegisterOffset(SP, currentSP - index)),
           Ldr(reg, RegAdd(reg))
         )
-      case Negation(e, _) => transExp(e, reg) += NegInstr(reg, reg)
-      case Not(e, _)      => transExp(e, reg) += Eor(reg, reg, ImmInt(1))
-      case Ord(e, _)      => transExp(e, reg)
-      case _              => ListBuffer.empty[Instruction]
+      case Negation(e, _) =>
+        addRuntimeError(Overflow)
+        transExp(e, reg) ++= ListBuffer(
+          NegInstr(reg, reg),
+          BranchLinkVS(Label("p_throw_overflow_error"))
+        )
+      case Not(e, _) => transExp(e, reg) += Eor(reg, reg, ImmInt(1))
+      case Ord(e, _) => transExp(e, reg)
+      case _         => ListBuffer.empty[Instruction]
     }
   }
 
@@ -627,11 +685,15 @@ object CodeGenerator {
         val rReg = getFreeReg()
         instructions ++= transExp(l, reg)
         instructions ++= transExp(r, rReg)
+        // Runtime error check
+        instructions += Cmp(rReg, ASR(reg, ImmInt(31)))
+        instructions += BranchLinkNE(Label("p_throw_overflow_error"))
+        addRuntimeError(Overflow)
+        // TODO: use SMULL
         instructions += InstructionSet.Mul(reg, reg, rReg)
         addUnusedReg(rReg)
       case Div(l, r, _) =>
         val rReg = getFreeReg()
-        // TODO: make sure R0 and R1 are free
         instructions ++= transExp(l, reg)
         instructions ++= transExp(r, rReg)
         // Needs to be in R0 and R1 for "__aeabi_idiv"
@@ -643,12 +705,17 @@ object CodeGenerator {
         instructions += Mov(reg, R0)
       case Mod(l, r, _) =>
         val rReg = getFreeReg()
-        // TODO: make sure R0 and R1 are free
         instructions ++= transExp(l, reg)
         instructions ++= transExp(r, rReg)
+        // Runtime error check
+        instructions += BranchLink(Label("p_check_divide_by_zero"))
+        addRuntimeError(DivideByZero)
         // Needs to be in R0 and R1 for "__aeabi_idivmod"
         instructions += Mov(R0, reg)
         instructions += Mov(R1, rReg)
+        // Runtime error check
+        instructions += BranchLink(Label("p_check_divide_by_zero"))
+        addRuntimeError(DivideByZero)
         // Mod function
         instructions += BranchLink(Label("__aeabi_idivmod"))
         addUnusedReg(rReg)
@@ -658,12 +725,18 @@ object CodeGenerator {
         instructions ++= transExp(l, reg)
         instructions ++= transExp(r, rReg)
         instructions += Add(reg, reg, rReg)
+        // Runtime error check
+        instructions += BranchLinkVS(Label("p_throw_overflow_error"))
+        addRuntimeError(Overflow)
         addUnusedReg(rReg)
       case frontend.Rules.Sub(l, r, _) =>
         val rReg = getFreeReg()
         instructions ++= transExp(l, reg)
         instructions ++= transExp(r, rReg)
         instructions += InstructionSet.Sub(reg, reg, rReg)
+        // Runtime error check
+        instructions += BranchLinkVS(Label("p_throw_overflow_error"))
+        addRuntimeError(Overflow)
         addUnusedReg(rReg)
       case frontend.Rules.And(l, r, _) =>
         val rReg = getFreeReg()
