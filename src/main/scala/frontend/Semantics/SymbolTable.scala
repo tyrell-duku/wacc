@@ -56,15 +56,14 @@ case class SymbolTable(
     if (isVar != null) {
       return isVar._2
     }
-    val t = funcMap.get(id)
-    if (t.isEmpty) {
-      return null
+    funcMap.get(id) match {
+      case Some(meta) => meta.t
+      case None       => null
     }
-    t.get.t
   }
 
   // throw error
-  def apply(id: Ident) : (Int, Type) = {
+  def apply(id: Ident): (Int, Type) = {
     lookupAll(id)
   }
 
@@ -77,7 +76,7 @@ case class SymbolTable(
   }
 
   def contains(id: Ident): Boolean = {
-    lookupAll(id) != null
+    lookupAllType(id) != null
   }
 
   def containScope(id: Ident): Boolean = {
