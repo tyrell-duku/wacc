@@ -472,7 +472,6 @@ object CodeGenerator {
     val instructions = ListBuffer.empty[Instruction]
     val nextFreeReg = getFreeReg()
     val Pair(fstType, sndType) = p
-    // val Newpair(fst, snd, _) = rhs
     rhs match {
       case Newpair(fst, snd, _) =>
         // Every pair requires 8 bytes
@@ -503,6 +502,37 @@ object CodeGenerator {
     instructions
   }
 
+  private def transPairElem(
+      id: Ident,
+      fst: Boolean,
+      freeReg: Reg
+  ): ListBuffer[Instruction] = {
+    val instructions = ListBuffer.empty[Instruction]
+    val (spOffset, idType) = varTable(id)
+    val spIndex = currentSP - spOffset
+    instructions += Ldr(freeReg, RegisterOffset(SP, spIndex))
+    // Value must be in R0 for branch
+    instructions += Mov(R0, freeReg)
+    // Runtime error
+    instructions += BranchLink(Label("p_check_null_pointer"))
+    addRuntimeError(FreePair)
+    if (fst) {
+      // For Fst
+      instructions += Ldr(freeReg, RegAdd(freeReg))
+    } else {
+      // For Snd
+      instructions += Ldr(freeReg, RegisterOffset(freeReg, PAIR_SIZE))
+    }
+    if (idType == BoolT || idType == CharT) {
+      instructions += LdrSB(freeReg, RegAdd(freeReg))
+      instructions += StrB(freeReg, RegAdd(SP))
+    } else {
+      instructions += Ldr(freeReg, RegAdd(freeReg))
+      instructions += Str(freeReg, RegAdd(SP))
+    }
+    instructions
+  }
+
   private def assignRHS(
       t: Type,
       aRHS: AssignRHS,
@@ -512,8 +542,12 @@ object CodeGenerator {
     t match {
       case IntT | CharT | BoolT | StringT =>
         aRHS match {
-          case ex: Expr    => instructions ++= transExp(ex, freeReg)
-          case p: PairElem =>
+          case ex: Expr => instructions ++= transExp(ex, freeReg)
+          // PairElem
+          case Fst(id: Ident, _) =>
+            instructions ++= transPairElem(id, true, freeReg)
+          case Snd(id: Ident, _) =>
+            instructions ++= transPairElem(id, false, freeReg)
           case Call(id, args, _) =>
             val Ident(i, _) = id
             val (argInstrs, toAdd) = loadArgs(args, freeReg)
