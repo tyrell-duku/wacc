@@ -107,6 +107,7 @@ class CodeGenerator(var sTable: SymbolTable) {
       transFunc(f)
     }
     currentLabel = Label("main")
+
     val instructions = transStat(stat, ListBuffer(Push(ListBuffer(LR))))
     var toAdd = addSP() ++ ListBuffer(
       Ldr(resultReg, ImmMem(0)),
@@ -351,12 +352,14 @@ class CodeGenerator(var sTable: SymbolTable) {
     oldScopeSP = scopeSP
     scopeSP = 0
     sTable = sTable.getNextScope
-    val i = transStat(s, curInstrs)
-    i += Add(SP, SP, ImmInt(scopeSP))
-    currentSP -= scopeSP
+    val instructions = transStat(s, curInstrs)
+    if (scopeSP > 0) {
+      instructions += Add(SP, SP, ImmInt(scopeSP))
+      currentSP -= scopeSP
+    }
     scopeSP = oldScopeSP
     sTable = sTable.getPrevScope
-    i
+    instructions
   }
 
   private def transIf(
