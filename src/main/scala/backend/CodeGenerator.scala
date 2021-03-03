@@ -163,10 +163,12 @@ object CodeGenerator {
     val reg = getFreeReg()
     val instrs = transExp(e, reg) ++ ListBuffer(
       Mov(resultReg, reg),
+      Add(SP, SP, ImmInt(currentSP)),
       Pop(ListBuffer(PC)),
       Pop(ListBuffer(PC)),
       Ltorg
     )
+    currentSP = 0
     addUnusedReg(reg)
     instrs
   }
