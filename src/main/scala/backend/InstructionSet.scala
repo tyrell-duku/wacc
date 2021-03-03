@@ -72,11 +72,6 @@ package object InstructionSet {
     override def toString: String = "LDR" + cond + " " + rd + ", " + op2
   }
 
-  case class StrOffset(rd: Reg, regAdd: Reg, offset: Int) extends Instruction {
-    override def toString: String =
-      "STR " + rd + ", " + "[" + regAdd + ", #" + offset + "]"
-  }
-
   case class Mov(rd: Reg, op2: Operand) extends Instruction {
     override def toString: String = "MOV " + rd + ", " + op2
   }
@@ -93,6 +88,23 @@ package object InstructionSet {
 
   case class StrB(rd: Reg, add: Address) extends Instruction {
     override def toString: String = "STRB " + rd + ", " + add
+  }
+
+  case class StrOffset(rd: Reg, regAdd: Reg, offset: Int) extends Instruction {
+    override def toString: String =
+      "STR " + rd + ", " + "[" + regAdd + ", #" + offset + "]"
+  }
+
+  case class StrOffsetIndex(rd: Reg, regAdd: Reg, offset: Int)
+      extends Instruction {
+    override def toString: String =
+      "STR " + rd + ", " + "[" + regAdd + ", #" + offset + "]!"
+  }
+
+  case class StrBOffsetIndex(rd: Reg, regAdd: Reg, offset: Int)
+      extends Instruction {
+    override def toString: String =
+      "STRB " + rd + ", " + "[" + regAdd + ", #" + offset + "]!"
   }
 
   case object Ltorg extends Instruction {
