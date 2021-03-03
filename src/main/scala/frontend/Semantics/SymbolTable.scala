@@ -38,24 +38,35 @@ case class SymbolTable(
     this.parent
   }
 
-  // Returns Type of id if is a variable else gives the return type of the function id
-  def lookupAll(id: Ident): (Int, Type) = {
+  // Returns Type of variable id & index at which it is stored in SP
+  def lookupAllCodeGen(id: Ident): (Int, Type) = {
     var curSymbol = this
     while (curSymbol != null) {
-      val d = curSymbol.varMap
-      if (d.contains(id)) {
-        return d.apply(id)
+      val dict = curSymbol.varMap
+      if (dict.contains(id)) {
+        val (index, t) = dict.apply(id)
+
+        // if index is = 0 it has not been declared yet for code gen
+        if (index != 0) {
+          return (index, t)
+        }
       }
       curSymbol = curSymbol.parent
     }
     null
   }
 
+  // Returns Type of id if is a variable else gives the return type of the function id
   def lookupAllType(id: Ident): Type = {
-    val isVar = lookupAll(id)
-    if (isVar != null) {
-      return isVar._2
+    var curSymbol = this
+    while (curSymbol != null) {
+      val d = curSymbol.varMap
+      if (d.contains(id)) {
+        return d.apply(id)._2
+      }
+      curSymbol = curSymbol.parent
     }
+
     funcMap.get(id) match {
       case Some(meta) => meta.t
       case None       => null
@@ -64,7 +75,7 @@ case class SymbolTable(
 
   // throw error
   def apply(id: Ident): (Int, Type) = {
-    lookupAll(id)
+    lookupAllCodeGen(id)
   }
 
   def add(id: Ident, n: Int, t: Type): Unit = {
