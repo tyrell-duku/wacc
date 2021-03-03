@@ -50,7 +50,7 @@ object CodeGenerator {
     new Pop(regsToPush)
   }
 
-  private def addRuntimeError(err: RuntimeError) {
+  private def addRuntimeError(err: RuntimeError): Unit = {
     funcTable.addEntry(throwRuntimeError())
     funcTable.addEntry(stringPrintInstrs)
     dataTable.addDataEntryWithLabel("msg_string", "%.*s\\0")
@@ -90,7 +90,7 @@ object CodeGenerator {
         funcTable.addEntry(
           free_pair(
             dataTable.addDataEntryWithLabel(
-              "msg_null_refernce",
+              "msg_null_reference",
               "NullReferenceError: dereference a null reference\\n\\0"
             )
           )
