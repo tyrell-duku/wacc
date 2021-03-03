@@ -19,8 +19,9 @@ class CodeGenerator(var sTable: SymbolTable) {
   freeRegs -= R2
   freeRegs -= R3
 
-  var varTable = Map.empty[Ident, (Int, Type)]
   var currentSP = 0
+  var scopeSP = 0
+  var oldScopeSP = 0
   private var currentLabel = Label("main")
 
   private var labelCounter = 0
@@ -120,6 +121,8 @@ class CodeGenerator(var sTable: SymbolTable) {
   }
 
   private def transFunc(func: Func): Unit = {
+    oldScopeSP = scopeSP
+    scopeSP = 0
     sTable = sTable.getNextScope
     val Func(t, Ident(id, _), ps, s) = func
     currentLabel = Label("f_" + id)
@@ -137,12 +140,12 @@ class CodeGenerator(var sTable: SymbolTable) {
         }
     }
 
-
     val instrs = transStat(s, ListBuffer(Push(ListBuffer(LR))))
+    instrs += Add(SP, SP, ImmInt(scopeSP))
+    scopeSP = oldScopeSP
     sTable = sTable.getPrevScope
 
     userFuncTable.addEntry(currentLabel, instrs.toList)
-    varTable = Map.empty[Ident, (Int, Type)]
   }
 
   /* Translates read identifiers to the internal representation.
@@ -248,12 +251,8 @@ class CodeGenerator(var sTable: SymbolTable) {
           nextInstructions = transStat(s, nextInstructions)
         }
         nextInstructions
-      case Begin(s) =>
-        sTable = sTable.getNextScope
-        val i = transStat(s, instructions)
-        sTable = sTable.getPrevScope
-        i
-      case _ => instructions
+      case Begin(s) => transNextScope(s, instructions)
+      case _        => instructions
     }
   }
 
@@ -345,6 +344,21 @@ class CodeGenerator(var sTable: SymbolTable) {
     nextLabel
   }
 
+  private def transNextScope(
+      s: Stat,
+      curInstrs: ListBuffer[Instruction]
+  ): ListBuffer[Instruction] = {
+    oldScopeSP = scopeSP
+    scopeSP = 0
+    sTable = sTable.getNextScope
+    val i = transStat(s, curInstrs)
+    i += Add(SP, SP, ImmInt(scopeSP))
+    currentSP -= scopeSP
+    scopeSP = oldScopeSP
+    sTable = sTable.getPrevScope
+    i
+  }
+
   private def transIf(
       cond: Expr,
       s1: Stat,
@@ -359,22 +373,21 @@ class CodeGenerator(var sTable: SymbolTable) {
     addUnusedReg(reg)
     val elseBranch = assignLabel()
     curInstrs += BranchEq(elseBranch)
-    sTable = sTable.getNextScope
+
     // statement if the condition was true
-    curInstrs ++= transStat(s1, ListBuffer.empty[Instruction])
-    sTable = sTable.getPrevScope
+    curInstrs ++= transNextScope(s1, ListBuffer.empty[Instruction])
 
     val afterLabel = assignLabel()
     curInstrs += Branch(afterLabel)
 
     userFuncTable.addEntry(currentLabel, curInstrs.toList)
     currentLabel = elseBranch
-    sTable = sTable.getNextScope
-    val t = transStat(s2, ListBuffer.empty[Instruction]).toList
-    sTable = sTable.getPrevScope
+
+    val t = transNextScope(s2, ListBuffer.empty[Instruction])
+
     userFuncTable.addEntry(
       currentLabel,
-      t
+      t.toList
     )
     currentLabel = afterLabel
 
@@ -393,10 +406,10 @@ class CodeGenerator(var sTable: SymbolTable) {
 
     val insideWhile = assignLabel()
     currentLabel = insideWhile
-    sTable = sTable.getNextScope
-    val transInnerWhile = transStat(s, ListBuffer.empty[Instruction]).toList
-    sTable = sTable.getPrevScope
-    userFuncTable.addEntry(currentLabel, transInnerWhile)
+
+    val transInnerWhile = transNextScope(s, ListBuffer.empty[Instruction])
+
+    userFuncTable.addEntry(currentLabel, transInnerWhile.toList)
 
     currentLabel = afterLabel
 
@@ -428,6 +441,7 @@ class CodeGenerator(var sTable: SymbolTable) {
   ): ListBuffer[Instruction] = {
     val instructions = ListBuffer.empty[Instruction]
     currentSP += getBaseTypeSize(t)
+    scopeSP += getBaseTypeSize(t)
     sTable.add(id, currentSP, t)
 
     instructions += InstructionSet.Sub(SP, SP, ImmInt(getBaseTypeSize(t)))
