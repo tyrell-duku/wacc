@@ -57,10 +57,12 @@ object CodeGenerator {
       case ArrayBounds =>
         funcTable.addEntry(
           checkArrayBounds(
-            dataTable.addDataEntry(
+            dataTable.addDataEntryWithLabel(
+              "msg_neg_index",
               "ArrayIndexOutOfBoundsError: negative index\\n\\0"
             ),
-            dataTable.addDataEntry(
+            dataTable.addDataEntryWithLabel(
+              "msg_index_too_large",
               "ArrayIndexOutOfBoundsError: index too large\\n\\0"
             )
           )
@@ -68,7 +70,8 @@ object CodeGenerator {
       case DivideByZero =>
         funcTable.addEntry(
           checkDivideByZero(
-            dataTable.addDataEntry(
+            dataTable.addDataEntryWithLabel(
+              "msg_divide_by_zero",
               "DivideByZeroError: divide or modulo by zero\n\\0"
             )
           )
@@ -76,7 +79,8 @@ object CodeGenerator {
       case Overflow =>
         funcTable.addEntry(
           throwOverflowError(
-            dataTable.addDataEntry(
+            dataTable.addDataEntryWithLabel(
+              "msg_overflow",
               "OverflowError: the result is too small/large to store in a 4-byte signed-integer.\n"
             )
           )
@@ -84,7 +88,8 @@ object CodeGenerator {
       case FreePair =>
         funcTable.addEntry(
           free_pair(
-            dataTable.addDataEntry(
+            dataTable.addDataEntryWithLabel(
+              "msg_null_refernce",
               "NullReferenceError: dereference a null reference\n\\0"
             )
           )
