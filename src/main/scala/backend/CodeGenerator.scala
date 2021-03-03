@@ -33,6 +33,7 @@ object CodeGenerator {
   private val BOOL_SIZE = 1
   private val STR_SIZE = 4
   private val ARRAY_SIZE = 4
+  private val PAIR_SIZE = 4
   private val MAX_INT_IMM = 1024
 
   private def saveRegs(
@@ -463,6 +464,34 @@ object CodeGenerator {
     (instrs.reverse, totalOff)
   }
 
+  private def assignRHSPair(
+      p: Type,
+      rhs: AssignRHS,
+      freeReg: Reg
+  ): ListBuffer[Instruction] = {
+    val Pair(fstType, sndType) = p
+    val Newpair(fst, snd, _) = rhs
+    val instructions = ListBuffer.empty[Instruction]
+    val nextFreeReg = getFreeReg()
+    // Every pair requires 8 bytes
+    instructions += Ldr(R0, ImmMem(8))
+    instructions += BranchLink(Label("malloc"))
+    instructions += Mov(freeReg, R0)
+    instructions ++= transExp(fst, nextFreeReg)
+    // Size of fst rhs
+    instructions += Ldr(R0, ImmMem(getPairElemTypeSize(fstType)))
+    instructions += BranchLink(Label("malloc"))
+    instructions += StrB(nextFreeReg, RegAdd(R0))
+    instructions += Str(R0, RegAdd(freeReg))
+    instructions ++= transExp(snd, nextFreeReg)
+    // Size of snd rhs
+    instructions += Ldr(R0, ImmMem(getPairElemTypeSize(sndType)))
+    instructions += BranchLink(Label("malloc"))
+    instructions += StrB(nextFreeReg, RegAdd(R0))
+    instructions += Str(R0, RegisterOffset(freeReg, 4))
+    instructions
+  }
+
   private def assignRHS(
       t: Type,
       aRHS: AssignRHS,
@@ -516,7 +545,8 @@ object CodeGenerator {
         instructions += Ldr(nextFreeReg, ImmMem(listSize))
         instructions += Str(nextFreeReg, RegAdd(freeReg))
         addUnusedReg(nextFreeReg)
-      case _ =>
+      case p: Pair => (false, instructions ++= assignRHSPair(p, aRHS, freeReg))
+      case _       =>
     }
     (t == CharT || t == BoolT, instructions)
   }
@@ -811,9 +841,15 @@ object CodeGenerator {
       case CharT          => CHAR_SIZE
       case StringT        => STR_SIZE
       case ArrayT(innerT) => ARRAY_SIZE
-      // CODEME
-      case _: PairType => -1
-      case _           => -1
+      case Pair(_, _)     => PAIR_SIZE
+      case _              => -1
+    }
+  }
+
+  private def getPairElemTypeSize(pairType: PairElemType): Int = {
+    pairType match {
+      case PairElemPair        => PAIR_SIZE
+      case PairElemT(baseType) => getBaseTypeSize(baseType)
     }
   }
 
