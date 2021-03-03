@@ -142,7 +142,7 @@ class CodeGenerator(var sTable: SymbolTable) {
     }
 
     val instrs = transStat(s, ListBuffer(Push(ListBuffer(LR))))
-    instrs += Add(SP, SP, ImmInt(scopeSP))
+
     scopeSP = oldScopeSP
     sTable = sTable.getPrevScope
 
@@ -218,14 +218,18 @@ class CodeGenerator(var sTable: SymbolTable) {
 
   private def transReturn(e: Expr): ListBuffer[Instruction] = {
     val reg = getFreeReg()
-    val instrs = transExp(e, reg) ++ ListBuffer(
-      Mov(resultReg, reg),
-      Add(SP, SP, ImmInt(currentSP)),
+    val instrs = transExp(e, reg)
+    instrs += Mov(resultReg, reg)
+    if (scopeSP > 0) {
+      instrs += Add(SP, SP, ImmInt(scopeSP))
+      currentSP -= scopeSP
+    }
+    instrs ++= ListBuffer(
       Pop(ListBuffer(PC)),
       Pop(ListBuffer(PC)),
       Ltorg
     )
-    currentSP = 0
+
     addUnusedReg(reg)
     instrs
   }
