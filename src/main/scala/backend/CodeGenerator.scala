@@ -50,7 +50,7 @@ object CodeGenerator {
     new Pop(regsToPush)
   }
 
-  private def addRuntimeError(err: RuntimeError) {
+  private def addRuntimeError(err: RuntimeError): Unit = {
     funcTable.addEntry(throwRuntimeError())
     funcTable.addEntry(stringPrintInstrs)
     dataTable.addDataEntryWithLabel("msg_string", "%.*s\\0")
@@ -88,9 +88,9 @@ object CodeGenerator {
         )
       case FreePair =>
         funcTable.addEntry(
-          free_pair(
+          freePair(
             dataTable.addDataEntryWithLabel(
-              "msg_null_refernce",
+              "msg_null_reference",
               "NullReferenceError: dereference a null reference\\n\\0"
             )
           )
@@ -482,7 +482,11 @@ object CodeGenerator {
         // Size of fst rhs
         instructions += Ldr(R0, ImmMem(getPairElemTypeSize(fstType)))
         instructions += BranchLink(Label("malloc"))
-        instructions += StrB(nextFreeReg, RegAdd(R0))
+        if (fstType == PairElemT(CharT) || fstType == PairElemT(BoolT)) {
+          instructions += StrB(nextFreeReg, RegAdd(R0))
+        } else {
+          instructions += Str(nextFreeReg, RegAdd(R0))
+        }
         instructions += Str(R0, RegAdd(freeReg))
         instructions ++= transExp(snd, nextFreeReg)
         // Size of snd rhs
@@ -515,7 +519,7 @@ object CodeGenerator {
     instructions += Mov(R0, freeReg)
     // Runtime error
     instructions += BranchLink(Label("p_check_null_pointer"))
-    addRuntimeError(FreePair)
+    // TODO: null dereference check
     if (fst) {
       // For Fst
       instructions += Ldr(freeReg, RegAdd(freeReg))
