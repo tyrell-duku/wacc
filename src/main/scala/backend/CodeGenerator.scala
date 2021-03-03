@@ -584,7 +584,6 @@ object CodeGenerator {
         addUnusedReg(rReg)
       case Div(l, r, _) =>
         val rReg = getFreeReg()
-        // TODO: make sure R0 and R1 are free
         instructions ++= transExp(l, reg)
         instructions ++= transExp(r, rReg)
         // Needs to be in R0 and R1 for "__aeabi_idiv"
@@ -596,12 +595,17 @@ object CodeGenerator {
         instructions += Mov(reg, R0)
       case Mod(l, r, _) =>
         val rReg = getFreeReg()
-        // TODO: make sure R0 and R1 are free
         instructions ++= transExp(l, reg)
         instructions ++= transExp(r, rReg)
+        // Runtime error check
+        instructions += BranchLink(Label("p_check_divide_by_zero"))
+        addRuntimeError(DivideByZero)
         // Needs to be in R0 and R1 for "__aeabi_idivmod"
         instructions += Mov(R0, reg)
         instructions += Mov(R1, rReg)
+        // Runtime error check
+        instructions += BranchLink(Label("p_check_divide_by_zero"))
+        addRuntimeError(DivideByZero)
         // Mod function
         instructions += BranchLink(Label("__aeabi_idivmod"))
         addUnusedReg(rReg)
