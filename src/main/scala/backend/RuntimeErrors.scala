@@ -9,6 +9,7 @@ case object ArrayBounds extends RuntimeError
 case object DivideByZero extends RuntimeError
 case object Overflow extends RuntimeError
 case object FreePair extends RuntimeError
+case object NullPointer extends RuntimeError
 
 object RuntimeErrors {
 
@@ -79,6 +80,18 @@ object RuntimeErrors {
         BranchLink(Label("free")),
         Pop(ListBuffer(R0)),
         BranchLink(Label("free")),
+        Pop(ListBuffer(PC))
+      )
+    )
+  }
+
+  def checkNullPointer(label: Label): (Label, List[Instruction]) = {
+    (
+      Label("p_check_null_pointer"),
+      List[Instruction](
+        Push(ListBuffer(LR)),
+        LdrEQ(R0, DataLabel(label)),
+        BranchLinkEQ(Label("p_throw_runtime_error")),
         Pop(ListBuffer(PC))
       )
     )
