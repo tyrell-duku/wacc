@@ -51,24 +51,32 @@ object CodeGenerator {
 
   private def addRuntimeError(err: RuntimeError) {
     funcTable.addEntry(throwRuntimeError())
+    funcTable.addEntry(stringPrintInstrs)
+    dataTable.addDataEntryWithLabel("msg_string", "%.*s\\0")
     err match {
       case ArrayBounds =>
         funcTable.addEntry(
           checkArrayBounds(
-            Label("ArrayIndexOutOfBoundsError: negative index\\n\\0"),
-            Label("ArrayIndexOutOfBoundsError: index too large\\n\\0")
+            dataTable.addDataEntry(
+              "ArrayIndexOutOfBoundsError: negative index\\n\\0"
+            ),
+            dataTable.addDataEntry(
+              "ArrayIndexOutOfBoundsError: index too large\\n\\0"
+            )
           )
         )
       case DivideByZero =>
         funcTable.addEntry(
           checkDivideByZero(
-            Label("DivideByZeroError: divide or modulo by zero\n\\0")
+            dataTable.addDataEntry(
+              "DivideByZeroError: divide or modulo by zero\n\\0"
+            )
           )
         )
       case Overflow =>
         funcTable.addEntry(
           throwOverflowError(
-            Label(
+            dataTable.addDataEntry(
               "OverflowError: the result is too small/large to store in a 4-byte signed-integer.\n"
             )
           )
@@ -76,7 +84,9 @@ object CodeGenerator {
       case FreePair =>
         funcTable.addEntry(
           free_pair(
-            Label("NullReferenceError: dereference a null reference\n\\0")
+            dataTable.addDataEntry(
+              "NullReferenceError: dereference a null reference\n\\0"
+            )
           )
         )
     }
