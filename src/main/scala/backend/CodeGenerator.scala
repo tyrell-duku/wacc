@@ -368,7 +368,6 @@ class CodeGenerator(var sTable: SymbolTable) {
       s2: Stat,
       curInstrs: ListBuffer[Instruction]
   ): ListBuffer[Instruction] = {
-    val instructions = ListBuffer.empty[Instruction]
     val reg = getFreeReg()
     curInstrs ++= transExp(cond, reg)
     // check if condition is false
@@ -378,23 +377,23 @@ class CodeGenerator(var sTable: SymbolTable) {
     curInstrs += BranchEq(elseBranch)
 
     // statement if the condition was true
-    curInstrs ++= transNextScope(s1, ListBuffer.empty[Instruction])
+    val instructions = transNextScope(s1, curInstrs)
 
     val afterLabel = assignLabel()
-    curInstrs += Branch(afterLabel)
+    instructions += Branch(afterLabel)
 
-    userFuncTable.addEntry(currentLabel, curInstrs.toList)
+    userFuncTable.addEntry(currentLabel, instructions.toList)
     currentLabel = elseBranch
 
-    val t = transNextScope(s2, ListBuffer.empty[Instruction])
+    val elseInstrs = transNextScope(s2, ListBuffer.empty[Instruction])
 
     userFuncTable.addEntry(
       currentLabel,
-      t.toList
+      elseInstrs.toList
     )
     currentLabel = afterLabel
 
-    instructions
+    ListBuffer.empty[Instruction]
   }
 
   private def transWhile(
