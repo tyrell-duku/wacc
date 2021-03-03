@@ -491,7 +491,7 @@ object CodeGenerator {
         // Size of fst rhs
         instructions += Ldr(R0, ImmMem(getPairElemTypeSize(fstType)))
         instructions += BranchLink(Label("malloc"))
-        if (fstType == PairElemT(CharT) || fstType == PairElemT(BoolT)) {
+        if (pairIsByte(p, true)) {
           instructions += StrB(nextFreeReg, RegAdd(R0))
         } else {
           instructions += Str(nextFreeReg, RegAdd(R0))
@@ -501,7 +501,11 @@ object CodeGenerator {
         // Size of snd rhs
         instructions += Ldr(R0, ImmMem(getPairElemTypeSize(sndType)))
         instructions += BranchLink(Label("malloc"))
-        instructions += StrB(nextFreeReg, RegAdd(R0))
+        if (pairIsByte(p, false)) {
+          instructions += StrB(nextFreeReg, RegAdd(R0))
+        } else {
+          instructions += Str(nextFreeReg, RegAdd(R0))
+        }
         instructions += Str(R0, RegisterOffset(freeReg, PAIR_SIZE))
       case ident: Ident =>
         val (spIndex, _) = varTable(ident)
