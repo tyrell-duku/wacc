@@ -62,7 +62,7 @@ case class SymbolTable(
     while (curSymbol != null) {
       val d = curSymbol.varMap
       if (d.contains(id)) {
-        return d.apply(id)
+        return d.apply(id)._2
       }
       curSymbol = curSymbol.parent
     }
