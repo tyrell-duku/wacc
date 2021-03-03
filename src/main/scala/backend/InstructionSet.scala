@@ -10,6 +10,9 @@ package object InstructionSet {
   case class Add(rd: Reg, rn: Reg, op2: Operand) extends Instruction {
     override def toString: String = "ADD " + rd + ", " + rn + ", " + op2
   }
+  case class AddS(rd: Reg, rn: Reg, op2: Operand) extends Instruction {
+    override def toString: String = "ADDS " + rd + ", " + rn + ", " + op2
+  }
   case class Sub(rd: Reg, rn: Reg, op2: Operand) extends Instruction {
     override def toString: String = "SUB " + rd + ", " + rn + ", " + op2
   }
