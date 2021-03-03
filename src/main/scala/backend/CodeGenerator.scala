@@ -2,12 +2,13 @@ package backend
 
 import InstructionSet._
 import frontend.Rules._
+import frontend.Semantics.SymbolTable
 import scala.collection.mutable.ListBuffer
 import PrintInstrs._
 import ReadInstructions._
 import RuntimeErrors._
 
-object CodeGenerator {
+class CodeGenerator(var sTable: SymbolTable) {
   final val allRegs: ListBuffer[Reg] =
     ListBuffer(R0, R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12)
 
@@ -119,6 +120,7 @@ object CodeGenerator {
   }
 
   private def transFunc(func: Func): Unit = {
+
     val Func(t, Ident(id, _), ps, s) = func
     currentLabel = Label("f_" + id)
     ps match {
@@ -135,7 +137,9 @@ object CodeGenerator {
         }
     }
 
+    sTable = sTable.getNextScope
     val instrs = transStat(s, ListBuffer(Push(ListBuffer(LR))))
+    sTable = sTable.getPrevScope
 
     userFuncTable.addEntry(currentLabel, instrs.toList)
     varTable = Map.empty[Ident, (Int, Type)]
@@ -231,18 +235,24 @@ object CodeGenerator {
       case EqAssign(l, r)   => instructions ++= transEqAssign(l, r)
       case Read(lhs)        => instructions ++= transRead(lhs)
       // case Free(e)          => instructions ++= ListBuffer.empty[Instruction]
-      case Return(e)        => instructions ++= transReturn(e)
-      case Exit(e)          => instructions ++= transExit(e)
-      case Print(e)         => instructions ++= transPrint(e, false)
-      case PrintLn(e)       => instructions ++= transPrint(e, true)
-      case If(cond, s1, s2) => transIf(cond, s1, s2, instructions)
-      case While(cond, s)   => transWhile(cond, s, instructions)
+      case Return(e)  => instructions ++= transReturn(e)
+      case Exit(e)    => instructions ++= transExit(e)
+      case Print(e)   => instructions ++= transPrint(e, false)
+      case PrintLn(e) => instructions ++= transPrint(e, true)
+      case If(cond, s1, s2) =>
+        transIf(cond, s1, s2, instructions)
+      case While(cond, s) => transWhile(cond, s, instructions)
       case Seq(statList) =>
         var nextInstructions = instructions
         for (s <- statList) {
           nextInstructions = transStat(s, nextInstructions)
         }
         nextInstructions
+      case Begin(s) =>
+        sTable = sTable.getNextScope
+        val i = transStat(s, instructions)
+        sTable = sTable.getPrevScope
+        i
       case _ => instructions
     }
   }
@@ -349,17 +359,22 @@ object CodeGenerator {
     addUnusedReg(reg)
     val elseBranch = assignLabel()
     curInstrs += BranchEq(elseBranch)
+    sTable = sTable.getNextScope
     // statement if the condition was true
     curInstrs ++= transStat(s1, ListBuffer.empty[Instruction])
+    sTable = sTable.getPrevScope
 
     val afterLabel = assignLabel()
     curInstrs += Branch(afterLabel)
 
     userFuncTable.addEntry(currentLabel, curInstrs.toList)
     currentLabel = elseBranch
+    sTable = sTable.getNextScope
+    val t = transStat(s2, ListBuffer.empty[Instruction]).toList
+    sTable = sTable.getPrevScope
     userFuncTable.addEntry(
       currentLabel,
-      transStat(s2, ListBuffer.empty[Instruction]).toList
+      t
     )
     currentLabel = afterLabel
 
@@ -378,7 +393,9 @@ object CodeGenerator {
 
     val insideWhile = assignLabel()
     currentLabel = insideWhile
+    sTable = sTable.getNextScope
     val transInnerWhile = transStat(s, ListBuffer.empty[Instruction]).toList
+    sTable = sTable.getPrevScope
     userFuncTable.addEntry(currentLabel, transInnerWhile)
 
     currentLabel = afterLabel
