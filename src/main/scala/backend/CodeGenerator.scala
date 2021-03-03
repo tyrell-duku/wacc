@@ -724,7 +724,7 @@ object CodeGenerator {
         val rReg = getFreeReg()
         instructions ++= transExp(l, reg)
         instructions ++= transExp(r, rReg)
-        instructions += Add(reg, reg, rReg)
+        instructions += AddS(reg, reg, rReg)
         // Runtime error check
         instructions += BranchLinkVS(Label("p_throw_overflow_error"))
         addRuntimeError(Overflow)
