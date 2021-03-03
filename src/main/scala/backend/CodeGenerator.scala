@@ -55,6 +55,7 @@ object CodeGenerator {
     for (f <- funcs) {
       transFunc(f)
     }
+    currentLabel = Label("main")
     val instructions = transStat(stat, ListBuffer(Push(ListBuffer(LR))))
     var toAdd = addSP() ++ ListBuffer(
       Ldr(resultReg, ImmMem(0)),
@@ -70,6 +71,7 @@ object CodeGenerator {
 
   private def transFunc(func: Func): Unit = {
     val Func(t, Ident(id, _), ps, s) = func
+    currentLabel = Label("f_" + id)
     ps match {
       case None =>
       case Some(paramList) =>
@@ -84,11 +86,9 @@ object CodeGenerator {
         }
     }
 
-    val instrs = ListBuffer(Push(ListBuffer(LR))) ++ transStat(
-      s,
-      ListBuffer.empty[Instruction]
-    )
-    userFuncTable.addEntry(Label("f_" + id), instrs.toList)
+    val instrs = transStat(s, ListBuffer(Push(ListBuffer(LR))))
+
+    userFuncTable.addEntry(currentLabel, instrs.toList)
     varTable = Map.empty[Ident, (Int, Type)]
   }
 
@@ -163,10 +163,12 @@ object CodeGenerator {
     val reg = getFreeReg()
     val instrs = transExp(e, reg) ++ ListBuffer(
       Mov(resultReg, reg),
+      Add(SP, SP, ImmInt(currentSP)),
       Pop(ListBuffer(PC)),
       Pop(ListBuffer(PC)),
       Ltorg
     )
+    currentSP = 0
     addUnusedReg(reg)
     instrs
   }
