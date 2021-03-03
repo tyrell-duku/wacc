@@ -24,12 +24,13 @@ object Main {
     sys.exit(semanticError)
   }
 
-  def semanticAnalysis(result: Program): Unit = {
+  def semanticAnalysis(result: Program): SymbolTable = {
     val semanticChecker = new SemanticChecker
-    val semanticResult = semanticChecker.progAnalysis(result)
+    val (sTable, semanticResult) = semanticChecker.progAnalysis(result)
     if (semanticResult.nonEmpty) {
       semanticExit(semanticResult)
     }
+    sTable
   }
 
   def main(args: Array[String]): Unit = {
@@ -47,8 +48,9 @@ object Main {
     parserResult match {
       case Failure(msg) => syntaxExit(msg)
       case Success(x) =>
-        semanticAnalysis(x)
-        val (data, instrs) = CodeGenerator.transProg(x)
+        val sTable = semanticAnalysis(x)
+        val codeGen = new CodeGenerator(sTable)
+        val (data, instrs) = codeGen.transProg(x)
         ARMPrinter.execute(file.getName(), data, instrs)
     }
   }

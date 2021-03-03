@@ -19,7 +19,7 @@ class SemanticErrorTest extends AnyFunSuite {
     if (file.isFile) {
       test("Semantically checks invalid file " + file.getName) {
         val checker = new SemanticChecker
-        val errors =
+        val (_, errors) =
           checker.progAnalysis(
             programWhitespace.parseFromFile(file).get
           )
@@ -32,7 +32,7 @@ class SemanticErrorTest extends AnyFunSuite {
     if (file.isFile) {
       test("Semantically checks valid file " + file.getName) {
         val checker = new SemanticChecker
-        val errors =
+        val (_, errors) =
           checker.progAnalysis(
             programWhitespace.parseFromFile(file).get
           )
