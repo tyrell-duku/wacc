@@ -482,7 +482,11 @@ object CodeGenerator {
         // Size of fst rhs
         instructions += Ldr(R0, ImmMem(getPairElemTypeSize(fstType)))
         instructions += BranchLink(Label("malloc"))
-        instructions += StrB(nextFreeReg, RegAdd(R0))
+        if (fstType == PairElemT(CharT) || fstType == PairElemT(BoolT)) {
+          instructions += StrB(nextFreeReg, RegAdd(R0))
+        } else {
+          instructions += Str(nextFreeReg, RegAdd(R0))
+        }
         instructions += Str(R0, RegAdd(freeReg))
         instructions ++= transExp(snd, nextFreeReg)
         // Size of snd rhs
