@@ -52,6 +52,9 @@ object CodeGenerator {
       prog: Program
   ): (List[Data], List[(Label, List[Instruction])]) = {
     val Program(funcs, stat) = prog
+    for (f <- funcs) {
+      transFunc(f)
+    }
     val instructions = transStat(stat, ListBuffer(Push(ListBuffer(LR))))
     var toAdd = addSP() ++ ListBuffer(
       Ldr(resultReg, ImmMem(0)),
@@ -63,6 +66,30 @@ object CodeGenerator {
     val funcList = userFuncTable.table ++ funcTable.table
 
     (dataTable.table.toList, funcList.toList)
+  }
+
+  private def transFunc(func: Func): Unit = {
+    val Func(t, Ident(id, _), ps, s) = func
+    ps match {
+      case None =>
+      case Some(paramList) =>
+        val ParamList(plist) = paramList
+        var currSp = 4
+        var prevSize = 0
+        for (param <- plist) {
+          val Param(t, i) = param
+          currSp += prevSize
+          prevSize = getBaseTypeSize(t)
+          varTable += (i -> (-currSp, t))
+        }
+    }
+
+    val instrs = ListBuffer(Push(ListBuffer(LR))) ++ transStat(
+      s,
+      ListBuffer.empty[Instruction]
+    )
+    userFuncTable.addEntry(Label("f_" + id), instrs.toList)
+    varTable = Map.empty[Ident, (Int, Type)]
   }
 
   /* Translates read identifiers to the internal representation.
@@ -79,6 +106,7 @@ object CodeGenerator {
     )
     // variable must be in R0 for the branch
     instructions += Mov(R0, freeReg)
+    addUnusedReg(freeReg)
     // pattern matching for which read label to use
     identType match {
       case CharT =>
@@ -97,13 +125,14 @@ object CodeGenerator {
   def transReadArrayElem(ae: ArrayElem): ListBuffer[Instruction] = {
     val ArrayElem(ident, exprs, _) = ae
     val instructions = ListBuffer.empty[Instruction]
-    val resultReg = getFreeReg()
+    val resReg = getFreeReg()
 
     // Handles nested arrays
-    val (_, instrs) = transArrayElem(ident, exprs, resultReg)
+    val (_, instrs) = transArrayElem(ident, exprs, resReg)
     instructions ++= instrs
     // value must be in R0 for branch
-    instructions += Mov(R0, resultReg)
+    instructions += Mov(R0, resReg)
+    addUnusedReg(resReg)
 
     // Gets base type of the arrayElem
     val t = getExprType(ae)
@@ -130,6 +159,18 @@ object CodeGenerator {
     }
   }
 
+  private def transReturn(e: Expr): ListBuffer[Instruction] = {
+    val reg = getFreeReg()
+    val instrs = transExp(e, reg) ++ ListBuffer(
+      Mov(resultReg, reg),
+      Pop(ListBuffer(PC)),
+      Pop(ListBuffer(PC)),
+      Ltorg
+    )
+    addUnusedReg(reg)
+    instrs
+  }
+
   private def transStat(
       stat: Stat,
       instructions: ListBuffer[Instruction]
@@ -139,7 +180,7 @@ object CodeGenerator {
       case EqAssign(l, r)   => instructions ++= transEqAssign(l, r)
       case Read(lhs)        => instructions ++= transRead(lhs)
       // case Free(e)          => instructions ++= ListBuffer.empty[Instruction]
-      // case Return(e)        => instructions ++= ListBuffer.empty[Instruction]
+      case Return(e)        => instructions ++= transReturn(e)
       case Exit(e)          => instructions ++= transExit(e)
       case Print(e)         => instructions ++= transPrint(e, false)
       case PrintLn(e)       => instructions ++= transPrint(e, true)
@@ -254,6 +295,7 @@ object CodeGenerator {
     curInstrs ++= transExp(cond, reg)
     // check if condition is false
     curInstrs += Cmp(reg, ImmInt(0))
+    addUnusedReg(reg)
     val elseBranch = assignLabel()
     curInstrs += BranchEq(elseBranch)
     // statement if the condition was true
@@ -294,6 +336,7 @@ object CodeGenerator {
     instructions ++= transExp(cond, reg)
     // check if condition is true
     instructions += Cmp(reg, ImmInt(1))
+    addUnusedReg(reg)
     instructions += BranchEq(insideWhile)
   }
 
@@ -345,6 +388,30 @@ object CodeGenerator {
     instrs
   }
 
+  private def loadArgs(
+      args: Option[ArgList] = None,
+      reg: Reg
+  ): (ListBuffer[Instruction], Int) = {
+    var instrs = ListBuffer.empty[Instruction]
+    var totalOff = 0
+    args match {
+      case None =>
+      case Some(argList) =>
+        val ArgList(aList) = argList
+        for (e <- aList) {
+          val t = getExprType(e)
+          if (t == CharT || t == BoolT) {
+            instrs += StrBOffsetIndex(reg, SP, -getBaseTypeSize(t))
+          } else {
+            instrs += StrOffsetIndex(reg, SP, -getBaseTypeSize(t))
+          }
+          totalOff += getBaseTypeSize(t)
+          instrs ++= transExp(e, reg)
+        }
+    }
+    (instrs.reverse, totalOff)
+  }
+
   private def assignRHS(
       t: Type,
       aRHS: AssignRHS,
@@ -354,10 +421,17 @@ object CodeGenerator {
     t match {
       case IntT | CharT | BoolT | StringT =>
         aRHS match {
-          case ex: Expr          => instructions ++= transExp(ex, freeReg)
-          case p: PairElem       =>
+          case ex: Expr    => instructions ++= transExp(ex, freeReg)
+          case p: PairElem =>
           case Call(id, args, _) =>
-          case _                 => ListBuffer.empty[Instruction]
+            val Ident(i, _) = id
+            val (argInstrs, toAdd) = loadArgs(args, freeReg)
+            instructions ++= argInstrs ++ ListBuffer(
+              BranchLink(Label("f_" + i)),
+              Add(SP, SP, ImmInt(toAdd)),
+              Mov(freeReg, resultReg)
+            )
+          case _ => ListBuffer.empty[Instruction]
         }
       case ArrayT(t) =>
         val ArrayLiter(opArr, _) = aRHS
