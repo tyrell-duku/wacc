@@ -2,6 +2,6 @@ a is 42
 b is true
 c is u
 d is hello
-e is 0x[a-f,0-9]+
-f is 0x[a-f,0-9]+
+e is #addr#
+f is #addr#
 answer is g
