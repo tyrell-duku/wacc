@@ -1,18 +1,17 @@
 package backend
 
 import InstructionSet._
-import frontend.Rules._
 import scala.collection.mutable.ListBuffer
 
-sealed trait RuntimeError
-case object ArrayBounds extends RuntimeError
-case object DivideByZero extends RuntimeError
-case object Overflow extends RuntimeError
-case object FreePair extends RuntimeError
-case object FreeArray extends RuntimeError
-case object NullPointer extends RuntimeError
+sealed trait PreDefFunc
+case object ArrayBounds extends PreDefFunc
+case object DivideByZero extends PreDefFunc
+case object Overflow extends PreDefFunc
+case object FreePair extends PreDefFunc
+case object FreeArray extends PreDefFunc
+case object NullPointer extends PreDefFunc
 
-object RuntimeErrors {
+object PreDefinedFuncs {
 
   def throwRuntimeError(): (Label, List[Instruction]) = {
     (
