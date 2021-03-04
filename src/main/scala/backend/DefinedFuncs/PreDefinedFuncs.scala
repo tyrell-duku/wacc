@@ -16,6 +16,7 @@ object PreDefinedFuncs {
   case object FreePair extends PreDefFunc
   case object FreeArray extends PreDefFunc
   case object NullPointer extends PreDefFunc
+  case object RuntimeError extends PreDefFunc
 
   def addRuntimeError(err: PreDefFunc): Label = {
     funcTable.addEntry(throwRuntimeError())
@@ -85,6 +86,7 @@ object PreDefinedFuncs {
           )
         )
         Label("p_check_null_pointer")
+      case RuntimeError => Label("p_throw_runtime_error")
     }
   }
 
