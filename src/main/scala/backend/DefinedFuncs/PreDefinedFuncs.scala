@@ -9,90 +9,80 @@ import scala.collection.mutable.ListBuffer
 
 object PreDefinedFuncs {
 
-  sealed trait PreDefFunc
-  case object ArrayBounds extends PreDefFunc
-  case object DivideByZero extends PreDefFunc
-  case object Overflow extends PreDefFunc
-  case object FreePair extends PreDefFunc
-  case object FreeArray extends PreDefFunc
-  case object NullPointer extends PreDefFunc
-  case object RuntimeError extends PreDefFunc
+  sealed trait PreDefFunc {
+    val funcLabel: Label
+    val msgName: List[String]
+    val functionMsg: List[String]
+    val func: (Label, List[Instruction])
+  }
+  case object ArrayBounds extends PreDefFunc {
+    override val funcLabel = Label("p_check_array_bounds")
+    override val msgName = List("msg_neg_index", "msg_index_too_large")
+    override val functionMsg = List(
+      "ArrayIndexOutOfBoundsError: negative index\\n\\0",
+      "ArrayIndexOutOfBoundsError: index too large\\n\\0"
+    )
+    override val func = checkArrayBounds
+  }
+  case object DivideByZero extends PreDefFunc {
+    override val funcLabel = Label("p_check_divide_by_zero")
+    override val msgName = List("msg_divide_by_zero")
+    override val functionMsg =
+      List("DivideByZeroError: divide or modulo by zero\\n\\0")
+    override val func = checkDivideByZero
+  }
+  case object Overflow extends PreDefFunc {
+    override val funcLabel = Label("p_throw_overflow_error")
+    override val msgName = List("msg_overflow")
+    override val functionMsg =
+      List(
+        "OverflowError: the result is too small/large to store in a 4-byte signed-integer.\\n"
+      )
+    override val func = throwOverflowError
+  }
+  case object FreePair extends PreDefFunc {
+    override val funcLabel = Label("p_free_pair")
+    override val msgName = List("msg_null_reference")
+    override val functionMsg =
+      List("NullReferenceError: dereference a null reference\\n\\0")
+    override val func = freePair
 
-  def addRuntimeError(err: PreDefFunc): Label = {
-    funcTable.addEntry(throwRuntimeError())
-    funcTable.addEntry(stringPrintInstrs)
-    dataTable.addDataEntryWithLabel("msg_string", "%.*s\\0")
-    err match {
-      case ArrayBounds =>
-        funcTable.addEntry(
-          checkArrayBounds(
-            dataTable.addDataEntryWithLabel(
-              "msg_neg_index",
-              "ArrayIndexOutOfBoundsError: negative index\\n\\0"
-            ),
-            dataTable.addDataEntryWithLabel(
-              "msg_index_too_large",
-              "ArrayIndexOutOfBoundsError: index too large\\n\\0"
-            )
-          )
-        )
-        Label("p_check_array_bounds")
-      case DivideByZero =>
-        funcTable.addEntry(
-          checkDivideByZero(
-            dataTable.addDataEntryWithLabel(
-              "msg_divide_by_zero",
-              "DivideByZeroError: divide or modulo by zero\\n\\0"
-            )
-          )
-        )
-        Label("p_check_divide_by_zero")
-      case Overflow =>
-        funcTable.addEntry(
-          throwOverflowError(
-            dataTable.addDataEntryWithLabel(
-              "msg_overflow",
-              "OverflowError: the result is too small/large to store in a 4-byte signed-integer.\\n"
-            )
-          )
-        )
-        Label("p_throw_overflow_error")
-      case FreePair =>
-        funcTable.addEntry(
-          freePair(
-            dataTable.addDataEntryWithLabel(
-              "msg_null_reference",
-              "NullReferenceError: dereference a null reference\\n\\0"
-            )
-          )
-        )
-        Label("p_free_pair")
-      case FreeArray =>
-        funcTable.addEntry(
-          freeArray(
-            dataTable.addDataEntry(
-              "NullReferenceError: dereference a null reference\\n\\0"
-            )
-          )
-        )
-        Label("p_free_array")
-      case NullPointer =>
-        funcTable.addEntry(
-          checkNullPointer(
-            dataTable.addDataEntryWithLabel(
-              "msg_null_reference",
-              "NullReferenceError: dereference a null reference\\n\\0"
-            )
-          )
-        )
-        Label("p_check_null_pointer")
-      case RuntimeError => Label("p_throw_runtime_error")
-    }
+  }
+  case object FreeArray extends PreDefFunc {
+    override val funcLabel = Label("p_free_array")
+    override val msgName = List("msg_null_reference")
+    override val functionMsg =
+      List("NullReferenceError: dereference a null reference\\n\\0")
+    override val func = freeArray
+  }
+  case object NullPointer extends PreDefFunc {
+    override val funcLabel = Label("p_check_null_pointer")
+    override val msgName = List("msg_null_reference")
+    override val functionMsg =
+      List("NullReferenceError: dereference a null reference\\n\\0")
+    override val func = checkNullPointer
+  }
+  case object RuntimeError extends PreDefFunc {
+    override val funcLabel = Label("p_throw_runtime_error")
+    override val msgName = List.empty[String]
+    override val functionMsg = List.empty[String]
+    override val func = throwRuntimeError
   }
 
-  def throwRuntimeError(): (Label, List[Instruction]) = {
+  def addRuntimeError(err: PreDefFunc): Label = {
+    funcTable.addEntry(RuntimeError.func)
+    funcTable.addEntry(stringPrintInstrs)
+    dataTable.addDataEntryWithLabel("msg_string", "%.*s\\0")
+    for (i <- 0 until err.functionMsg.length) {
+      dataTable.addDataEntryWithLabel(err.msgName(i), err.functionMsg(i))
+    }
+    funcTable.addEntry(err.func)
+    err.funcLabel
+  }
+
+  def throwRuntimeError: (Label, List[Instruction]) = {
     (
-      Label("p_throw_runtime_error"),
+      RuntimeError.funcLabel,
       List[Instruction](
         BranchLink(Label("p_print_string")),
         Mov(R0, ImmInt(-1)),
@@ -101,57 +91,54 @@ object PreDefinedFuncs {
     )
   }
 
-  def checkArrayBounds(
-      label1: Label,
-      label2: Label
-  ): (Label, List[Instruction]) = {
+  def checkArrayBounds: (Label, List[Instruction]) = {
     (
-      Label("p_check_array_bounds"),
+      ArrayBounds.funcLabel,
       List[Instruction](
         Push(ListBuffer(LR)),
         Cmp(R0, ImmInt(0)),
-        LdrLT(R0, DataLabel(label1)),
-        BranchLinkLT(Label("p_throw_runtime_error")),
+        LdrLT(R0, DataLabel(Label(ArrayBounds.msgName(0)))),
+        BranchLinkLT(RuntimeError.funcLabel),
         Ldr(R1, RegAdd(R1)),
         Cmp(R0, R1),
-        LdrCS(R0, DataLabel(label2)),
-        BranchLinkCS(Label("p_throw_runtime_error")),
+        LdrCS(R0, DataLabel(Label(ArrayBounds.msgName(1)))),
+        BranchLinkCS(RuntimeError.funcLabel),
         Pop(ListBuffer(PC))
       )
     )
   }
 
-  def checkDivideByZero(label: Label): (Label, List[Instruction]) = {
+  def checkDivideByZero: (Label, List[Instruction]) = {
     (
-      Label("p_check_divide_by_zero"),
+      DivideByZero.funcLabel,
       List[Instruction](
         Push(ListBuffer(LR)),
         Cmp(R1, ImmInt(0)),
-        LdrEQ(R0, DataLabel(label)),
-        BranchLinkEQ(Label("p_throw_runtime_error")),
+        LdrEQ(R0, DataLabel(Label(DivideByZero.msgName(0)))),
+        BranchLinkEQ(RuntimeError.funcLabel),
         Pop(ListBuffer(PC))
       )
     )
   }
 
-  def throwOverflowError(label: Label): (Label, List[Instruction]) = {
+  def throwOverflowError: (Label, List[Instruction]) = {
     (
-      Label("p_throw_overflow_error"),
+      Overflow.funcLabel,
       List[Instruction](
-        Ldr(R0, DataLabel(label)),
-        BranchLink(Label("p_throw_runtime_error"))
+        Ldr(R0, DataLabel(Label(Overflow.msgName(0)))),
+        BranchLink(RuntimeError.funcLabel)
       )
     )
   }
 
-  def freePair(label: Label): (Label, List[Instruction]) = {
+  def freePair: (Label, List[Instruction]) = {
     (
-      Label("p_free_pair"),
+      FreePair.funcLabel,
       List[Instruction](
         Push(ListBuffer(LR)),
         Cmp(R0, ImmInt(0)),
-        LdrEQ(R0, DataLabel(label)),
-        BranchEq(Label("p_throw_runtime_error")),
+        LdrEQ(R0, DataLabel(Label(FreePair.msgName(0)))),
+        BranchEq(RuntimeError.funcLabel),
         Push(ListBuffer(R0)),
         Ldr(R0, RegAdd(R0)),
         BranchLink(Label("free")),
@@ -165,28 +152,28 @@ object PreDefinedFuncs {
     )
   }
 
-  def freeArray(label: Label): (Label, List[Instruction]) = {
+  def freeArray: (Label, List[Instruction]) = {
     (
-      Label("p_free_pair"),
+      FreeArray.funcLabel,
       List[Instruction](
         Push(ListBuffer(LR)),
         Cmp(R0, ImmInt(0)),
-        LdrEQ(R0, DataLabel(label)),
-        BranchEq(Label("p_throw_runtime_error")),
+        LdrEQ(R0, DataLabel(Label(FreeArray.msgName(0)))),
+        BranchEq(RuntimeError.funcLabel),
         BranchLink(Label("free")),
         Pop(ListBuffer(PC))
       )
     )
   }
 
-  def checkNullPointer(label: Label): (Label, List[Instruction]) = {
+  def checkNullPointer: (Label, List[Instruction]) = {
     (
-      Label("p_check_null_pointer"),
+      NullPointer.funcLabel,
       List[Instruction](
         Push(ListBuffer(LR)),
         Cmp(R0, ImmInt(0)),
-        LdrEQ(R0, DataLabel(label)),
-        BranchLinkEQ(Label("p_throw_runtime_error")),
+        LdrEQ(R0, DataLabel(Label(NullPointer.msgName(0)))),
+        BranchLinkEQ(RuntimeError.funcLabel),
         Pop(ListBuffer(PC))
       )
     )
