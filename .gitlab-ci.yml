@@ -11,18 +11,12 @@ compile:
 
 test:
   stage: test
-  script: sbt test
+  script:
+    - apt-get install gcc-arm-linux-gnueabi qemu qemu-user -y
+    - sbt test
   needs: []
   artifacts:
     when: always
     reports:
       junit:
         - target/test-reports/TEST-*.xml 
-
-backend-test:
-  stage: test
-  script:
-    - apt-get install python3 gcc-arm-linux-gnueabi qemu qemu-user python3-pip -y
-    - pip3 install colorama
-    - python3 backend_test.py
-  needs: []
