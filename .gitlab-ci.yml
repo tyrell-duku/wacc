@@ -11,7 +11,9 @@ compile:
 
 test:
   stage: test
-  script: sbt test
+  script:
+    - apt-get install gcc-arm-linux-gnueabi qemu qemu-user -y
+    - sbt test
   needs: []
   artifacts:
     when: always
