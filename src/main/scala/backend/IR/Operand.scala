@@ -21,14 +21,12 @@ object Operand {
     override def toString: String = "#'" + c + "'"
   }
 
-  sealed trait Address
-  sealed case class RegisterOffset(r: Reg, n: Int)
-      extends Address
-      with LoadOperand {
+  sealed trait Address extends LoadOperand
+  sealed case class RegisterOffset(r: Reg, n: Int) extends Address {
     override def toString: String = "[" + r + ", #" + n + "]"
   }
 
-  sealed case class RegAdd(r: Reg) extends Address with LoadOperand {
+  sealed case class RegAdd(r: Reg) extends Address {
     override def toString: String = "[" + r + "]"
   }
 

@@ -102,9 +102,31 @@ object InstructionSet {
   case class Ldr(rd: Reg, op2: LoadOperand) extends Instruction {
     override def toString: String = "LDR " + rd + ", " + op2
   }
+  object Ldr {
+    def apply(isByte: Boolean, src: Reg, dst: Reg, offset: Int): Instruction = {
+      if (isByte) {
+        return LdrSB.apply(src, dst, offset)
+      }
+      apply(src, dst, offset)
+    }
+    def apply(src: Reg, dst: Reg, offset: Int): Instruction = {
+      if (offset == 0) {
+        return Ldr(src, RegAdd(dst))
+      }
+      Ldr(src, RegisterOffset(dst, offset))
+    }
+  }
 
   case class LdrSB(rd: Reg, op2: LoadOperand) extends Instruction {
     override def toString: String = "LDRSB " + rd + ", " + op2
+  }
+  object LdrSB {
+    def apply(src: Reg, dst: Reg, offset: Int): Instruction = {
+      if (offset == 0) {
+        return LdrSB(src, RegAdd(dst))
+      }
+      LdrSB(src, RegisterOffset(dst, offset))
+    }
   }
 
   // LDR Equal
@@ -140,15 +162,45 @@ object InstructionSet {
   case class Str(rd: Reg, add: Address) extends Instruction {
     override def toString: String = "STR " + rd + ", " + add
   }
+  object Str {
+    def apply(isByte: Boolean, src: Reg, dst: Reg, offset: Int): Instruction = {
+      if (isByte) {
+        return StrB.apply(src, dst, offset)
+      }
+      apply(src, dst, offset)
+    }
+    def apply(src: Reg, dst: Reg, offset: Int): Instruction = {
+      if (offset == 0) {
+        return Str(src, RegAdd(dst))
+      }
+      Str(src, RegisterOffset(dst, offset))
+    }
+  }
 
   case class StrB(rd: Reg, add: Address) extends Instruction {
     override def toString: String = "STRB " + rd + ", " + add
+  }
+  object StrB {
+    def apply(src: Reg, dst: Reg, offset: Int): Instruction = {
+      if (offset == 0) {
+        return StrB(src, RegAdd(dst))
+      }
+      StrB(src, RegisterOffset(dst, offset))
+    }
   }
 
   case class StrOffsetIndex(rd: Reg, regAdd: Reg, offset: Int)
       extends Instruction {
     override def toString: String =
       "STR " + rd + ", " + "[" + regAdd + ", #" + offset + "]!"
+  }
+  object StrOffsetIndex {
+    def apply(isByte: Boolean, src: Reg, dst: Reg, offset: Int): Instruction = {
+      if (isByte) {
+        return StrBOffsetIndex(src, dst, offset)
+      }
+      StrOffsetIndex(src, dst, offset)
+    }
   }
 
   case class StrBOffsetIndex(rd: Reg, regAdd: Reg, offset: Int)
