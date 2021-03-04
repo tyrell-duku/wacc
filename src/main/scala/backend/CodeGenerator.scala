@@ -290,36 +290,35 @@ class CodeGenerator(var sTable: SymbolTable) {
   }
 
   private def transFree(e: Expr): ListBuffer[Instruction] = {
-    val instructions = ListBuffer.empty[Instruction]
-    val freeReg = getFreeReg()
     e match {
       case id: Ident =>
-        val (spIndex, _) = sTable(id)
-        instructions += Ldr(freeReg, RegisterOffset(SP, currentSP - spIndex))
+        val freeReg = getFreeReg()
+        val instructions = getExprType(id, freeReg)
         instructions += Mov(R0, freeReg)
+        addUnusedReg(freeReg)
         instructions += BranchLink(Label("p_free_pair"))
         addRuntimeError(FreePair)
       // Semantically incorrect
-      case _ =>
+      case _ => ListBuffer.empty[Instruction]
     }
-    instructions
+
   }
 
   private def transReturn(e: Expr): ListBuffer[Instruction] = {
     val reg = getFreeReg()
-    val instrs = transExp(e, reg)
-    instrs += Mov(resultReg, reg)
+    val instructions = transExp(e, reg)
+    instructions += Mov(resultReg, reg)
     if (scopeSP > 0) {
-      instrs ++= addSP(scopeSP)
+      instructions ++= addSP(scopeSP)
     }
-    instrs ++= ListBuffer(
+    instructions ++= ListBuffer(
       Pop(ListBuffer(PC)),
       Pop(ListBuffer(PC)),
       Ltorg
     )
 
     addUnusedReg(reg)
-    instrs
+    instructions
   }
 
   private def transStat(
@@ -605,7 +604,7 @@ class CodeGenerator(var sTable: SymbolTable) {
           val t = getExprType(e)
 
           instrs ++= transExp(e, reg)
-          if (t == CharT || t == BoolT) {
+          if (isByte(t)) {
             instrs += StrBOffsetIndex(reg, SP, -getBaseTypeSize(t))
           } else {
             instrs += StrOffsetIndex(reg, SP, -getBaseTypeSize(t))
@@ -677,7 +676,7 @@ class CodeGenerator(var sTable: SymbolTable) {
   private def pairIsByte(idType: Type, fst: Boolean): Boolean = {
     idType match {
       case Pair(PairElemT(x), PairElemT(y)) => if (fst) isByte(x) else isByte(y)
-      case _                                => false
+      case _                                => falseq
     }
   }
 
@@ -909,14 +908,16 @@ class CodeGenerator(var sTable: SymbolTable) {
       addRuntimeError(ArrayBounds)
 
       instructions += Add(reg, reg, ImmInt(INT_SIZE))
-      if (t == CharT || t == BoolT) {
+
+      val isSizeByte = isByte(t)
+      if (isSizeByte) {
         instructions += Add(reg, reg, nextReg)
       } else {
         instructions += Add(reg, reg, LSL(nextReg, ImmInt(2)))
       }
     }
     addUnusedReg(nextReg)
-    (t == CharT || t == BoolT, instructions)
+    (isSizeByte, instructions)
   }
 
   /* Translates unary operator OP to the internal representation. */
