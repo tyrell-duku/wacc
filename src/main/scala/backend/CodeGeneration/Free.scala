@@ -14,7 +14,7 @@ object Free {
     val instructions = ListBuffer.empty[Instruction]
     val freeReg = getFreeReg()
     val (index, t) = sTable(id)
-    instructions += Ldr(freeReg, RegisterOffset(SP, currentSP - index))
+    instructions += Ldr(freeReg, SP, currentSP - index)
     instructions += Mov(R0, freeReg)
     addUnusedReg(freeReg)
     t match {

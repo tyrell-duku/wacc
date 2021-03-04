@@ -19,11 +19,8 @@ object Arrays {
   ): ListBuffer[Instruction] = {
     val (isByte, instructions) = transArrayElem(id, es, reg)
 
-    if (isByte) {
-      instructions += LdrSB(reg, RegAdd(reg))
-    } else {
-      instructions += Ldr(reg, RegAdd(reg))
-    }
+    instructions += Ldr(isByte, reg, reg, 0)
+
   }
 
   def storeArrayElem(
@@ -34,11 +31,7 @@ object Arrays {
     val freeReg = getFreeReg()
     val (isByte, instructions) = transArrayElem(id, es, freeReg)
 
-    if (isByte) {
-      instructions += StrB(reg, RegAdd(freeReg))
-    } else {
-      instructions += Str(reg, RegAdd(freeReg))
-    }
+    instructions += Str(isByte, reg, freeReg, 0)
 
     addUnusedReg(freeReg)
     instructions

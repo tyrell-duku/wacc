@@ -37,7 +37,7 @@ object Pairs {
       instructions += Ldr(freeReg, RegAdd(freeReg))
     } else {
       // For Snd
-      instructions += Ldr(freeReg, RegisterOffset(freeReg, PAIR_SIZE))
+      instructions += Ldr(freeReg, freeReg, PAIR_SIZE)
     }
     instructions
   }
@@ -48,11 +48,9 @@ object Pairs {
       isFst: Boolean
   ): Instruction = {
     val (_, idType) = sTable(id)
-    if (pairIsByte(idType, isFst)) {
-      LdrSB(freeReg, RegAdd(freeReg))
-    } else {
-      Ldr(freeReg, RegAdd(freeReg))
-    }
+
+    Ldr(pairIsByte(idType, isFst), freeReg, freeReg, 0)
+
   }
 
   def assignRHSPair(
@@ -73,23 +71,15 @@ object Pairs {
     // Size of fst rhs
     instructions += Ldr(R0, ImmMem(getPairElemTypeSize(fstType)))
     instructions += BranchLink(Label("malloc"))
-    if (pairIsByte(p, true)) {
-      instructions += StrB(nextFreeReg, RegAdd(R0))
-    } else {
-      instructions += Str(nextFreeReg, RegAdd(R0))
-    }
+    instructions += Str(pairIsByte(p, true), nextFreeReg, R0, 0)
     instructions += Str(R0, RegAdd(freeReg))
     instructions ++= transExp(snd, nextFreeReg)
     // Size of snd rhs
     instructions += Ldr(R0, ImmMem(getPairElemTypeSize(sndType)))
     instructions += BranchLink(Label("malloc"))
-    if (pairIsByte(p, false)) {
-      instructions += StrB(nextFreeReg, RegAdd(R0))
-    } else {
-      instructions += Str(nextFreeReg, RegAdd(R0))
-    }
+    instructions += Str(pairIsByte(p, false), nextFreeReg, R0, 0)
     addUnusedReg(nextFreeReg)
-    instructions += Str(R0, RegisterOffset(freeReg, PAIR_SIZE))
+    instructions += Str(R0, freeReg, PAIR_SIZE)
 
     instructions
   }
@@ -121,11 +111,8 @@ object Pairs {
     instructions ++= instrs
     val nextReg = getFreeReg()
     instructions ++= transPairElem(id, isFst, nextReg)
-    if (isByte) {
-      instructions += StrB(freeReg, RegAdd(nextReg))
-    } else {
-      instructions += Str(freeReg, RegAdd(nextReg))
-    }
+    instructions += Str(isByte, freeReg, nextReg, 0)
+
     addUnusedReg(nextReg)
     instructions
   }

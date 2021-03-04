@@ -27,11 +27,8 @@ object Assignments {
     val freeReg = getFreeReg()
     val (isByte, instrs) = assignRHS(t, aRHS, freeReg)
     instructions ++= instrs
-    if (isByte) {
-      instructions += StrB(freeReg, RegisterOffset(SP, spOffset))
-    } else {
-      instructions += Str(freeReg, RegisterOffset(SP, spOffset))
-    }
+
+    instructions += Str(isByte, freeReg, SP, spOffset)
 
     addUnusedReg(freeReg)
     instructions
@@ -68,24 +65,16 @@ object Assignments {
         instructions += BranchLink(Label("malloc"))
         instructions += Mov(freeReg, R0)
         val nextFreeReg = getFreeReg()
+        val typeSizeIsByte = isByte(innerType)
 
-        if (innerType == CharT || innerType == BoolT) {
-          for (i <- 0 until listSize) {
-            instructions ++= transExp(arr(i), nextFreeReg)
-            instructions += StrB(
-              nextFreeReg,
-              RegisterOffset(freeReg, i + 4)
-            )
-          }
-        } else {
-          for (i <- 0 until listSize) {
-            instructions ++= transExp(arr(i), nextFreeReg)
-            instructions += Str(
-              nextFreeReg,
-              RegisterOffset(freeReg, (i + 1) * 4)
-            )
-          }
+        val offset: (Int => Int) =
+          if (typeSizeIsByte) (i => i + 4) else (i => (i + 1) * 4)
+
+        for (i <- 0 until listSize) {
+          instructions ++= transExp(arr(i), nextFreeReg)
+          instructions += Str(typeSizeIsByte, nextFreeReg, freeReg, offset(i))
         }
+
         instructions += Ldr(nextFreeReg, ImmMem(listSize))
         instructions += Str(nextFreeReg, RegAdd(freeReg))
         addUnusedReg(nextFreeReg)
@@ -113,11 +102,7 @@ object Assignments {
         instructions ++= instrs
         val spOffset = currentSP - index
 
-        if (isByte) {
-          instructions += StrB(freeReg, RegisterOffset(SP, spOffset))
-        } else {
-          instructions += Str(freeReg, RegisterOffset(SP, spOffset))
-        }
+        instructions += Str(isByte, freeReg, SP, spOffset)
 
       case ae @ ArrayElem(id, es, _) =>
         val (_, instrs) = assignRHS(getExprType(ae), aRHS, freeReg)
