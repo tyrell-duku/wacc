@@ -578,49 +578,40 @@ class CodeGenerator(var sTable: SymbolTable) {
 
   private def assignRHSPair(
       p: Type,
-      rhs: AssignRHS,
+      fst: Expr,
+      snd: Expr,
       freeReg: Reg
   ): ListBuffer[Instruction] = {
     val instructions = ListBuffer.empty[Instruction]
-    val nextFreeReg = getFreeReg()
+
     val Pair(fstType, sndType) = p
-    rhs match {
-      case Newpair(fst, snd, _) =>
-        // Every pair requires 8 bytes
-        instructions += Ldr(R0, ImmMem(2 * PAIR_SIZE))
-        instructions += BranchLink(Label("malloc"))
-        instructions += Mov(freeReg, R0)
-        instructions ++= transExp(fst, nextFreeReg)
-        // Size of fst rhs
-        instructions += Ldr(R0, ImmMem(getPairElemTypeSize(fstType)))
-        instructions += BranchLink(Label("malloc"))
-        if (pairIsByte(p, true)) {
-          instructions += StrB(nextFreeReg, RegAdd(R0))
-        } else {
-          instructions += Str(nextFreeReg, RegAdd(R0))
-        }
-        instructions += Str(R0, RegAdd(freeReg))
-        instructions ++= transExp(snd, nextFreeReg)
-        // Size of snd rhs
-        instructions += Ldr(R0, ImmMem(getPairElemTypeSize(sndType)))
-        instructions += BranchLink(Label("malloc"))
-        if (pairIsByte(p, false)) {
-          instructions += StrB(nextFreeReg, RegAdd(R0))
-        } else {
-          instructions += Str(nextFreeReg, RegAdd(R0))
-        }
-        instructions += Str(R0, RegisterOffset(freeReg, PAIR_SIZE))
-      case ident: Ident =>
-        val (spIndex, _) = sTable(ident)
-        instructions += Ldr(
-          freeReg,
-          RegisterOffset(SP, currentSP - spIndex)
-        )
-      case PairLiter(_)      => instructions += Ldr(freeReg, ImmMem(0))
-      case Call(id, args, _) => instructions ++= transCall(id, args, freeReg)
-      // Semantically incorrect
-      case _ =>
+    val nextFreeReg = getFreeReg()
+    // Every pair requires 8 bytes
+    instructions += Ldr(R0, ImmMem(2 * PAIR_SIZE))
+    instructions += BranchLink(Label("malloc"))
+    instructions += Mov(freeReg, R0)
+    instructions ++= transExp(fst, nextFreeReg)
+    // Size of fst rhs
+    instructions += Ldr(R0, ImmMem(getPairElemTypeSize(fstType)))
+    instructions += BranchLink(Label("malloc"))
+    if (pairIsByte(p, true)) {
+      instructions += StrB(nextFreeReg, RegAdd(R0))
+    } else {
+      instructions += Str(nextFreeReg, RegAdd(R0))
     }
+    instructions += Str(R0, RegAdd(freeReg))
+    instructions ++= transExp(snd, nextFreeReg)
+    // Size of snd rhs
+    instructions += Ldr(R0, ImmMem(getPairElemTypeSize(sndType)))
+    instructions += BranchLink(Label("malloc"))
+    if (pairIsByte(p, false)) {
+      instructions += StrB(nextFreeReg, RegAdd(R0))
+    } else {
+      instructions += Str(nextFreeReg, RegAdd(R0))
+    }
+    addUnusedReg(nextFreeReg)
+    instructions += Str(R0, RegisterOffset(freeReg, PAIR_SIZE))
+
     instructions
   }
 
@@ -691,63 +682,55 @@ class CodeGenerator(var sTable: SymbolTable) {
       freeReg: Reg
   ): (Boolean, ListBuffer[Instruction]) = {
     val instructions = ListBuffer.empty[Instruction]
-    t match {
-      case IntT | CharT | BoolT | StringT =>
-        aRHS match {
-          case ex: Expr => instructions ++= transExp(ex, freeReg)
-          // PairElem
-          case Fst(id: Ident, _) =>
-            instructions ++= transPairElem(id, true, freeReg)
-            instructions += loadPairElem(id, freeReg, true)
-          case Snd(id: Ident, _) =>
-            instructions ++= transPairElem(id, false, freeReg)
-            instructions += loadPairElem(id, freeReg, false)
-          case Call(id, args, _) =>
-            instructions ++= transCall(id, args, freeReg)
-          case _ =>
+    aRHS match {
+      case ex: Expr => instructions ++= transExp(ex, freeReg)
+      // PairElem
+      case Fst(id: Ident, _) =>
+        instructions ++= transPairElem(id, true, freeReg)
+        instructions += loadPairElem(id, freeReg, true)
+        println(instructions)
+      case Snd(id: Ident, _) =>
+        instructions ++= transPairElem(id, false, freeReg)
+        instructions += loadPairElem(id, freeReg, false)
+      case Call(id, args, _) =>
+        instructions ++= transCall(id, args, freeReg)
+      case ArrayLiter(opArr, _) =>
+        val arr = opArr match {
+          case Some(arr) => arr
+          case None      => List.empty[Expr]
         }
-      case ArrayT(t) =>
-        aRHS match {
-          case ArrayLiter(opArr, _) =>
-            val arr = opArr match {
-              case Some(arr) => arr
-              case None      => List.empty[Expr]
-            }
 
-            val listSize = arr.size
-            val baseTypeSize = getBaseTypeSize(t)
-            val sizeToMalloc = 4 + (listSize * baseTypeSize)
-            instructions += Ldr(R0, ImmMem(sizeToMalloc))
-            instructions += BranchLink(Label("malloc"))
-            instructions += Mov(freeReg, R0)
-            val nextFreeReg = getFreeReg()
+        val listSize = arr.size
+        val baseTypeSize = getBaseTypeSize(t)
+        val sizeToMalloc = 4 + (listSize * baseTypeSize)
+        instructions += Ldr(R0, ImmMem(sizeToMalloc))
+        instructions += BranchLink(Label("malloc"))
+        instructions += Mov(freeReg, R0)
+        val nextFreeReg = getFreeReg()
 
-            if (t == CharT || t == BoolT) {
-              for (i <- 0 until listSize) {
-                instructions ++= transExp(arr(i), nextFreeReg)
-                instructions += StrB(
-                  nextFreeReg,
-                  RegisterOffset(freeReg, i + 4)
-                )
-              }
-            } else {
-              for (i <- 0 until listSize) {
-                instructions ++= transExp(arr(i), nextFreeReg)
-                instructions += Str(
-                  nextFreeReg,
-                  RegisterOffset(freeReg, (i + 1) * 4)
-                )
-              }
-            }
-            instructions += Ldr(nextFreeReg, ImmMem(listSize))
-            instructions += Str(nextFreeReg, RegAdd(freeReg))
-            addUnusedReg(nextFreeReg)
-          case Call(id, args, _) =>
-            instructions ++= transCall(id, args, freeReg)
-          case _ =>
+        if (t == CharT || t == BoolT) {
+          for (i <- 0 until listSize) {
+            instructions ++= transExp(arr(i), nextFreeReg)
+            instructions += StrB(
+              nextFreeReg,
+              RegisterOffset(freeReg, i + 4)
+            )
+          }
+        } else {
+          for (i <- 0 until listSize) {
+            instructions ++= transExp(arr(i), nextFreeReg)
+            instructions += Str(
+              nextFreeReg,
+              RegisterOffset(freeReg, (i + 1) * 4)
+            )
+          }
         }
-      case p: Pair => instructions ++= assignRHSPair(p, aRHS, freeReg)
-      case _       =>
+        instructions += Ldr(nextFreeReg, ImmMem(listSize))
+        instructions += Str(nextFreeReg, RegAdd(freeReg))
+        addUnusedReg(nextFreeReg)
+      case Newpair(fst, snd, _) =>
+        instructions ++= assignRHSPair(t, fst, snd, freeReg)
+      case _ =>
     }
     (isByte(t), instructions)
   }
