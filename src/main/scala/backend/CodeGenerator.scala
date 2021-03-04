@@ -6,7 +6,7 @@ import frontend.Semantics.SymbolTable
 import scala.collection.mutable.ListBuffer
 import PrintInstrs._
 import ReadInstructions._
-import RuntimeErrors._
+import PreDefinedFuncs._
 
 class CodeGenerator(var sTable: SymbolTable) {
   final val allRegs: ListBuffer[Reg] =
@@ -51,7 +51,7 @@ class CodeGenerator(var sTable: SymbolTable) {
     new Pop(regsToPush)
   }
 
-  private def addRuntimeError(err: RuntimeError): Label = {
+  def addRuntimeError(err: PreDefFunc): Label = {
     funcTable.addEntry(throwRuntimeError())
     funcTable.addEntry(stringPrintInstrs)
     dataTable.addDataEntryWithLabel("msg_string", "%.*s\\0")
