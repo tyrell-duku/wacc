@@ -106,6 +106,9 @@ package object InstructionSet {
     override def toString: String =
       "LDR " + rd + ", " + "[" + regAdd + ", #" + offset + "]"
   }
+  case class LdrSB(rd: Reg, op2: LoadOperand) extends Instruction {
+    override def toString: String = "LDRSB " + rd + ", " + op2
+  }
 
   case class LdrCond(cond: Condition, rd: Reg, op2: LoadOperand)
       extends Instruction {

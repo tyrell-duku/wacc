@@ -35,6 +35,7 @@ class CodeGenerator(var sTable: SymbolTable) {
   private val BOOL_SIZE = 1
   private val STR_SIZE = 4
   private val ARRAY_SIZE = 4
+  private val PAIR_SIZE = 4
   private val MAX_INT_IMM = 1024
 
   private def saveRegs(
@@ -51,7 +52,7 @@ class CodeGenerator(var sTable: SymbolTable) {
     new Pop(regsToPush)
   }
 
-  private def addRuntimeError(err: RuntimeError) {
+  private def addRuntimeError(err: RuntimeError): Unit = {
     funcTable.addEntry(throwRuntimeError())
     funcTable.addEntry(stringPrintInstrs)
     dataTable.addDataEntryWithLabel("msg_string", "%.*s\\0")
@@ -89,9 +90,18 @@ class CodeGenerator(var sTable: SymbolTable) {
         )
       case FreePair =>
         funcTable.addEntry(
-          free_pair(
+          freePair(
             dataTable.addDataEntryWithLabel(
-              "msg_null_refernce",
+              "msg_null_reference",
+              "NullReferenceError: dereference a null reference\\n\\0"
+            )
+          )
+        )
+      case NullPointer =>
+        funcTable.addEntry(
+          checkNullPointer(
+            dataTable.addDataEntryWithLabel(
+              "msg_null_reference",
               "NullReferenceError: dereference a null reference\\n\\0"
             )
           )
@@ -211,9 +221,24 @@ class CodeGenerator(var sTable: SymbolTable) {
     lhs match {
       case ident: Ident  => transReadIdent(ident)
       case ae: ArrayElem => transReadArrayElem(ae)
-      // CODEME
-      case _: PairElem => ListBuffer.empty[Instruction]
+      case _             => ListBuffer.empty[Instruction]
     }
+  }
+
+  private def transFree(e: Expr): ListBuffer[Instruction] = {
+    val instructions = ListBuffer.empty[Instruction]
+    val freeReg = getFreeReg()
+    e match {
+      case id: Ident =>
+        val (spIndex, _) = sTable(id)
+        instructions += Ldr(freeReg, RegisterOffset(SP, currentSP - spIndex))
+        instructions += Mov(R0, freeReg)
+        instructions += BranchLink(Label("p_free_pair"))
+        addRuntimeError(FreePair)
+      // Semantically incorrect
+      case _ =>
+    }
+    instructions
   }
 
   private def transReturn(e: Expr): ListBuffer[Instruction] = {
@@ -242,14 +267,13 @@ class CodeGenerator(var sTable: SymbolTable) {
       case EqIdent(t, i, r) => instructions ++= transEqIdent(t, i, r)
       case EqAssign(l, r)   => instructions ++= transEqAssign(l, r)
       case Read(lhs)        => instructions ++= transRead(lhs)
-      // case Free(e)          => instructions ++= ListBuffer.empty[Instruction]
-      case Return(e)  => instructions ++= transReturn(e)
-      case Exit(e)    => instructions ++= transExit(e)
-      case Print(e)   => instructions ++= transPrint(e, false)
-      case PrintLn(e) => instructions ++= transPrint(e, true)
-      case If(cond, s1, s2) =>
-        transIf(cond, s1, s2, instructions)
-      case While(cond, s) => transWhile(cond, s, instructions)
+      case Free(e)          => instructions ++= transFree(e)
+      case Return(e)        => instructions ++= transReturn(e)
+      case Exit(e)          => instructions ++= transExit(e)
+      case Print(e)         => instructions ++= transPrint(e, false)
+      case PrintLn(e)       => instructions ++= transPrint(e, true)
+      case If(cond, s1, s2) => transIf(cond, s1, s2, instructions)
+      case While(cond, s)   => transWhile(cond, s, instructions)
       case Seq(statList) =>
         var nextInstructions = instructions
         for (s <- statList) {
@@ -319,7 +343,7 @@ class CodeGenerator(var sTable: SymbolTable) {
         dataTable.addDataEntryWithLabel("msg_string", "%.*s\\0")
         instrs += BranchLink(Label("p_print_string"))
         funcTable.addEntry(stringPrintInstrs)
-      case Pair(null, null) =>
+      case Pair(_, _) =>
         dataTable.addDataEntryWithLabel("msg_reference", "%p\\0")
         instrs += BranchLink(Label("p_print_reference"))
         funcTable.addEntry(referencePrintInstrs)
@@ -505,6 +529,101 @@ class CodeGenerator(var sTable: SymbolTable) {
     (instrs, totalOff)
   }
 
+  private def assignRHSPair(
+      p: Type,
+      rhs: AssignRHS,
+      freeReg: Reg
+  ): ListBuffer[Instruction] = {
+    val instructions = ListBuffer.empty[Instruction]
+    val nextFreeReg = getFreeReg()
+    val Pair(fstType, sndType) = p
+    rhs match {
+      case Newpair(fst, snd, _) =>
+        // Every pair requires 8 bytes
+        instructions += Ldr(R0, ImmMem(2 * PAIR_SIZE))
+        instructions += BranchLink(Label("malloc"))
+        instructions += Mov(freeReg, R0)
+        instructions ++= transExp(fst, nextFreeReg)
+        // Size of fst rhs
+        instructions += Ldr(R0, ImmMem(getPairElemTypeSize(fstType)))
+        instructions += BranchLink(Label("malloc"))
+        if (pairIsByte(p, true)) {
+          instructions += StrB(nextFreeReg, RegAdd(R0))
+        } else {
+          instructions += Str(nextFreeReg, RegAdd(R0))
+        }
+        instructions += Str(R0, RegAdd(freeReg))
+        instructions ++= transExp(snd, nextFreeReg)
+        // Size of snd rhs
+        instructions += Ldr(R0, ImmMem(getPairElemTypeSize(sndType)))
+        instructions += BranchLink(Label("malloc"))
+        if (pairIsByte(p, false)) {
+          instructions += StrB(nextFreeReg, RegAdd(R0))
+        } else {
+          instructions += Str(nextFreeReg, RegAdd(R0))
+        }
+        instructions += Str(R0, RegisterOffset(freeReg, PAIR_SIZE))
+      case ident: Ident =>
+        val (spIndex, _) = sTable(ident)
+        instructions += Ldr(
+          freeReg,
+          RegisterOffset(SP, currentSP - spIndex)
+        )
+      case PairLiter(_) => instructions += Ldr(freeReg, ImmMem(0))
+      // Semantically incorrect
+      case _ => instructions
+    }
+    instructions
+  }
+
+  private def isByte(t: Type): Boolean = {
+    t == BoolT || t == CharT
+  }
+
+  private def pairIsByte(idType: Type, fst: Boolean): Boolean = {
+    idType match {
+      case Pair(PairElemT(x), PairElemT(y)) => if (fst) isByte(x) else isByte(y)
+      case _                                => false
+    }
+  }
+
+  private def transPairElem(
+      id: Ident,
+      fst: Boolean,
+      freeReg: Reg
+  ): ListBuffer[Instruction] = {
+    val instructions = ListBuffer.empty[Instruction]
+    val (spOffset, idType) = sTable(id)
+    val spIndex = currentSP - spOffset
+    instructions += Ldr(freeReg, RegisterOffset(SP, spIndex))
+    // Value must be in R0 for branch
+    instructions += Mov(R0, freeReg)
+    // Runtime error
+    instructions += BranchLink(Label("p_check_null_pointer"))
+    addRuntimeError(NullPointer)
+    if (fst) {
+      // For Fst
+      instructions += Ldr(freeReg, RegAdd(freeReg))
+    } else {
+      // For Snd
+      instructions += Ldr(freeReg, RegisterOffset(freeReg, PAIR_SIZE))
+    }
+    instructions
+  }
+
+  private def loadPairElem(
+      id: Ident,
+      freeReg: Reg,
+      isFst: Boolean
+  ): Instruction = {
+    val (_, idType) = sTable(id)
+    if (pairIsByte(idType, isFst)) {
+      LdrSB(freeReg, RegAdd(freeReg))
+    } else {
+      Ldr(freeReg, RegAdd(freeReg))
+    }
+  }
+
   private def assignRHS(
       t: Type,
       aRHS: AssignRHS,
@@ -514,8 +633,14 @@ class CodeGenerator(var sTable: SymbolTable) {
     t match {
       case IntT | CharT | BoolT | StringT =>
         aRHS match {
-          case ex: Expr    => instructions ++= transExp(ex, freeReg)
-          case p: PairElem =>
+          case ex: Expr => instructions ++= transExp(ex, freeReg)
+          // PairElem
+          case Fst(id: Ident, _) =>
+            instructions ++= transPairElem(id, true, freeReg)
+            instructions += loadPairElem(id, freeReg, true)
+          case Snd(id: Ident, _) =>
+            instructions ++= transPairElem(id, false, freeReg)
+            instructions += loadPairElem(id, freeReg, false)
           case Call(id, args, _) =>
             val Ident(i, _) = id
             val (argInstrs, toAdd) = loadArgs(args, freeReg)
@@ -558,9 +683,46 @@ class CodeGenerator(var sTable: SymbolTable) {
         instructions += Ldr(nextFreeReg, ImmMem(listSize))
         instructions += Str(nextFreeReg, RegAdd(freeReg))
         addUnusedReg(nextFreeReg)
-      case _ =>
+      case p: Pair => instructions ++= assignRHSPair(p, aRHS, freeReg)
+      case _       => instructions
     }
-    (t == CharT || t == BoolT, instructions)
+    (isByte(t), instructions)
+  }
+
+  private def transEqAssignPairElem(
+      rhs: AssignRHS,
+      id: Ident,
+      isFst: Boolean,
+      freeReg: Reg
+  ): ListBuffer[Instruction] = {
+    val instructions = ListBuffer.empty[Instruction]
+    val (index, t) = sTable(id)
+    val pairElemType = if (isFst) {
+      t match {
+        case Pair(PairElemT(fstType), _) => fstType
+        case Pair(PairElemPair, _)       => Pair(null, null)
+        // Semantically incorrect
+        case _ => null
+      }
+    } else {
+      t match {
+        case Pair(_, PairElemT(sndType)) => sndType
+        case Pair(_, PairElemPair)       => Pair(null, null)
+        // Semantically incorrect
+        case _ => null
+      }
+    }
+    val (isByte, instrs) = assignRHS(pairElemType, rhs, freeReg)
+    instructions ++= instrs
+    val nextReg = getFreeReg()
+    instructions ++= transPairElem(id, isFst, nextReg)
+    if (isByte) {
+      instructions += StrB(freeReg, RegAdd(nextReg))
+    } else {
+      instructions += Str(freeReg, RegAdd(nextReg))
+    }
+    addUnusedReg(nextReg)
+    instructions
   }
 
   private def transEqAssign(
@@ -570,7 +732,10 @@ class CodeGenerator(var sTable: SymbolTable) {
     val instructions = ListBuffer.empty[Instruction]
     val freeReg = getFreeReg()
     aLHS match {
-      case elem: PairElem => ListBuffer.empty[Instruction]
+      case Fst(id: Ident, _) =>
+        instructions ++= transEqAssignPairElem(aRHS, id, true, freeReg)
+      case Snd(id: Ident, _) =>
+        instructions ++= transEqAssignPairElem(aRHS, id, false, freeReg)
       case id: Ident =>
         val (index, t) = sTable(id)
         val (isByte, instrs) = assignRHS(t, aRHS, freeReg)
@@ -587,7 +752,7 @@ class CodeGenerator(var sTable: SymbolTable) {
         val (_, instrs) = assignRHS(getExprType(ae), aRHS, freeReg)
         instructions ++= instrs
         instructions ++= storeArrayElem(id, es, freeReg)
-
+      case _ =>
     }
     addUnusedReg(freeReg)
     instructions
@@ -853,9 +1018,15 @@ class CodeGenerator(var sTable: SymbolTable) {
       case CharT          => CHAR_SIZE
       case StringT        => STR_SIZE
       case ArrayT(innerT) => ARRAY_SIZE
-      // CODEME
-      case _: PairType => -1
-      case _           => -1
+      case Pair(_, _)     => PAIR_SIZE
+      case _              => -1
+    }
+  }
+
+  private def getPairElemTypeSize(pairType: PairElemType): Int = {
+    pairType match {
+      case PairElemPair        => PAIR_SIZE
+      case PairElemT(baseType) => getBaseTypeSize(baseType)
     }
   }
 
