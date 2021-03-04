@@ -85,10 +85,9 @@ object BackendTestHelper extends AnyFunSuite {
     var outLines = readFile(outputFile)
     val expLines = readFile(expOut)
     outputFile.delete()
-    // to match register addresses
-    val pattern = "0x[0-9]+".r
-    outLines.equals(expLines)
-    outLines = pattern replaceAllIn (outLines, "")
+    // Replace register addresses
+    val addr = "0x[0-9a-z]+".r
+    outLines = addr replaceAllIn (outLines, "#addr#")
     outLines.equals(expLines)
   }
 }
