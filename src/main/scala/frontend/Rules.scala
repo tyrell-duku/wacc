@@ -447,7 +447,7 @@ object Rules {
         semErrs += VariableNotDeclared(this)
         return Any
       }
-      sTable.lookupAll(this)
+      sTable.lookupAllType(this)
     }
 
     override def equals(x: Any): Boolean =

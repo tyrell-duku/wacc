@@ -16,6 +16,9 @@ package object InstructionSet {
   case class Sub(rd: Reg, rn: Reg, op2: Operand) extends Instruction {
     override def toString: String = "SUB " + rd + ", " + rn + ", " + op2
   }
+  case class SubS(rd: Reg, rn: Reg, op2: Operand) extends Instruction {
+    override def toString: String = "SUBS " + rd + ", " + rn + ", " + op2
+  }
   case class Mul(rd: Reg, rm: Reg, rs: Reg) extends Instruction {
     override def toString: String = "MUL " + rd + ", " + rm + ", " + rs
   }

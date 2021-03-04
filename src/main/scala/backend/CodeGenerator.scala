@@ -2,12 +2,13 @@ package backend
 
 import InstructionSet._
 import frontend.Rules._
+import frontend.Semantics.SymbolTable
 import scala.collection.mutable.ListBuffer
 import PrintInstrs._
 import ReadInstructions._
 import RuntimeErrors._
 
-object CodeGenerator {
+class CodeGenerator(var sTable: SymbolTable) {
   final val allRegs: ListBuffer[Reg] =
     ListBuffer(R0, R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12)
 
@@ -18,8 +19,9 @@ object CodeGenerator {
   freeRegs -= R2
   freeRegs -= R3
 
-  var varTable = Map.empty[Ident, (Int, Type)]
   var currentSP = 0
+  var scopeSP = 0
+  var oldScopeSP = 0
   private var currentLabel = Label("main")
 
   private var labelCounter = 0
@@ -115,6 +117,7 @@ object CodeGenerator {
       transFunc(f)
     }
     currentLabel = Label("main")
+
     val instructions = transStat(stat, ListBuffer(Push(ListBuffer(LR))))
     var toAdd = addSP() ++ ListBuffer(
       Ldr(resultReg, ImmMem(0)),
@@ -129,6 +132,9 @@ object CodeGenerator {
   }
 
   private def transFunc(func: Func): Unit = {
+    oldScopeSP = scopeSP
+    scopeSP = 0
+    sTable = sTable.getNextScope
     val Func(t, Ident(id, _), ps, s) = func
     currentLabel = Label("f_" + id)
     ps match {
@@ -138,17 +144,19 @@ object CodeGenerator {
         var currSp = 4
         var prevSize = 0
         for (param <- plist) {
-          val Param(t, i) = param
+          val Param(t, id) = param
           currSp += prevSize
           prevSize = getBaseTypeSize(t)
-          varTable += (i -> (-currSp, t))
+          sTable.add(id, -currSp, t)
         }
     }
 
     val instrs = transStat(s, ListBuffer(Push(ListBuffer(LR))))
 
+    scopeSP = oldScopeSP
+    sTable = sTable.getPrevScope
+
     userFuncTable.addEntry(currentLabel, instrs.toList)
-    varTable = Map.empty[Ident, (Int, Type)]
   }
 
   /* Translates read identifiers to the internal representation.
@@ -156,7 +164,7 @@ object CodeGenerator {
   private def transReadIdent(ident: Ident): ListBuffer[Instruction] = {
     val instructions = ListBuffer.empty[Instruction]
     val freeReg = getFreeReg()
-    val (spIndex, identType) = varTable(ident)
+    val (spIndex, identType) = sTable(ident)
     val spOffset = currentSP - spIndex
     instructions += InstructionSet.Add(
       freeReg,
@@ -222,7 +230,7 @@ object CodeGenerator {
     val freeReg = getFreeReg()
     e match {
       case id: Ident =>
-        val (spIndex, _) = varTable(id)
+        val (spIndex, _) = sTable(id)
         instructions += Ldr(freeReg, RegisterOffset(SP, currentSP - spIndex))
         instructions += Mov(R0, freeReg)
         instructions += BranchLink(Label("p_free_pair"))
@@ -235,14 +243,18 @@ object CodeGenerator {
 
   private def transReturn(e: Expr): ListBuffer[Instruction] = {
     val reg = getFreeReg()
-    val instrs = transExp(e, reg) ++ ListBuffer(
-      Mov(resultReg, reg),
-      Add(SP, SP, ImmInt(currentSP)),
+    val instrs = transExp(e, reg)
+    instrs += Mov(resultReg, reg)
+    if (scopeSP > 0) {
+      instrs += Add(SP, SP, ImmInt(scopeSP))
+      currentSP -= scopeSP
+    }
+    instrs ++= ListBuffer(
       Pop(ListBuffer(PC)),
       Pop(ListBuffer(PC)),
       Ltorg
     )
-    currentSP = 0
+
     addUnusedReg(reg)
     instrs
   }
@@ -268,7 +280,8 @@ object CodeGenerator {
           nextInstructions = transStat(s, nextInstructions)
         }
         nextInstructions
-      case _ => instructions
+      case Begin(s) => transNextScope(s, instructions)
+      case _        => instructions
     }
   }
 
@@ -286,10 +299,10 @@ object CodeGenerator {
       case StrLiter(_, _)  => StringT
       case PairLiter(_)    => Pair(null, null)
       case id: Ident =>
-        val (_, t) = varTable.apply(id)
+        val (_, t) = sTable(id)
         t
       case ArrayElem(id, es, _) =>
-        var (_, t) = varTable.apply(id)
+        var (_, t) = sTable(id)
         for (_ <- es) {
           t = getInnerType(t)
         }
@@ -360,13 +373,29 @@ object CodeGenerator {
     nextLabel
   }
 
+  private def transNextScope(
+      s: Stat,
+      curInstrs: ListBuffer[Instruction]
+  ): ListBuffer[Instruction] = {
+    oldScopeSP = scopeSP
+    scopeSP = 0
+    sTable = sTable.getNextScope
+    val instructions = transStat(s, curInstrs)
+    if (scopeSP > 0) {
+      instructions += Add(SP, SP, ImmInt(scopeSP))
+      currentSP -= scopeSP
+    }
+    scopeSP = oldScopeSP
+    sTable = sTable.getPrevScope
+    instructions
+  }
+
   private def transIf(
       cond: Expr,
       s1: Stat,
       s2: Stat,
       curInstrs: ListBuffer[Instruction]
   ): ListBuffer[Instruction] = {
-    val instructions = ListBuffer.empty[Instruction]
     val reg = getFreeReg()
     curInstrs ++= transExp(cond, reg)
     // check if condition is false
@@ -374,21 +403,25 @@ object CodeGenerator {
     addUnusedReg(reg)
     val elseBranch = assignLabel()
     curInstrs += BranchEq(elseBranch)
+
     // statement if the condition was true
-    curInstrs ++= transStat(s1, ListBuffer.empty[Instruction])
+    val instructions = transNextScope(s1, curInstrs)
 
     val afterLabel = assignLabel()
-    curInstrs += Branch(afterLabel)
+    instructions += Branch(afterLabel)
 
-    userFuncTable.addEntry(currentLabel, curInstrs.toList)
+    userFuncTable.addEntry(currentLabel, instructions.toList)
     currentLabel = elseBranch
+
+    val elseInstrs = transNextScope(s2, ListBuffer.empty[Instruction])
+
     userFuncTable.addEntry(
       currentLabel,
-      transStat(s2, ListBuffer.empty[Instruction]).toList
+      elseInstrs.toList
     )
     currentLabel = afterLabel
 
-    instructions
+    ListBuffer.empty[Instruction]
   }
 
   private def transWhile(
@@ -403,8 +436,10 @@ object CodeGenerator {
 
     val insideWhile = assignLabel()
     currentLabel = insideWhile
-    val transInnerWhile = transStat(s, ListBuffer.empty[Instruction]).toList
-    userFuncTable.addEntry(currentLabel, transInnerWhile)
+
+    val transInnerWhile = transNextScope(s, ListBuffer.empty[Instruction])
+
+    userFuncTable.addEntry(currentLabel, transInnerWhile.toList)
 
     currentLabel = afterLabel
 
@@ -436,7 +471,8 @@ object CodeGenerator {
   ): ListBuffer[Instruction] = {
     val instructions = ListBuffer.empty[Instruction]
     currentSP += getBaseTypeSize(t)
-    varTable += (id -> (currentSP, t))
+    scopeSP += getBaseTypeSize(t)
+    sTable.add(id, currentSP, t)
 
     instructions += InstructionSet.Sub(SP, SP, ImmInt(getBaseTypeSize(t)))
 
@@ -461,6 +497,7 @@ object CodeGenerator {
       instrs += InstructionSet.Add(SP, SP, ImmInt(MAX_INT_IMM))
     }
     instrs += InstructionSet.Add(SP, SP, ImmInt(curSp))
+    currentSP = 0
     instrs
   }
 
@@ -474,18 +511,22 @@ object CodeGenerator {
       case None =>
       case Some(argList) =>
         val ArgList(aList) = argList
-        for (e <- aList) {
+        val pList = aList.reverse
+        for (e <- pList) {
           val t = getExprType(e)
+
+          instrs ++= transExp(e, reg)
           if (t == CharT || t == BoolT) {
             instrs += StrBOffsetIndex(reg, SP, -getBaseTypeSize(t))
           } else {
             instrs += StrOffsetIndex(reg, SP, -getBaseTypeSize(t))
           }
+          currentSP += getBaseTypeSize(t)
           totalOff += getBaseTypeSize(t)
-          instrs ++= transExp(e, reg)
         }
     }
-    (instrs.reverse, totalOff)
+    currentSP -= totalOff
+    (instrs, totalOff)
   }
 
   private def assignRHSPair(
@@ -523,7 +564,7 @@ object CodeGenerator {
         }
         instructions += Str(R0, RegisterOffset(freeReg, PAIR_SIZE))
       case ident: Ident =>
-        val (spIndex, _) = varTable(ident)
+        val (spIndex, _) = sTable(ident)
         instructions += Ldr(
           freeReg,
           RegisterOffset(SP, currentSP - spIndex)
@@ -552,7 +593,7 @@ object CodeGenerator {
       freeReg: Reg
   ): ListBuffer[Instruction] = {
     val instructions = ListBuffer.empty[Instruction]
-    val (spOffset, idType) = varTable(id)
+    val (spOffset, idType) = sTable(id)
     val spIndex = currentSP - spOffset
     instructions += Ldr(freeReg, RegisterOffset(SP, spIndex))
     // Value must be in R0 for branch
@@ -575,7 +616,7 @@ object CodeGenerator {
       freeReg: Reg,
       isFst: Boolean
   ): Instruction = {
-    val (_, idType) = varTable(id)
+    val (_, idType) = sTable(id)
     if (pairIsByte(idType, isFst)) {
       LdrSB(freeReg, RegAdd(freeReg))
     } else {
@@ -655,7 +696,7 @@ object CodeGenerator {
       freeReg: Reg
   ): ListBuffer[Instruction] = {
     val instructions = ListBuffer.empty[Instruction]
-    val (index, t) = varTable.apply(id)
+    val (index, t) = sTable(id)
     val pairElemType = if (isFst) {
       t match {
         case Pair(PairElemT(fstType), _) => fstType
@@ -696,7 +737,7 @@ object CodeGenerator {
       case Snd(id: Ident, _) =>
         instructions ++= transEqAssignPairElem(aRHS, id, false, freeReg)
       case id: Ident =>
-        val (index, t) = varTable.apply(id)
+        val (index, t) = sTable(id)
         val (isByte, instrs) = assignRHS(t, aRHS, freeReg)
         instructions ++= instrs
         val spOffset = currentSP - index
@@ -762,7 +803,7 @@ object CodeGenerator {
       es: List[Expr],
       reg: Reg
   ): (Boolean, ListBuffer[Instruction]) = {
-    var (index, t) = varTable.apply(id)
+    var (index, t) = sTable(id)
     val instructions = ListBuffer.empty[Instruction]
 
     val baseTypeSize = getBaseTypeSize(t)
@@ -796,7 +837,7 @@ object CodeGenerator {
     op match {
       case Chr(e, _) => transExp(e, reg)
       case Len(id: Ident, _) =>
-        val (index, _) = varTable.apply(id)
+        val (index, _) = sTable(id)
         ListBuffer(
           Ldr(reg, RegisterOffset(SP, currentSP - index)),
           Ldr(reg, RegAdd(reg))
@@ -901,7 +942,7 @@ object CodeGenerator {
         val rReg = getFreeReg()
         instructions ++= transExp(l, reg)
         instructions ++= transExp(r, rReg)
-        instructions += InstructionSet.Sub(reg, reg, rReg)
+        instructions += SubS(reg, reg, rReg)
         // Runtime error check
         instructions += BranchLinkVS(Label("p_throw_overflow_error"))
         addRuntimeError(Overflow)
@@ -937,7 +978,7 @@ object CodeGenerator {
       case PairLiter(_)    => instructions += Ldr(reg, ImmMem(0))
       // TODO: track variable location
       case id: Ident =>
-        val (index, t) = varTable.apply(id)
+        val (index, t) = sTable(id)
         val spOffset = currentSP - index
         t match {
           case CharT | BoolT =>
