@@ -87,7 +87,7 @@ case class SymbolTable(
 
   def add(id: Ident, t: Type): Unit = {
     val codeGen = new CodeGenerator(this)
-    spDepth += codeGen.getBaseTypeSize(t)
+    spMaxDepth += codeGen.getBaseTypeSize(t)
     varMap.addOne(id, (0, t))
   }
 
