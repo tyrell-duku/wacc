@@ -19,9 +19,6 @@ package object InstructionSet {
   case class SubS(rd: Reg, rn: Reg, op2: Operand) extends Instruction {
     override def toString: String = "SUBS " + rd + ", " + rn + ", " + op2
   }
-  case class Mul(rd: Reg, rm: Reg, rs: Reg) extends Instruction {
-    override def toString: String = "MUL " + rd + ", " + rm + ", " + rs
-  }
   case class SMul(rdLo: Reg, rdHi: Reg, rn: Reg, rm: Reg) extends Instruction {
     override def toString: String =
       "SMULL " + rdLo + ", " + rdHi + ", " + rn + ", " + rm
@@ -87,8 +84,8 @@ package object InstructionSet {
   case class Ldr(rd: Reg, op2: LoadOperand) extends Instruction {
     override def toString: String = "LDR " + rd + ", " + op2
   }
-  case class LdrB(rd: Reg, op2: LoadOperand) extends Instruction {
-    override def toString: String = "LDRB " + rd + ", " + op2
+  case class LdrSB(rd: Reg, op2: LoadOperand) extends Instruction {
+    override def toString: String = "LDRSB " + rd + ", " + op2
   }
   // LDR Equal
   case class LdrEQ(rd: Reg, op2: LoadOperand) extends Instruction {
@@ -102,14 +99,6 @@ package object InstructionSet {
   case class LdrCS(rd: Reg, op2: LoadOperand) extends Instruction {
     override def toString: String = "LDRCS " + rd + ", " + op2
   }
-  case class LdrOffset(rd: Reg, regAdd: Reg, offset: Int) extends Instruction {
-    override def toString: String =
-      "LDR " + rd + ", " + "[" + regAdd + ", #" + offset + "]"
-  }
-  case class LdrSB(rd: Reg, op2: LoadOperand) extends Instruction {
-    override def toString: String = "LDRSB " + rd + ", " + op2
-  }
-
   case class LdrCond(cond: Condition, rd: Reg, op2: LoadOperand)
       extends Instruction {
     override def toString: String = "LDR" + cond + " " + rd + ", " + op2
@@ -131,11 +120,6 @@ package object InstructionSet {
 
   case class StrB(rd: Reg, add: Address) extends Instruction {
     override def toString: String = "STRB " + rd + ", " + add
-  }
-
-  case class StrOffset(rd: Reg, regAdd: Reg, offset: Int) extends Instruction {
-    override def toString: String =
-      "STR " + rd + ", " + "[" + regAdd + ", #" + offset + "]"
   }
 
   case class StrOffsetIndex(rd: Reg, regAdd: Reg, offset: Int)
