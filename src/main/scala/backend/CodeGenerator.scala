@@ -213,8 +213,7 @@ object CodeGenerator {
     lhs match {
       case ident: Ident  => transReadIdent(ident)
       case ae: ArrayElem => transReadArrayElem(ae)
-      // CODEME
-      case _: PairElem => ListBuffer.empty[Instruction]
+      case _             => ListBuffer.empty[Instruction]
     }
   }
 
