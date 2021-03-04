@@ -144,7 +144,7 @@ class SemanticChecker {
 
   private def freeStat(e: Expr, sTable: SymbolTable): Unit = {
     val actualType = checkType(e, sTable)
-    if ((actualType == null) || actualType.isPair || actualType.isPair) {
+    if ((actualType == null) || actualType.isPair || actualType.isArray) {
       return
     }
     // Error case: calling free only permitted for pairs/arrays
