@@ -1,8 +1,7 @@
 package backend
 
 import scala.collection.mutable.ListBuffer
-import InstructionSet.Data
-import InstructionSet.Label
+import backend.IR.InstructionSet.{Data, Label}
 import frontend.Rules.StrLiter
 
 class DataTable {
@@ -30,7 +29,7 @@ class DataTable {
   }
 
   private def getNextLabel(): String = {
-    val nextLabel = stringDataSkeleton + dataCount.toString()
+    val nextLabel = stringDataSkeleton + dataCount.toString
     dataCount += 1
     nextLabel
   }

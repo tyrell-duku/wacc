@@ -1,4 +1,4 @@
-package backend
+package backend.IR
 
 sealed trait Condition {
   val oppositeCmp: Condition

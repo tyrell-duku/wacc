@@ -1,6 +1,9 @@
 package backend
 
-import InstructionSet._
+import backend.IR.InstructionSet._
+import backend.IR.Operand._
+
+
 import scala.collection.mutable.ListBuffer
 
 sealed trait PreDefFunc

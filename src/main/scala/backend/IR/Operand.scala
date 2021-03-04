@@ -1,5 +1,5 @@
-package backend
-import backend.InstructionSet.Label
+package backend.IR
+
 import frontend.Rules.Character
 
 sealed trait Operand
