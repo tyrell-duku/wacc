@@ -14,8 +14,6 @@ case class SymbolTable(
     funcMap: HashMap[Ident, Meta]
 ) {
 
-  var spMaxDepth = 0
-
   val varMap = new HashMap[Ident, (Int, Type)]
   val children = mutable.ListBuffer.empty[SymbolTable]
 
@@ -39,6 +37,21 @@ case class SymbolTable(
 
   def getPrevScope: SymbolTable = {
     this.parent
+  }
+
+  def spMaxDepth: Int = {
+    val codeGen = new CodeGenerator(this)
+    varMap.toList.map((x) => codeGen.getBaseTypeSize(x._2._2)).sum
+  }
+
+  def spMaxDepth(funcId: Ident): Int = {
+    val Meta(_, pList) = funcMap(funcId)
+    pList match {
+      case Some(ts) =>
+        val codeGen = new CodeGenerator(this)
+        spMaxDepth - ts.map((x) => codeGen.getBaseTypeSize(x)).sum
+      case None => spMaxDepth
+    }
   }
 
   // Returns Type of variable id & index at which it is stored in SP
@@ -86,8 +99,6 @@ case class SymbolTable(
   }
 
   def add(id: Ident, t: Type): Unit = {
-    val codeGen = new CodeGenerator(this)
-    spMaxDepth += codeGen.getBaseTypeSize(t)
     varMap.addOne(id, (0, t))
   }
 
