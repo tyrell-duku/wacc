@@ -837,7 +837,7 @@ class CodeGenerator(var sTable: SymbolTable) {
     val (isByte, instructions) = transArrayElem(id, es, reg)
 
     if (isByte) {
-      instructions += LdrB(reg, RegAdd(reg))
+      instructions += LdrSB(reg, RegAdd(reg))
     } else {
       instructions += Ldr(reg, RegAdd(reg))
     }
@@ -1045,7 +1045,7 @@ class CodeGenerator(var sTable: SymbolTable) {
         val spOffset = currentSP - index
         t match {
           case CharT | BoolT =>
-            instructions += LdrB(reg, RegisterOffset(SP, spOffset))
+            instructions += LdrSB(reg, RegisterOffset(SP, spOffset))
           case _ => instructions += Ldr(reg, RegisterOffset(SP, spOffset))
         }
       case ArrayElem(id, es, _) => instructions ++= loadArrayElem(id, es, reg)
