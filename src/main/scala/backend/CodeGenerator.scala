@@ -51,7 +51,7 @@ class CodeGenerator(var sTable: SymbolTable) {
     new Pop(regsToPush)
   }
 
-  private def addRuntimeError(err: RuntimeError): Unit = {
+  private def addRuntimeError(err: RuntimeError): Label = {
     funcTable.addEntry(throwRuntimeError())
     funcTable.addEntry(stringPrintInstrs)
     dataTable.addDataEntryWithLabel("msg_string", "%.*s\\0")
@@ -69,6 +69,7 @@ class CodeGenerator(var sTable: SymbolTable) {
             )
           )
         )
+        Label("p_check_array_bounds")
       case DivideByZero =>
         funcTable.addEntry(
           checkDivideByZero(
@@ -78,6 +79,7 @@ class CodeGenerator(var sTable: SymbolTable) {
             )
           )
         )
+        Label("p_check_divide_by_zero")
       case Overflow =>
         funcTable.addEntry(
           throwOverflowError(
@@ -87,6 +89,7 @@ class CodeGenerator(var sTable: SymbolTable) {
             )
           )
         )
+        Label("p_throw_overflow_error")
       case FreePair =>
         funcTable.addEntry(
           freePair(
@@ -96,6 +99,7 @@ class CodeGenerator(var sTable: SymbolTable) {
             )
           )
         )
+        Label("p_free_pair")
       case FreeArray =>
         funcTable.addEntry(
           freeArray(
@@ -104,6 +108,7 @@ class CodeGenerator(var sTable: SymbolTable) {
             )
           )
         )
+        Label("p_free_array")
       case NullPointer =>
         funcTable.addEntry(
           checkNullPointer(
@@ -113,6 +118,7 @@ class CodeGenerator(var sTable: SymbolTable) {
             )
           )
         )
+        Label("p_check_null_pointer")
     }
   }
 
@@ -306,11 +312,11 @@ class CodeGenerator(var sTable: SymbolTable) {
     addUnusedReg(freeReg)
     t match {
       case Pair(_, _) =>
-        instructions += BranchLink(Label("p_free_pair"))
-        addRuntimeError(FreePair)
+        instructions += BranchLink(addRuntimeError(FreePair))
+
       case ArrayT(_) =>
-        instructions += BranchLink(Label("p_free_array"))
-        addRuntimeError(FreeArray)
+        instructions += BranchLink(addRuntimeError(FreeArray))
+
       // Semantically incorrect
       case _ => ListBuffer.empty[Instruction]
     }
@@ -705,8 +711,8 @@ class CodeGenerator(var sTable: SymbolTable) {
     // Value must be in R0 for branch
     instructions += Mov(R0, freeReg)
     // Runtime error
-    instructions += BranchLink(Label("p_check_null_pointer"))
-    addRuntimeError(NullPointer)
+    instructions += BranchLink(addRuntimeError(NullPointer))
+
     if (fst) {
       // For Fst
       instructions += Ldr(freeReg, RegAdd(freeReg))
@@ -918,8 +924,7 @@ class CodeGenerator(var sTable: SymbolTable) {
       // Values must be in R0 & R1 for branch
       instructions += Mov(R0, nextReg)
       instructions += Mov(R1, reg)
-      instructions += BranchLink(Label("p_check_array_bounds"))
-      addRuntimeError(ArrayBounds)
+      instructions += BranchLink(addRuntimeError(ArrayBounds))
 
       instructions += Add(reg, reg, ImmInt(INT_SIZE))
 
@@ -945,10 +950,9 @@ class CodeGenerator(var sTable: SymbolTable) {
           Ldr(reg, RegAdd(reg))
         )
       case Negation(e, _) =>
-        addRuntimeError(Overflow)
         transExp(e, reg) ++= ListBuffer(
           RsbS(reg, reg, ImmInt(0)),
-          BranchLinkVS(Label("p_throw_overflow_error"))
+          BranchLinkVS(addRuntimeError(Overflow))
         )
       case Not(e, _) => transExp(e, reg) += Eor(reg, reg, ImmInt(1))
       case Ord(e, _) => transExp(e, reg)
@@ -995,10 +999,10 @@ class CodeGenerator(var sTable: SymbolTable) {
         instructions ++= transExp(l, reg)
         instructions ++= transExp(r, rReg)
         // Runtime error check
-        instructions += InstructionSet.SMul(reg, rReg, reg, rReg)
+        instructions += SMul(reg, rReg, reg, rReg)
         instructions += Cmp(rReg, ASR(reg, ImmInt(31)))
-        instructions += BranchLinkNE(Label("p_throw_overflow_error"))
-        addRuntimeError(Overflow)
+        instructions += BranchLinkNE(addRuntimeError(Overflow))
+
         addUnusedReg(rReg)
       case Div(l, r, _) =>
         val rReg = getFreeReg()
@@ -1008,8 +1012,8 @@ class CodeGenerator(var sTable: SymbolTable) {
         instructions += Mov(R0, reg)
         instructions += Mov(R1, rReg)
         // Runtime error check
-        instructions += BranchLink(Label("p_check_divide_by_zero"))
-        addRuntimeError(DivideByZero)
+        instructions += BranchLink(addRuntimeError(DivideByZero))
+
         // Divide function
         instructions += BranchLink(Label("__aeabi_idiv"))
         addUnusedReg(rReg)
@@ -1018,15 +1022,13 @@ class CodeGenerator(var sTable: SymbolTable) {
         val rReg = getFreeReg()
         instructions ++= transExp(l, reg)
         instructions ++= transExp(r, rReg)
-        // Runtime error check
-        instructions += BranchLink(Label("p_check_divide_by_zero"))
-        addRuntimeError(DivideByZero)
+
         // Needs to be in R0 and R1 for "__aeabi_idivmod"
         instructions += Mov(R0, reg)
         instructions += Mov(R1, rReg)
         // Runtime error check
-        instructions += BranchLink(Label("p_check_divide_by_zero"))
-        addRuntimeError(DivideByZero)
+        instructions += BranchLink(addRuntimeError(DivideByZero))
+
         // Mod function
         instructions += BranchLink(Label("__aeabi_idivmod"))
         addUnusedReg(rReg)
@@ -1037,8 +1039,7 @@ class CodeGenerator(var sTable: SymbolTable) {
         instructions ++= transExp(r, rReg)
         instructions += AddS(reg, reg, rReg)
         // Runtime error check
-        instructions += BranchLinkVS(Label("p_throw_overflow_error"))
-        addRuntimeError(Overflow)
+        instructions += BranchLinkVS(addRuntimeError(Overflow))
         addUnusedReg(rReg)
       case frontend.Rules.Sub(l, r, _) =>
         val rReg = getFreeReg()
@@ -1046,8 +1047,7 @@ class CodeGenerator(var sTable: SymbolTable) {
         instructions ++= transExp(r, rReg)
         instructions += SubS(reg, reg, rReg)
         // Runtime error check
-        instructions += BranchLinkVS(Label("p_throw_overflow_error"))
-        addRuntimeError(Overflow)
+        instructions += BranchLinkVS(addRuntimeError(Overflow))
         addUnusedReg(rReg)
       case frontend.Rules.And(l, r, _) =>
         val rReg = getFreeReg()
