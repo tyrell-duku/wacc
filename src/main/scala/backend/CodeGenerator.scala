@@ -932,7 +932,7 @@ class CodeGenerator(var sTable: SymbolTable) {
       case Negation(e, _) =>
         addRuntimeError(Overflow)
         transExp(e, reg) ++= ListBuffer(
-          NegInstr(reg, reg),
+          RsbS(reg, reg, ImmInt(0)),
           BranchLinkVS(Label("p_throw_overflow_error"))
         )
       case Not(e, _) => transExp(e, reg) += Eor(reg, reg, ImmInt(1))
