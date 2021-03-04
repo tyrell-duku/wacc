@@ -1,3 +1,5 @@
+package frontend
+
 import parsley.Parsley
 import parsley.token.{LanguageDef, Lexer, Predicate}
 import parsley.character.{char, digit, isWhitespace, letter, upper}

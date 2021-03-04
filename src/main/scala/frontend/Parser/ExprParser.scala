@@ -1,10 +1,12 @@
+package frontend
+
 import parsley.Parsley
 import parsley.Parsley._
 import parsley.combinator.{manyN, option, sepBy1}
 import parsley.expr.{InfixL, Ops, Prefix, precedence}
 import frontend.Rules._
-import Lexer._
-import LiterParser._
+import frontend.Lexer._
+import frontend.LiterParser._
 
 object ExprParser {
   // <int-liter> | <bool-liter> | <char-liter> | <str-liter> | <pair-liter> |

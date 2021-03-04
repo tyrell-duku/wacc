@@ -21,3 +21,4 @@ metals.sbt
 
 #ignore assembly files
 *.s
+*.out

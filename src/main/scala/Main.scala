@@ -2,6 +2,7 @@ import java.io.File
 
 import frontend.Rules.Program
 import frontend.Semantics._
+import frontend._
 import parsley.Failure
 import parsley.Success
 
