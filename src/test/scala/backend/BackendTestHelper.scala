@@ -38,12 +38,18 @@ object BackendTestHelper extends AnyFunSuite {
     createExecutable(file)
     val name = file.getName().replaceAll(".wacc", "")
     val output = new File(s"$name.out")
-    val command = s"qemu-arm -L /usr/arm-linux-gnueabi/ $name" #> output
+    val inputString = readFile(getFilePath(file, "wacc_inputs"))
+    val command =
+      if (inputString.isEmpty()) {
+        s"qemu-arm -L /usr/arm-linux-gnueabi/ $name" #> output
+      } else {
+        (s"printf '$inputString'" #| s"timeout 5s qemu-arm -L /usr/arm-linux-gnueabi/ $name" #> output)
+      }
     (file, output, command)
   }
 
   private def readFile(file: File): String = {
-    Source.fromFile(file).getLines().mkString
+    Source.fromFile(file).getLines().mkString("\n")
   }
 
   /* Generates the target file in the given directory. */
@@ -67,7 +73,6 @@ object BackendTestHelper extends AnyFunSuite {
   def checkExitCode(file: File, out: File, command: ProcessBuilder): Boolean = {
     val expExitCode = readFile(getExitCodeFile(file)).toInt
     val exitCode = command.!
-
     val name = file.getName().replaceAll(".wacc", "")
     val exeFile = new File(name)
     exeFile.delete()
