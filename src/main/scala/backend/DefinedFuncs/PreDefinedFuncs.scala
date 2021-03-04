@@ -1,20 +1,92 @@
-package backend
+package backend.DefinedFuncs
 
+import backend.CodeGenerator.{dataTable, funcTable}
+import backend.DefinedFuncs.PrintInstrs.stringPrintInstrs
 import backend.IR.InstructionSet._
 import backend.IR.Operand._
 
-
 import scala.collection.mutable.ListBuffer
 
-sealed trait PreDefFunc
-case object ArrayBounds extends PreDefFunc
-case object DivideByZero extends PreDefFunc
-case object Overflow extends PreDefFunc
-case object FreePair extends PreDefFunc
-case object FreeArray extends PreDefFunc
-case object NullPointer extends PreDefFunc
-
 object PreDefinedFuncs {
+
+  sealed trait PreDefFunc
+  case object ArrayBounds extends PreDefFunc
+  case object DivideByZero extends PreDefFunc
+  case object Overflow extends PreDefFunc
+  case object FreePair extends PreDefFunc
+  case object FreeArray extends PreDefFunc
+  case object NullPointer extends PreDefFunc
+
+  def addRuntimeError(err: PreDefFunc): Label = {
+    funcTable.addEntry(throwRuntimeError())
+    funcTable.addEntry(stringPrintInstrs)
+    dataTable.addDataEntryWithLabel("msg_string", "%.*s\\0")
+    err match {
+      case ArrayBounds =>
+        funcTable.addEntry(
+          checkArrayBounds(
+            dataTable.addDataEntryWithLabel(
+              "msg_neg_index",
+              "ArrayIndexOutOfBoundsError: negative index\\n\\0"
+            ),
+            dataTable.addDataEntryWithLabel(
+              "msg_index_too_large",
+              "ArrayIndexOutOfBoundsError: index too large\\n\\0"
+            )
+          )
+        )
+        Label("p_check_array_bounds")
+      case DivideByZero =>
+        funcTable.addEntry(
+          checkDivideByZero(
+            dataTable.addDataEntryWithLabel(
+              "msg_divide_by_zero",
+              "DivideByZeroError: divide or modulo by zero\\n\\0"
+            )
+          )
+        )
+        Label("p_check_divide_by_zero")
+      case Overflow =>
+        funcTable.addEntry(
+          throwOverflowError(
+            dataTable.addDataEntryWithLabel(
+              "msg_overflow",
+              "OverflowError: the result is too small/large to store in a 4-byte signed-integer.\\n"
+            )
+          )
+        )
+        Label("p_throw_overflow_error")
+      case FreePair =>
+        funcTable.addEntry(
+          freePair(
+            dataTable.addDataEntryWithLabel(
+              "msg_null_reference",
+              "NullReferenceError: dereference a null reference\\n\\0"
+            )
+          )
+        )
+        Label("p_free_pair")
+      case FreeArray =>
+        funcTable.addEntry(
+          freeArray(
+            dataTable.addDataEntry(
+              "NullReferenceError: dereference a null reference\\n\\0"
+            )
+          )
+        )
+        Label("p_free_array")
+      case NullPointer =>
+        funcTable.addEntry(
+          checkNullPointer(
+            dataTable.addDataEntryWithLabel(
+              "msg_null_reference",
+              "NullReferenceError: dereference a null reference\\n\\0"
+            )
+          )
+        )
+        Label("p_check_null_pointer")
+    }
+  }
 
   def throwRuntimeError(): (Label, List[Instruction]) = {
     (
