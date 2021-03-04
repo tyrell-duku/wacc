@@ -1,8 +1,9 @@
-package backend
+package backend.DataTypes
 
-import scala.collection.mutable.ListBuffer
 import backend.IR.InstructionSet.{Data, Label}
 import frontend.Rules.StrLiter
+
+import scala.collection.mutable.ListBuffer
 
 class DataTable {
   var table = ListBuffer.empty[Data]

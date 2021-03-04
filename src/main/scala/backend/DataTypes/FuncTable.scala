@@ -1,7 +1,8 @@
-package backend
+package backend.DataTypes
+
+import backend.IR.InstructionSet.{Instruction, Label}
 
 import scala.collection.mutable.ListBuffer
-import backend.IR.InstructionSet.{Label, Instruction}
 
 class FuncTable {
   var table = ListBuffer.empty[(Label, List[Instruction])]
