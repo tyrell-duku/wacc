@@ -96,6 +96,14 @@ class CodeGenerator(var sTable: SymbolTable) {
             )
           )
         )
+      case FreeArray =>
+        funcTable.addEntry(
+          freeArray(
+            dataTable.addDataEntry(
+              "NullReferenceError: dereference a null reference\\n\\0"
+            )
+          )
+        )
       case NullPointer =>
         funcTable.addEntry(
           checkNullPointer(
@@ -289,18 +297,24 @@ class CodeGenerator(var sTable: SymbolTable) {
     }
   }
 
-  private def transFree(e: Expr): ListBuffer[Instruction] = {
-    e match {
-      case id: Ident =>
-        val freeReg = getFreeReg()
-        val instructions = getExprType(id, freeReg)
-        instructions += Mov(R0, freeReg)
-        addUnusedReg(freeReg)
+  private def transFree(id: Ident): ListBuffer[Instruction] = {
+    val instructions = ListBuffer.empty[Instruction]
+    val freeReg = getFreeReg()
+    val (index, t) = sTable(id)
+    instructions += Ldr(freeReg, RegisterOffset(SP, currentSP - index))
+    instructions += Mov(R0, freeReg)
+    addUnusedReg(freeReg)
+    t match {
+      case Pair(_, _) =>
         instructions += BranchLink(Label("p_free_pair"))
         addRuntimeError(FreePair)
+      case ArrayT(_) =>
+        instructions += BranchLink(Label("p_free_array"))
+        addRuntimeError(FreeArray)
       // Semantically incorrect
       case _ => ListBuffer.empty[Instruction]
     }
+    instructions
 
   }
 
@@ -329,7 +343,7 @@ class CodeGenerator(var sTable: SymbolTable) {
       case EqIdent(t, i, r) => instructions ++= transEqIdent(t, i, r)
       case EqAssign(l, r)   => instructions ++= transEqAssign(l, r)
       case Read(lhs)        => instructions ++= transRead(lhs)
-      case Free(e)          => instructions ++= transFree(e)
+      case Free(id: Ident)  => instructions ++= transFree(id)
       case Return(e)        => instructions ++= transReturn(e)
       case Exit(e)          => instructions ++= transExit(e)
       case Print(e)         => instructions ++= transPrint(e, false)
@@ -676,7 +690,7 @@ class CodeGenerator(var sTable: SymbolTable) {
   private def pairIsByte(idType: Type, fst: Boolean): Boolean = {
     idType match {
       case Pair(PairElemT(x), PairElemT(y)) => if (fst) isByte(x) else isByte(y)
-      case _                                => falseq
+      case _                                => false
     }
   }
 
@@ -917,7 +931,7 @@ class CodeGenerator(var sTable: SymbolTable) {
       }
     }
     addUnusedReg(nextReg)
-    (isSizeByte, instructions)
+    (isByte(t), instructions)
   }
 
   /* Translates unary operator OP to the internal representation. */
