@@ -688,7 +688,6 @@ class CodeGenerator(var sTable: SymbolTable) {
       case Fst(id: Ident, _) =>
         instructions ++= transPairElem(id, true, freeReg)
         instructions += loadPairElem(id, freeReg, true)
-        println(instructions)
       case Snd(id: Ident, _) =>
         instructions ++= transPairElem(id, false, freeReg)
         instructions += loadPairElem(id, freeReg, false)
