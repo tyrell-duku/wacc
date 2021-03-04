@@ -569,11 +569,25 @@ class CodeGenerator(var sTable: SymbolTable) {
           freeReg,
           RegisterOffset(SP, currentSP - spIndex)
         )
-      case PairLiter(_) => instructions += Ldr(freeReg, ImmMem(0))
+      case PairLiter(_)      => instructions += Ldr(freeReg, ImmMem(0))
+      case Call(id, args, _) => instructions ++= transCall(id, args, freeReg)
       // Semantically incorrect
-      case _ => instructions
+      case _ =>
     }
     instructions
+  }
+
+  private def transCall(
+      id: Ident,
+      args: Option[ArgList],
+      freeReg: Reg
+  ): ListBuffer[Instruction] = {
+    val (argInstrs, toAdd) = loadArgs(args, freeReg)
+    argInstrs ++ ListBuffer(
+      BranchLink(Label("f_" + id)),
+      Add(SP, SP, ImmInt(toAdd)),
+      Mov(freeReg, resultReg)
+    )
   }
 
   private def isByte(t: Type): Boolean = {
@@ -642,49 +656,51 @@ class CodeGenerator(var sTable: SymbolTable) {
             instructions ++= transPairElem(id, false, freeReg)
             instructions += loadPairElem(id, freeReg, false)
           case Call(id, args, _) =>
-            val Ident(i, _) = id
-            val (argInstrs, toAdd) = loadArgs(args, freeReg)
-            instructions ++= argInstrs ++ ListBuffer(
-              BranchLink(Label("f_" + i)),
-              Add(SP, SP, ImmInt(toAdd)),
-              Mov(freeReg, resultReg)
-            )
-          case _ => ListBuffer.empty[Instruction]
+            instructions ++= transCall(id, args, freeReg)
+          case _ =>
         }
       case ArrayT(t) =>
-        val ArrayLiter(opArr, _) = aRHS
-        val arr = opArr match {
-          case Some(arr) => arr
-          case None      => List.empty[Expr]
-        }
+        aRHS match {
+          case ArrayLiter(opArr, _) =>
+            val arr = opArr match {
+              case Some(arr) => arr
+              case None      => List.empty[Expr]
+            }
 
-        val listSize = arr.size
-        val baseTypeSize = getBaseTypeSize(t)
-        val sizeToMalloc = 4 + (listSize * baseTypeSize)
-        instructions += Ldr(R0, ImmMem(sizeToMalloc))
-        instructions += BranchLink(Label("malloc"))
-        instructions += Mov(freeReg, R0)
-        val nextFreeReg = getFreeReg()
+            val listSize = arr.size
+            val baseTypeSize = getBaseTypeSize(t)
+            val sizeToMalloc = 4 + (listSize * baseTypeSize)
+            instructions += Ldr(R0, ImmMem(sizeToMalloc))
+            instructions += BranchLink(Label("malloc"))
+            instructions += Mov(freeReg, R0)
+            val nextFreeReg = getFreeReg()
 
-        if (t == CharT || t == BoolT) {
-          for (i <- 0 until listSize) {
-            instructions ++= transExp(arr(i), nextFreeReg)
-            instructions += StrB(nextFreeReg, RegisterOffset(freeReg, i + 4))
-          }
-        } else {
-          for (i <- 0 until listSize) {
-            instructions ++= transExp(arr(i), nextFreeReg)
-            instructions += Str(
-              nextFreeReg,
-              RegisterOffset(freeReg, (i + 1) * 4)
-            )
-          }
+            if (t == CharT || t == BoolT) {
+              for (i <- 0 until listSize) {
+                instructions ++= transExp(arr(i), nextFreeReg)
+                instructions += StrB(
+                  nextFreeReg,
+                  RegisterOffset(freeReg, i + 4)
+                )
+              }
+            } else {
+              for (i <- 0 until listSize) {
+                instructions ++= transExp(arr(i), nextFreeReg)
+                instructions += Str(
+                  nextFreeReg,
+                  RegisterOffset(freeReg, (i + 1) * 4)
+                )
+              }
+            }
+            instructions += Ldr(nextFreeReg, ImmMem(listSize))
+            instructions += Str(nextFreeReg, RegAdd(freeReg))
+            addUnusedReg(nextFreeReg)
+          case Call(id, args, _) =>
+            instructions ++= transCall(id, args, freeReg)
+          case _ =>
         }
-        instructions += Ldr(nextFreeReg, ImmMem(listSize))
-        instructions += Str(nextFreeReg, RegAdd(freeReg))
-        addUnusedReg(nextFreeReg)
       case p: Pair => instructions ++= assignRHSPair(p, aRHS, freeReg)
-      case _       => instructions
+      case _       =>
     }
     (isByte(t), instructions)
   }
@@ -1011,7 +1027,7 @@ class CodeGenerator(var sTable: SymbolTable) {
     else { 0 }
   }
 
-  private def getBaseTypeSize(t: Type): Int = {
+  def getBaseTypeSize(t: Type): Int = {
     t match {
       case IntT           => INT_SIZE
       case BoolT          => BOOL_SIZE
