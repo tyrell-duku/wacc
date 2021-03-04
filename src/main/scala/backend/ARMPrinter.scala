@@ -14,10 +14,11 @@ object ARMPrinter {
       instrs: List[(Label, List[Instruction])]
   ): Unit = {
     val assemblyFileName = waccFileName.replaceFirst(".wacc", ".s")
-    val file = new File(assemblyFileName)
+    var file = new File(assemblyFileName)
 
     if (!file.createNewFile()) {
-      throw new Exception(file.getName + " is already present")
+      file.delete()
+      file = new File(assemblyFileName)
     }
 
     val fileWriter = new FileWriter(file)

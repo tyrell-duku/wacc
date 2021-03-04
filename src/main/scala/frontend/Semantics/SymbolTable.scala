@@ -1,5 +1,6 @@
 package frontend.Semantics
 
+import backend.CodeGenerator
 import frontend.Rules._
 
 import scala.collection.mutable.HashMap
@@ -36,6 +37,21 @@ case class SymbolTable(
 
   def getPrevScope: SymbolTable = {
     this.parent
+  }
+
+  def spMaxDepth: Int = {
+    val codeGen = new CodeGenerator(this)
+    varMap.toList.map((x) => codeGen.getBaseTypeSize(x._2._2)).sum
+  }
+
+  def spMaxDepth(funcId: Ident): Int = {
+    val Meta(_, pList) = funcMap(funcId)
+    pList match {
+      case Some(ts) =>
+        val codeGen = new CodeGenerator(this)
+        spMaxDepth - ts.map((x) => codeGen.getBaseTypeSize(x)).sum
+      case None => spMaxDepth
+    }
   }
 
   // Returns Type of variable id & index at which it is stored in SP
