@@ -123,12 +123,10 @@ class CodeGenerator(var sTable: SymbolTable) {
 
     val instructions = transStat(
       stat,
-      ListBuffer(
-        Push(ListBuffer(LR)),
-        InstructionSet.Sub(SP, SP, ImmInt(curScopeMaxSPDepth))
-      )
+      Push(ListBuffer(LR)) +=: subSP(curScopeMaxSPDepth)
     )
-    var toAdd = addSP() ++ ListBuffer(
+
+    var toAdd = addSP(currentSP) ++ ListBuffer(
       Ldr(resultReg, ImmMem(0)),
       Pop(ListBuffer(PC)),
       Ltorg
@@ -170,10 +168,7 @@ class CodeGenerator(var sTable: SymbolTable) {
 
     val instructions = transStat(
       s,
-      ListBuffer(
-        Push(ListBuffer(LR)),
-        InstructionSet.Sub(SP, SP, ImmInt(curScopeMaxSPDepth))
-      )
+      Push(ListBuffer(LR)) +=: subSP(curScopeMaxSPDepth)
     )
 
     if (curScopeMaxSPDepth > 0) {
@@ -273,7 +268,7 @@ class CodeGenerator(var sTable: SymbolTable) {
     val instrs = transExp(e, reg)
     instrs += Mov(resultReg, reg)
     if (scopeSP > 0) {
-      instrs += Add(SP, SP, ImmInt(scopeSP))
+      instrs ++= addSP(scopeSP)
     }
     instrs ++= ListBuffer(
       Pop(ListBuffer(PC)),
@@ -408,14 +403,14 @@ class CodeGenerator(var sTable: SymbolTable) {
     sTable = sTable.getNextScope
     val curScopeMaxSPDepth = sTable.spMaxDepth
 
-    curInstrs += InstructionSet.Sub(SP, SP, ImmInt(curScopeMaxSPDepth))
+    curInstrs ++= subSP(curScopeMaxSPDepth)
     scopeSP = currentSP
     currentSP += curScopeMaxSPDepth
 
     val instructions = transStat(s, curInstrs)
 
     if (curScopeMaxSPDepth > 0) {
-      instructions += Add(SP, SP, ImmInt(curScopeMaxSPDepth))
+      instructions ++= addSP(curScopeMaxSPDepth)
       currentSP -= curScopeMaxSPDepth
     }
 
@@ -523,15 +518,33 @@ class CodeGenerator(var sTable: SymbolTable) {
     instructions
   }
 
-  private def addSP(): ListBuffer[Instruction] = {
-    var curSp = currentSP
+  private def addSP(spToAdd: Int): ListBuffer[Instruction] = {
     val instrs = ListBuffer.empty[Instruction]
+    if (spToAdd == 0) {
+      return instrs
+    }
+
+    var curSp = spToAdd
     while (curSp > MAX_INT_IMM) {
       curSp -= MAX_INT_IMM
       instrs += InstructionSet.Add(SP, SP, ImmInt(MAX_INT_IMM))
     }
     instrs += InstructionSet.Add(SP, SP, ImmInt(curSp))
-    currentSP = 0
+    instrs
+  }
+
+  private def subSP(spToSub: Int): ListBuffer[Instruction] = {
+    val instrs = ListBuffer.empty[Instruction]
+    if (spToSub == 0) {
+      return instrs
+    }
+
+    var curSp = spToSub
+    while (curSp > MAX_INT_IMM) {
+      curSp -= MAX_INT_IMM
+      instrs += InstructionSet.Sub(SP, SP, ImmInt(MAX_INT_IMM))
+    }
+    instrs += InstructionSet.Sub(SP, SP, ImmInt(curSp))
     instrs
   }
 
@@ -617,11 +630,11 @@ class CodeGenerator(var sTable: SymbolTable) {
       freeReg: Reg
   ): ListBuffer[Instruction] = {
     val (argInstrs, toAdd) = loadArgs(args, freeReg)
-    argInstrs ++ ListBuffer(
-      BranchLink(Label("f_" + id)),
-      Add(SP, SP, ImmInt(toAdd)),
-      Mov(freeReg, resultReg)
-    )
+    val instrs = addSP(toAdd)
+    argInstrs += BranchLink(Label("f_" + id))
+    argInstrs ++= addSP(toAdd)
+    argInstrs += Mov(freeReg, resultReg)
+    argInstrs
   }
 
   private def isByte(t: Type): Boolean = {
