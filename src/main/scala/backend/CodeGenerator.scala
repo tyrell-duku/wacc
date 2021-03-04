@@ -512,6 +512,7 @@ object CodeGenerator {
           freeReg,
           RegisterOffset(SP, currentSP - spIndex)
         )
+      case PairLiter(_) => instructions += Ldr(freeReg, ImmMem(0))
       // Semantically incorrect
       case _ => instructions
     }
