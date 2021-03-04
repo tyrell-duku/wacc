@@ -217,6 +217,22 @@ object CodeGenerator {
     }
   }
 
+  private def transFree(e: Expr): ListBuffer[Instruction] = {
+    val instructions = ListBuffer.empty[Instruction]
+    val freeReg = getFreeReg()
+    e match {
+      case id: Ident =>
+        val (spIndex, _) = varTable(id)
+        instructions += Ldr(freeReg, RegisterOffset(SP, currentSP - spIndex))
+        instructions += Mov(R0, freeReg)
+        instructions += BranchLink(Label("p_free_pair"))
+        addRuntimeError(FreePair)
+      // Semantically incorrect
+      case _ =>
+    }
+    instructions
+  }
+
   private def transReturn(e: Expr): ListBuffer[Instruction] = {
     val reg = getFreeReg()
     val instrs = transExp(e, reg) ++ ListBuffer(
@@ -239,7 +255,7 @@ object CodeGenerator {
       case EqIdent(t, i, r) => instructions ++= transEqIdent(t, i, r)
       case EqAssign(l, r)   => instructions ++= transEqAssign(l, r)
       case Read(lhs)        => instructions ++= transRead(lhs)
-      // case Free(e)          => instructions ++= ListBuffer.empty[Instruction]
+      case Free(e)          => instructions ++= transFree(e)
       case Return(e)        => instructions ++= transReturn(e)
       case Exit(e)          => instructions ++= transExit(e)
       case Print(e)         => instructions ++= transPrint(e, false)
