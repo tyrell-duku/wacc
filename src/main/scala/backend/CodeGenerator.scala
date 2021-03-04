@@ -60,7 +60,8 @@ object CodeGenerator {
   }
 
   def transProg(
-      prog: Program , sTable: SymbolTable
+      prog: Program,
+      sTable: SymbolTable
   ): (List[Data], List[(Label, List[Instruction])]) = {
     val Program(funcs, stat) = prog
     for (f <- funcs) {
@@ -233,6 +234,5 @@ object CodeGenerator {
       case _              => -1
     }
   }
-
 
 }
