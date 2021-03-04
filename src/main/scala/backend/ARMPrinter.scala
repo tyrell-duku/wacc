@@ -2,7 +2,7 @@ package backend
 
 import java.io.{File, FileWriter}
 
-import backend.InstructionSet._
+import backend.IR.InstructionSet._
 
 object ARMPrinter {
   val tab = "\t"
