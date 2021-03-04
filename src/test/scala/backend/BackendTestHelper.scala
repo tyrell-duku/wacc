@@ -9,6 +9,7 @@ import frontend._
 import parsley.Failure
 import parsley.Success
 import org.scalatest.funsuite.AnyFunSuite
+import scala.util.matching.Regex
 
 object BackendTestHelper extends AnyFunSuite {
 
@@ -81,9 +82,13 @@ object BackendTestHelper extends AnyFunSuite {
 
   def checkStdOut(file: File, outputFile: File): Boolean = {
     val expOut = getExpectedFile(file)
-    val outLines = readFile(outputFile)
+    var outLines = readFile(outputFile)
     val expLines = readFile(expOut)
     outputFile.delete()
+    // to match register addresses
+    val pattern = "0x[0-9]+".r
+    outLines.equals(expLines)
+    outLines = pattern replaceAllIn (outLines, "")
     outLines.equals(expLines)
   }
 }
