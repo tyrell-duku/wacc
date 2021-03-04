@@ -26,8 +26,8 @@ package object InstructionSet {
     override def toString: String =
       "SMULL " + rdLo + ", " + rdHi + ", " + rn + ", " + rm
   }
-  case class NegInstr(rd: Reg, rm: Reg) extends Instruction {
-    override def toString: String = "NEG " + rd + ", " + rm
+  case class RsbS(rd: Reg, rn: Reg, op2: Operand) extends Instruction {
+    override def toString: String = "RSBS " + rd + ", " + rn + ", " + op2
   }
 
   // comparison
