@@ -1,6 +1,6 @@
 package frontend.Semantics
 
-import backend.CodeGenerator
+import backend.CodeGenerator.getBaseTypeSize
 import frontend.Rules._
 
 import scala.collection.mutable.HashMap
@@ -40,16 +40,14 @@ case class SymbolTable(
   }
 
   def spMaxDepth: Int = {
-    val codeGen = new CodeGenerator(this)
-    varMap.toList.map((x) => codeGen.getBaseTypeSize(x._2._2)).sum
+    varMap.toList.map(x => getBaseTypeSize(x._2._2)).sum
   }
 
   def spMaxDepth(funcId: Ident): Int = {
     val Meta(_, pList) = funcMap(funcId)
     pList match {
       case Some(ts) =>
-        val codeGen = new CodeGenerator(this)
-        spMaxDepth - ts.map((x) => codeGen.getBaseTypeSize(x)).sum
+        spMaxDepth - ts.map(x => getBaseTypeSize(x)).sum
       case None => spMaxDepth
     }
   }
