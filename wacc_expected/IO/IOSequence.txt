@@ -1,2 +1,1 @@
-Please input an integer: 
-You input: 37
+Please input an integer: You input: 37
