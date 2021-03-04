@@ -49,8 +49,7 @@ object Main {
       case Failure(msg) => syntaxExit(msg)
       case Success(x) =>
         val sTable = semanticAnalysis(x)
-        val codeGen = new CodeGenerator(sTable)
-        val (data, instrs) = codeGen.transProg(x)
+        val (data, instrs) = CodeGenerator.transProg(x, sTable)
         ARMPrinter.execute(file.getName(), data, instrs)
     }
   }
