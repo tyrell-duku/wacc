@@ -1,18 +1,22 @@
 import org.scalatest.funsuite.AnyFunSuite
-import Parser._
+import frontend.Parser._
 import frontend.Rules._
 import parsley.combinator.eof
-import Lexer._
+import frontend.Lexer._
 
 class ParamTest extends AnyFunSuite {
   val paramWhitespace = lexer.whiteSpace *> param <* eof
 
   test("Successfully parses param with base-type") {
     assert(
-      paramWhitespace.runParser("int var").contains(Param(IntT, Ident("var",(1,5))))
+      paramWhitespace
+        .runParser("int var")
+        .contains(Param(IntT, Ident("var", (1, 5))))
     )
     assert(
-      paramWhitespace.runParser("bool var").contains(Param(BoolT, Ident("var",(1,6))))
+      paramWhitespace
+        .runParser("bool var")
+        .contains(Param(BoolT, Ident("var", (1, 6))))
     )
   }
 
@@ -20,12 +24,12 @@ class ParamTest extends AnyFunSuite {
     assert(
       paramWhitespace
         .runParser("char[][] var")
-        .contains(Param(ArrayT(ArrayT(CharT)), Ident("var",(1,10))))
+        .contains(Param(ArrayT(ArrayT(CharT)), Ident("var", (1, 10))))
     )
     assert(
       paramWhitespace
         .runParser("int[] var")
-        .contains(Param(ArrayT(IntT), Ident("var",(1,7))))
+        .contains(Param(ArrayT(IntT), Ident("var", (1, 7))))
     )
   }
 
@@ -33,13 +37,15 @@ class ParamTest extends AnyFunSuite {
     assert(
       paramWhitespace
         .runParser("pair(int,char) var")
-        .contains(Param(Pair(PairElemT(IntT), PairElemT(CharT)), Ident("var",(1,16))))
+        .contains(
+          Param(Pair(PairElemT(IntT), PairElemT(CharT)), Ident("var", (1, 16)))
+        )
     )
     assert(
       paramWhitespace
         .runParser("pair(pair,pair)[] var")
         .contains(
-          Param(ArrayT(Pair(PairElemPair, PairElemPair)), Ident("var",(1,19)))
+          Param(ArrayT(Pair(PairElemPair, PairElemPair)), Ident("var", (1, 19)))
         )
     )
   }
@@ -60,7 +66,10 @@ class ParamListTest extends AnyFunSuite {
         .contains(
           ParamList(
             List(
-              Param(Pair(PairElemT(IntT), PairElemT(CharT)), Ident("var",(1,16)))
+              Param(
+                Pair(PairElemT(IntT), PairElemT(CharT)),
+                Ident("var", (1, 16))
+              )
             )
           )
         )
@@ -68,7 +77,7 @@ class ParamListTest extends AnyFunSuite {
     assert(
       paramWhitespace
         .runParser("bool var")
-        .contains(ParamList(List(Param(BoolT, Ident("var",(1,6))))))
+        .contains(ParamList(List(Param(BoolT, Ident("var", (1, 6))))))
     )
   }
 
@@ -79,9 +88,9 @@ class ParamListTest extends AnyFunSuite {
         .contains(
           ParamList(
             List(
-              Param(IntT, Ident("var1",(1,5))),
-              Param(CharT, Ident("var2",(1,16))),
-              Param(BoolT, Ident("var3",(1,27)))
+              Param(IntT, Ident("var1", (1, 5))),
+              Param(CharT, Ident("var2", (1, 16))),
+              Param(BoolT, Ident("var3", (1, 27)))
             )
           )
         )
@@ -92,9 +101,9 @@ class ParamListTest extends AnyFunSuite {
         .contains(
           ParamList(
             List(
-              Param(ArrayT(IntT), Ident("x",(1,7))),
-              Param(ArrayT(IntT), Ident("y",(1,16))),
-              Param(ArrayT(IntT), Ident("z",(1,25)))
+              Param(ArrayT(IntT), Ident("x", (1, 7))),
+              Param(ArrayT(IntT), Ident("y", (1, 16))),
+              Param(ArrayT(IntT), Ident("z", (1, 25)))
             )
           )
         )

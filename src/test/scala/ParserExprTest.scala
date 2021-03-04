@@ -1,7 +1,7 @@
 import org.scalatest.funsuite.AnyFunSuite
 import frontend.Rules._
-import ExprParser._
-import Lexer._
+import frontend.ExprParser._
+import frontend.Lexer._
 
 class ExprTest extends AnyFunSuite {
   test("Successfully parses expr within parentheses") {
@@ -9,7 +9,7 @@ class ExprTest extends AnyFunSuite {
       expr
         .runParser("((10))+(5)")
         .contains(
-          Plus(IntLiter(10,(1,3)), IntLiter(5,(1,9)),(1,7))
+          Plus(IntLiter(10, (1, 3)), IntLiter(5, (1, 9)), (1, 7))
         )
     )
   }
@@ -18,7 +18,7 @@ class ExprTest extends AnyFunSuite {
     assert(
       expr
         .runParser("ord(chr(10))")
-        .contains(Ord(Chr(IntLiter(10,(1,9)),(1,5)),(1,1)))
+        .contains(Ord(Chr(IntLiter(10, (1, 9)), (1, 5)), (1, 1)))
     )
   }
 
@@ -28,7 +28,16 @@ class ExprTest extends AnyFunSuite {
     assert(
       expr
         .runParser("!(!true||false)")
-        .contains(Not(Or(Not(BoolLiter(true,(1,4)),(1,3)), BoolLiter(false,(1,10)),(1,8)),(1,1)))
+        .contains(
+          Not(
+            Or(
+              Not(BoolLiter(true, (1, 4)), (1, 3)),
+              BoolLiter(false, (1, 10)),
+              (1, 8)
+            ),
+            (1, 1)
+          )
+        )
     )
   }
 
@@ -39,10 +48,12 @@ class ExprTest extends AnyFunSuite {
         .contains(
           Sub(
             Plus(
-              Mul(IntLiter(2,(1,1)), IntLiter(8,(1,3)),(1,2)),
-              Div(IntLiter(5,(1,5)), IntLiter(9,(1,7)),(1,6)),(1,4)
+              Mul(IntLiter(2, (1, 1)), IntLiter(8, (1, 3)), (1, 2)),
+              Div(IntLiter(5, (1, 5)), IntLiter(9, (1, 7)), (1, 6)),
+              (1, 4)
             ),
-            IntLiter(1,(1,9)),(1,8)
+            IntLiter(1, (1, 9)),
+            (1, 8)
           )
         )
     )
@@ -52,10 +63,16 @@ class ExprTest extends AnyFunSuite {
         .contains(
           Sub(
             Plus(
-              IntLiter(100,(1,1)),
-              Div(Mul(IntLiter(8,(1,5)), IntLiter(5,(1,7)),(1,6)), IntLiter(9,(1,9)),(1,8)),(1,4)
+              IntLiter(100, (1, 1)),
+              Div(
+                Mul(IntLiter(8, (1, 5)), IntLiter(5, (1, 7)), (1, 6)),
+                IntLiter(9, (1, 9)),
+                (1, 8)
+              ),
+              (1, 4)
             ),
-            IntLiter(1,(1,11)),(1,10)
+            IntLiter(1, (1, 11)),
+            (1, 10)
           )
         )
     )
@@ -66,12 +83,15 @@ class ExprTest extends AnyFunSuite {
           Sub(
             Plus(
               Plus(
-                IntLiter(100,(1,1)),
-                Mul(IntLiter(8,(1,5)), IntLiter(5,(1,7)),(1,6)),(1,4)
+                IntLiter(100, (1, 1)),
+                Mul(IntLiter(8, (1, 5)), IntLiter(5, (1, 7)), (1, 6)),
+                (1, 4)
               ),
-              IntLiter(100,(1,9)),(1,8)
+              IntLiter(100, (1, 9)),
+              (1, 8)
             ),
-            IntLiter(1,(1,13)),(1,12)
+            IntLiter(1, (1, 13)),
+            (1, 12)
           )
         )
     )
@@ -86,7 +106,11 @@ class ExprTest extends AnyFunSuite {
       expr
         .runParser("var1==(ord('c'))")
         .contains(
-          Equal(Ident("var1",(1,1)), Ord(CharLiter(NormalChar('c'),(1,12)),(1,8)),(1,5))
+          Equal(
+            Ident("var1", (1, 1)),
+            Ord(CharLiter(NormalChar('c'), (1, 12)), (1, 8)),
+            (1, 5)
+          )
         )
     )
   }

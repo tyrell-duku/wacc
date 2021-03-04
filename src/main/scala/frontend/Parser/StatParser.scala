@@ -1,11 +1,13 @@
+package frontend
+
 import parsley.Parsley
 import parsley.Parsley._
 import parsley.combinator.{between, option, sepBy1}
 import parsley.lift.{lift2, lift3}
 import frontend.Rules._
-import Lexer._
-import LiterParser._
-import ExprParser._
+import frontend.Lexer._
+import frontend.LiterParser._
+import frontend.ExprParser._
 
 object StatParser {
 

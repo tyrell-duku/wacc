@@ -1,10 +1,10 @@
 import org.scalatest.funsuite.AnyFunSuite
-import Parser._
+import frontend.Parser._
 import frontend.Rules._
-import LiterParser._
-import StatParser._
-import ExprParser._
-import Lexer._
+import frontend.LiterParser._
+import frontend.StatParser._
+import frontend.ExprParser._
+import frontend.Lexer._
 
 class EscapedCharTest extends AnyFunSuite {
   test("Successfully parses character 0") {

@@ -1,7 +1,6 @@
 import org.scalatest.funsuite.AnyFunSuite
 import frontend.Rules._
-import LiterParser._
-
+import frontend.LiterParser._
 
 class CharacterTest extends AnyFunSuite {
   test("Successfully parses escaped b character") {
