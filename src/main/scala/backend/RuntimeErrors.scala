@@ -93,6 +93,7 @@ object RuntimeErrors {
       Label("p_check_null_pointer"),
       List[Instruction](
         Push(ListBuffer(LR)),
+        Cmp(R0, ImmInt(0)),
         LdrEQ(R0, DataLabel(label)),
         BranchLinkEQ(Label("p_throw_runtime_error")),
         Pop(ListBuffer(PC))
