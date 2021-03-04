@@ -694,20 +694,21 @@ class CodeGenerator(var sTable: SymbolTable) {
       case Call(id, args, _) =>
         instructions ++= transCall(id, args, freeReg)
       case ArrayLiter(opArr, _) =>
+        val ArrayT(innerType) = t
         val arr = opArr match {
           case Some(arr) => arr
           case None      => List.empty[Expr]
         }
 
         val listSize = arr.size
-        val baseTypeSize = getBaseTypeSize(t)
+        val baseTypeSize = getBaseTypeSize(innerType)
         val sizeToMalloc = 4 + (listSize * baseTypeSize)
         instructions += Ldr(R0, ImmMem(sizeToMalloc))
         instructions += BranchLink(Label("malloc"))
         instructions += Mov(freeReg, R0)
         val nextFreeReg = getFreeReg()
 
-        if (t == CharT || t == BoolT) {
+        if (innerType == CharT || innerType == BoolT) {
           for (i <- 0 until listSize) {
             instructions ++= transExp(arr(i), nextFreeReg)
             instructions += StrB(
