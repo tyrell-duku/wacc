@@ -1,5 +1,6 @@
 package frontend.Semantics
 
+import backend.CodeGenerator
 import frontend.Rules._
 
 import scala.collection.mutable.HashMap
@@ -12,6 +13,8 @@ case class SymbolTable(
     funcId: Ident,
     funcMap: HashMap[Ident, Meta]
 ) {
+
+  var spMaxDepth = 0
 
   val varMap = new HashMap[Ident, (Int, Type)]
   val children = mutable.ListBuffer.empty[SymbolTable]
@@ -83,6 +86,8 @@ case class SymbolTable(
   }
 
   def add(id: Ident, t: Type): Unit = {
+    val codeGen = new CodeGenerator(this)
+    spDepth += codeGen.getBaseTypeSize(t)
     varMap.addOne(id, (0, t))
   }
 
