@@ -17,7 +17,7 @@ import backend.IR.Operand._
 
 object CodeGenerator {
   final val allRegs: ListBuffer[Reg] =
-    ListBuffer(R0, R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12)
+    ListBuffer(R0, R1, R2, R3, R4, R5, R6, R7, R8, R9, R10)
 
   var freeRegs = allRegs
   final val resultReg: Reg = R0
@@ -207,8 +207,7 @@ object CodeGenerator {
 
   def getFreeReg(): Reg = {
     if (freeRegs.isEmpty) {
-      // TODO: free up regs?
-      return R0
+      return R11
     }
     val reg = freeRegs(0)
     freeRegs.remove(0)
