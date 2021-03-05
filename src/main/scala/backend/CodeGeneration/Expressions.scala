@@ -66,11 +66,10 @@ object Expressions {
   /* Translates a binary operator to the internal representation. */
   private def transBinOp(op: BinOp, reg: Reg): ListBuffer[Instruction] = {
     val instructions = ListBuffer.empty[Instruction]
-    // TODO: determine result register for l & r
     op match {
       case frontend.Rules.Mul(l, r, _) =>
-        val rReg = getFreeReg()
         instructions ++= transExp(l, reg)
+        val rReg = getFreeReg()
         instructions ++= transExp(r, rReg)
         // Runtime error check
         instructions += SMul(reg, rReg, reg, rReg)
@@ -79,8 +78,8 @@ object Expressions {
 
         addUnusedReg(rReg)
       case Div(l, r, _) =>
-        val rReg = getFreeReg()
         instructions ++= transExp(l, reg)
+        val rReg = getFreeReg()
         instructions ++= transExp(r, rReg)
         // Needs to be in R0 and R1 for "__aeabi_idiv"
         instructions += Mov(R0, reg)
@@ -108,18 +107,29 @@ object Expressions {
         addUnusedReg(rReg)
         instructions += Mov(reg, R1)
       case Plus(l, r, _) =>
-        val rReg = getFreeReg()
         instructions ++= transExp(l, reg)
+        val rReg = getFreeReg()
         instructions ++= transExp(r, rReg)
-        instructions += AddS(reg, reg, rReg)
+        var newReg = reg
+        if (R11 == rReg) {
+          instructions += Pop(ListBuffer(R11))
+          newReg = R10
+        }
+        instructions += AddS(newReg, newReg, rReg)
+
         // Runtime error check
         instructions += BranchLinkVS(addRuntimeError(Overflow))
         addUnusedReg(rReg)
       case frontend.Rules.Sub(l, r, _) =>
-        val rReg = getFreeReg()
         instructions ++= transExp(l, reg)
+        val rReg = getFreeReg()
         instructions ++= transExp(r, rReg)
-        instructions += SubS(reg, reg, rReg)
+        var newReg = reg
+        if (R11 == rReg) {
+          instructions += Pop(ListBuffer(R11))
+          newReg = R10
+        }
+        instructions += SubS(newReg, newReg, rReg)
         // Runtime error check
         instructions += BranchLinkVS(addRuntimeError(Overflow))
         addUnusedReg(rReg)
@@ -141,6 +151,16 @@ object Expressions {
     instructions
   }
 
+  private def regAccumulate(r: Reg): (Reg, ListBuffer[Instruction]) = {
+    val instructions = ListBuffer.empty[Instruction]
+    var nextReg = r
+    if (r == R11) {
+      instructions += Push(ListBuffer(R10))
+      nextReg = R10
+    }
+    (nextReg, instructions)
+  }
+
   private def transStrLiter(
       str: StrLiter,
       reg: Reg
@@ -151,15 +171,22 @@ object Expressions {
 
   /* Translates an expression operator to the internal representation. */
   def transExp(e: Expr, reg: Reg): ListBuffer[Instruction] = {
+    // val instructions = foo(reg)
     val instructions = ListBuffer.empty[Instruction]
+
     // TODO: Determine free registers
     e match {
-      case IntLiter(n, _)  => instructions += Ldr(reg, ImmMem(n))
-      case BoolLiter(b, _) => instructions += Mov(reg, ImmInt(boolToInt(b)))
+      case IntLiter(n, _) =>
+        val (newReg, instrs) = regAccumulate(reg)
+        instructions ++= instrs
+        instructions += Ldr(newReg, ImmMem(n))
+      case BoolLiter(b, _) =>
+        instructions += Mov(reg, ImmInt(boolToInt(b)))
       // TODO: escaped character
-      case CharLiter(c, _) => instructions += Mov(reg, ImmChar(c))
-      case str: StrLiter   => instructions ++= transStrLiter(str, reg)
-      case PairLiter(_)    => instructions += Ldr(reg, ImmMem(0))
+      case CharLiter(c, _) =>
+        instructions += Mov(reg, ImmChar(c))
+      case str: StrLiter => instructions ++= transStrLiter(str, reg)
+      case PairLiter(_)  => instructions += Ldr(reg, ImmMem(0))
       // TODO: track variable location
       case id: Ident =>
         val (index, t) = sTable(id)
@@ -171,8 +198,10 @@ object Expressions {
         }
       case ArrayElem(id, es, _) => instructions ++= loadArrayElem(id, es, reg)
       case e: UnOp              => instructions ++= transUnOp(e, reg)
-      case e: BinOp             => instructions ++= transBinOp(e, reg)
+      case e: BinOp =>
+        instructions ++= transBinOp(e, reg)
     }
+
     instructions
   }
 
