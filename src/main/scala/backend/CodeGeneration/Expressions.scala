@@ -69,7 +69,7 @@ object Expressions {
     instructions ++= transExp(op.lExpr, reg)
     val rReg = getFreeReg()
     instructions ++= transExp(op.rExpr, rReg)
-    // I
+    // Register over allocation check, if true pops variable from stack into R11
     var newReg = reg
     if (R11 == rReg) {
       instructions += Pop(ListBuffer(R11))
@@ -128,6 +128,7 @@ object Expressions {
     instructions
   }
 
+  /* Pushes variable in R10 onto stack if registers are over allocated */
   private def regAccumulate(r: Reg): (Reg, ListBuffer[Instruction]) = {
     val instructions = ListBuffer.empty[Instruction]
     var nextReg = r
