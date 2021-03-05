@@ -10,6 +10,8 @@ import scala.collection.mutable.ListBuffer
 
 object Scope {
 
+  private final val TRUE_CMP_INT = ImmInt(1)
+
   def transBegin(
       s: Stat,
       curInstrs: ListBuffer[Instruction]
@@ -82,7 +84,7 @@ object Scope {
     val reg = getFreeReg()
     instructions ++= transExp(cond, reg)
     // check if condition is true
-    instructions += Cmp(reg, ImmInt(1))
+    instructions += Cmp(reg, TRUE_CMP_INT)
     addUnusedReg(reg)
     instructions += BranchEq(insideWhile)
   }
