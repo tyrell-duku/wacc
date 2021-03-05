@@ -28,7 +28,7 @@ object BackendTestHelper extends AnyFunSuite {
 
   private def createExecutable(file: File): Unit = {
     val fName = file.getPath()
-    s"./compile $fName".!
+    s"java -jar target/scala-2.13/wacc.jar $fName".!
     val name = file.getName().replaceAll(".wacc", "")
     s"arm-linux-gnueabi-gcc -o $name -mcpu=arm1176jzf-s -mtune=arm1176jzf-s $name.s".!
     val armFile = new File(file.getName().replaceAll(".wacc", ".s"))
