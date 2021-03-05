@@ -9,6 +9,7 @@ import scala.collection.mutable.ListBuffer
 import backend.IR.Condition._
 
 object RuntimeErrors {
+  /* Adds a runtime error ERR to the function table. */
   def addRuntimeError(err: PreDefFunc): Label = {
     funcTable.addEntry(RuntimeError.func)
     funcTable.addEntry(stringPrintInstrs)
@@ -20,6 +21,8 @@ object RuntimeErrors {
     err.funcLabel
   }
 
+  /* Throws a runtime error by adding the appropiate instructions to the
+     internal representation. */
   def throwRuntimeError: (Label, List[Instruction]) = {
     (
       RuntimeError.funcLabel,
@@ -31,6 +34,8 @@ object RuntimeErrors {
     )
   }
 
+  /* Checks the bounds of a given array, branching to a runtime error if
+     necessary. */
   def checkArrayBounds: (Label, List[Instruction]) = {
     (
       ArrayBounds.funcLabel,
@@ -48,6 +53,8 @@ object RuntimeErrors {
     )
   }
 
+  /* Checks an expression to determine whether an expression has been divided
+     by 0, branching to a runtime error if necessary. */
   def checkDivideByZero: (Label, List[Instruction]) = {
     (
       DivideByZero.funcLabel,
@@ -61,6 +68,8 @@ object RuntimeErrors {
     )
   }
 
+  /* Checks an expression to determine whether an int has overflown, branching
+     to a runtime error if necessary. */
   def throwOverflowError: (Label, List[Instruction]) = {
     (
       Overflow.funcLabel,
@@ -71,6 +80,7 @@ object RuntimeErrors {
     )
   }
 
+  /* Free a given pair, branching to a runtime error if necessary. */
   def freePair: (Label, List[Instruction]) = {
     (
       FreePair.funcLabel,
@@ -92,6 +102,7 @@ object RuntimeErrors {
     )
   }
 
+  /* Free a given array, branching to a runtime error if necessary. */
   def freeArray: (Label, List[Instruction]) = {
     (
       FreeArray.funcLabel,
@@ -106,6 +117,8 @@ object RuntimeErrors {
     )
   }
 
+  /* Checks if attempting to defererence a null pointer, branching to a
+     runtime error if necessary. */
   def checkNullPointer: (Label, List[Instruction]) = {
     (
       NullPointer.funcLabel,

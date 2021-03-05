@@ -14,7 +14,7 @@ import scala.collection.mutable.ListBuffer
 object Arrays {
   private val SHIFT_TWO = 2
 
-  /* Loads an array elem into register Reg */
+  /* Loads an array elem into register Reg. */
   def loadArrayElem(
       id: Ident,
       es: List[Expr],
@@ -24,7 +24,7 @@ object Arrays {
     instructions += Ldr(isByte, reg, reg, NO_OFFSET)
   }
 
-  /* Stores an expression from Reg into the array elem */
+  /* Stores an expression from Reg into the array elem. */
   def storeArrayElem(
       id: Ident,
       es: List[Expr],
@@ -74,7 +74,7 @@ object Arrays {
     (isByte(t), instructions)
   }
 
-  /* Translates an array literal to the internal representation. */
+  /* Translates an array literal into the internal representation. */
   def transArrayLiter(
       t: Type,
       opArr: Option[List[Expr]],

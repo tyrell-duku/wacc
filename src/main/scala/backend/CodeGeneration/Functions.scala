@@ -10,19 +10,25 @@ import scala.collection.mutable.ListBuffer
 
 object Functions {
 
+  /* Translates call functions, returns list of instructions for the call,
+     initially calling storeArgs to put the arguments on the Stack Pointer.
+     Levels the Stack Pointer to it's original state and returns the return
+     value in freeReg */
   def transCall(
       id: Ident,
       args: Option[ArgList],
       freeReg: Reg
   ): ListBuffer[Instruction] = {
-    val (argInstrs, toAdd) = loadArgs(args, freeReg)
+    val (argInstrs, toAdd) = storeArgs(args, freeReg)
     argInstrs += BranchLink(Label("f_" + id))
     argInstrs ++= addSP(toAdd)
     argInstrs += Mov(freeReg, resultReg)
     argInstrs
   }
 
-  private def loadArgs(
+  /* Stores arguments on the Stack Pointer, returns list of instructions
+     and totalOffset created by storing the arguemnts onto the stack pointer */
+  private def storeArgs(
       args: Option[ArgList] = None,
       reg: Reg
   ): (ListBuffer[Instruction], Int) = {
@@ -42,7 +48,8 @@ object Functions {
     currentSP -= totalOff
     (instrs, totalOff)
   }
-
+  /* Adds the parameters from the function to the symbol table
+     with it's corresponding offset*/
   private def transFuncParams(ps: Option[ParamList]): Unit = ps match {
     case None =>
     case Some(ParamList(plist)) =>
@@ -56,6 +63,8 @@ object Functions {
       }
   }
 
+  /* Translates functions by updating current scope, calls transFuncParams
+     and translates the functions statements*/
   def transFunc(func: Func): Unit = {
     val Func(t, id, ps, s) = func
     currentLabel = Label("f_" + id)
@@ -77,6 +86,8 @@ object Functions {
     userFuncTable.addEntry(currentLabel, instructions)
   }
 
+  /* Translates Return Statements, takes in an expression, translates
+     the argument and returns the Intruction list */
   def transReturn(e: Expr): ListBuffer[Instruction] = {
     val reg = getFreeReg()
     val instructions = transExp(e, reg)

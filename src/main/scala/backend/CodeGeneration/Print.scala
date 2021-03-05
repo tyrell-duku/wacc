@@ -1,10 +1,12 @@
 package backend.CodeGeneration
 
+import scala.collection.mutable.ListBuffer
 import backend.CodeGeneration.Expressions.transExp
 import backend.CodeGenerator._
 import backend.DefinedFuncs.PreDefinedFuncs._
 import backend.IR.InstructionSet._
 import backend.IR.Operand.R0
+import backend.DefinedFuncs.PreDefinedFuncs
 import frontend.Rules.{
   Type,
   CharT,
@@ -17,11 +19,9 @@ import frontend.Rules.{
   PrintLn => _
 }
 
-import scala.collection.mutable.ListBuffer
-import backend.DefinedFuncs.PreDefinedFuncs
-
 object Print {
-
+  /* Returns the pre-defined function of the given type T. Only valid for int,
+     bool, string, pair and array types. */
   private def typeToPreDefFunc(t: Type): PreDefinedFuncs.PreDefFunc = {
     t match {
       case IntT          => PrintInt
@@ -34,7 +34,9 @@ object Print {
       case _ => null
     }
   }
-
+  /* Translates print statements to the internal representation. ISNEWLINE is
+     used as a println flag; converting E into a println statement if true and
+     converting E into a print statement otherwise. */
   def transPrint(
       e: Expr,
       isNewLine: Boolean

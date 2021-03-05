@@ -12,7 +12,8 @@ import scala.collection.mutable.ListBuffer
 
 object Assignments {
 
-  /* Translates the declaration of a new variable */
+  /* Translates the declaration of a new variable to the internal
+     representation. */
   def transEqIdent(
       t: Type,
       id: Ident,
@@ -30,7 +31,8 @@ object Assignments {
     instructions
   }
 
-  /* Translates the re-assignment of a new variable */
+  /* Translates the re-assignment of a variable to the internal
+     representation. */
   def transEqAssign(
       aLHS: AssignLHS,
       aRHS: AssignRHS
@@ -41,7 +43,7 @@ object Assignments {
       case Fst(id: Ident, _) =>
         instructions ++= transEqAssignPairElem(aRHS, id, IS_FST_ELEM, freeReg)
       case Snd(id: Ident, _) =>
-        instructions ++= transEqAssignPairElem(aRHS, id, false, freeReg)
+        instructions ++= transEqAssignPairElem(aRHS, id, IS_SND_ELEM, freeReg)
       case id: Ident =>
         val (index, t) = sTable(id)
         val (isByte, instrs) = assignRHS(t, aRHS, freeReg)
@@ -59,7 +61,8 @@ object Assignments {
     instructions
   }
 
-  /* Translates the AssignRHS Rule, returns the RHS size and instructions */
+  /* Translates the ARHS. Returns if the size of RHS is a byte and the translated
+     instructions. */
   def assignRHS(
       t: Type,
       aRHS: AssignRHS,

@@ -105,6 +105,7 @@ object PreDefinedFuncs {
     override val msgs = List("%p\\0")
     override val func = referencePrintInstrs
   }
+  // Prints a new line
   case object PrintLn extends PreDefFunc {
     override val funcLabel = Label("p_print_ln")
     override val msgName = List("msg_new_line")
@@ -113,6 +114,7 @@ object PreDefinedFuncs {
   }
 
   /* Reading */
+  // Reads an int
   case object ReadInt extends PreDefFunc {
     override val funcLabel = Label("p_read_int")
     // function requires Label argument
@@ -120,6 +122,7 @@ object PreDefinedFuncs {
     override val msgs = List("%d\\0")
     override val msgName = List.empty
   }
+  // Reads a character
   case object ReadChar extends PreDefFunc {
     override val funcLabel = Label("p_read_char")
     // function requires Label argument

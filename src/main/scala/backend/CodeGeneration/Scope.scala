@@ -10,9 +10,7 @@ import frontend.Rules.{Expr, Stat}
 import scala.collection.mutable.ListBuffer
 
 object Scope {
-
-  private final val TRUE_CMP_INT = ImmInt(1)
-
+  /* Translates a begin statement into the IR */
   def transBegin(
       s: Stat,
       curInstrs: ListBuffer[Instruction]
@@ -20,6 +18,9 @@ object Scope {
     transNextScope(s, curInstrs)
   }
 
+  /* Translates the code within the next scope. CURINSTRS contains the
+     instructions that have been translated until the point where transNextScope
+     has been called. */
   private def transNextScope(
       s: Stat,
       curInstrs: ListBuffer[Instruction]
@@ -40,6 +41,9 @@ object Scope {
     instructions
   }
 
+  /* Translates the if statement to the internal representation.
+     CURINSTRS are the instructions executed before this function,
+     used for the if branching. */
   def transIf(
       cond: Expr,
       s1: Stat,
@@ -67,7 +71,9 @@ object Scope {
     currentLabel = afterLabel
     ListBuffer.empty[Instruction]
   }
-
+  /* Translates a while-loop with condition COND and body S into the
+     internal representation given the instructions that had been translated
+     beforehand CURINSTRS. */
   def transWhile(
       cond: Expr,
       s: Stat,

@@ -11,6 +11,9 @@ import frontend.Rules._
 import scala.collection.mutable.ListBuffer
 
 object Read {
+  /* Obtains the type of an element of a pair. Only works if T is a Pair.
+     Returns the type of the first element of pair T if ISFST is true, and the
+     second element otherwise. */
   private def getPairElemType(t: Type, isFst: Boolean): Type = t match {
     case Pair(PairElemPair, PairElemPair) => null
     case Pair(PairElemPair, PairElemT(baseType)) =>
@@ -38,7 +41,7 @@ object Read {
     // Semantically incorrect
     case _ => null
   }
-
+  /* Translates read pair elems to the internal representation. */
   def transReadPairElem(
       pe: PairElem,
       isFst: Boolean
@@ -59,7 +62,7 @@ object Read {
   }
 
   /* Translates read identifiers to the internal representation.
-    Only types int and char are semantically valid. */
+     Only types int and char are semantically valid. */
   private def transReadIdent(ident: Ident): ListBuffer[Instruction] = {
     val instructions = ListBuffer.empty[Instruction]
     val freeReg = getFreeReg()

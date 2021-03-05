@@ -49,6 +49,9 @@ object CodeGenerator {
   val IS_FST_ELEM = true
   val IS_SND_ELEM = false
 
+  val TRUE_CMP_INT = ImmInt(1)
+  val FALSE_CMP_INT = ImmInt(0)
+
   private def saveRegs(
       regsNotInUse: ListBuffer[Reg]
   ): Instruction = {
