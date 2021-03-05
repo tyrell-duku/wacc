@@ -1,3 +1,5 @@
+package frontend
+
 import parsley.Parsley
 import parsley.Parsley._
 import parsley.combinator.{option, many}
@@ -6,7 +8,7 @@ import parsley.expr.{Ops, Postfix, precedence}
 import parsley.character.{noneOf, oneOf}
 import parsley.lift.lift2
 import frontend.Rules._
-import Lexer._
+import frontend.Lexer._
 
 object LiterParser {
   // "int" | "bool"  | "char" | "string"

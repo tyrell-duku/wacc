@@ -63,11 +63,12 @@ object CodeGenerator {
       prog: Program,
       sTable: SymbolTable
   ): (List[Data], List[(Label, List[Instruction])]) = {
+    this.sTable = sTable
     val Program(funcs, stat) = prog
     for (f <- funcs) {
       transFunc(f)
     }
-    this.sTable = sTable
+
     currentLabel = Label("main")
 
     scopeSP = currentSP

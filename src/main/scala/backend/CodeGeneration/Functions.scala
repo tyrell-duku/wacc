@@ -38,7 +38,7 @@ object Functions {
           val t = getExprType(e)
 
           instrs ++= transExp(e, reg)
-          StrOffsetIndex(isByte(t), reg, SP, -getBaseTypeSize(t))
+          instrs += StrOffsetIndex(isByte(t), reg, SP, -getBaseTypeSize(t))
           currentSP += getBaseTypeSize(t)
           totalOff += getBaseTypeSize(t)
         }
