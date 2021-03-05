@@ -10,6 +10,7 @@ import backend.IR.Operand._
 import frontend.Rules._
 
 import scala.collection.mutable.ListBuffer
+import backend.IR
 
 object Expressions {
 
@@ -26,7 +27,7 @@ object Expressions {
       case Negation(e, _) =>
         transExp(e, reg) ++= ListBuffer(
           RsbS(reg, reg, ImmInt(0)),
-          BranchLinkVS(addRuntimeError(Overflow))
+          BranchLinkCond(IR.Condition.VS, addRuntimeError(Overflow))
         )
       case Not(e, _) => transExp(e, reg) += Eor(reg, reg, ImmInt(1))
       case Ord(e, _) => transExp(e, reg)
@@ -75,7 +76,10 @@ object Expressions {
         // Runtime error check
         instructions += SMul(reg, rReg, reg, rReg)
         instructions += Cmp(rReg, ASR(reg, ImmInt(31)))
-        instructions += BranchLinkNE(addRuntimeError(Overflow))
+        instructions += BranchLinkCond(
+          IR.Condition.NE,
+          addRuntimeError(Overflow)
+        )
 
         addUnusedReg(rReg)
       case Div(l, r, _) =>
@@ -113,7 +117,10 @@ object Expressions {
         instructions ++= transExp(r, rReg)
         instructions += AddS(reg, reg, rReg)
         // Runtime error check
-        instructions += BranchLinkVS(addRuntimeError(Overflow))
+        instructions += BranchLinkCond(
+          IR.Condition.VS,
+          addRuntimeError(Overflow)
+        )
         addUnusedReg(rReg)
       case frontend.Rules.Sub(l, r, _) =>
         val rReg = getFreeReg()
@@ -121,7 +128,10 @@ object Expressions {
         instructions ++= transExp(r, rReg)
         instructions += SubS(reg, reg, rReg)
         // Runtime error check
-        instructions += BranchLinkVS(addRuntimeError(Overflow))
+        instructions += BranchLinkCond(
+          IR.Condition.VS,
+          addRuntimeError(Overflow)
+        )
         addUnusedReg(rReg)
       case frontend.Rules.And(l, r, _) =>
         val rReg = getFreeReg()

@@ -6,6 +6,7 @@ import backend.IR.InstructionSet._
 import backend.IR.Operand._
 
 import scala.collection.mutable.ListBuffer
+import backend.IR.Condition._
 
 object PreDefinedFuncs {
 
@@ -98,11 +99,11 @@ object PreDefinedFuncs {
         Push(ListBuffer(LR)),
         Cmp(R0, ImmInt(0)),
         LdrLT(R0, DataLabel(Label(ArrayBounds.msgName(0)))),
-        BranchLinkLT(RuntimeError.funcLabel),
+        BranchLinkCond(LT, RuntimeError.funcLabel),
         Ldr(R1, RegAdd(R1)),
         Cmp(R0, R1),
         LdrCS(R0, DataLabel(Label(ArrayBounds.msgName(1)))),
-        BranchLinkCS(RuntimeError.funcLabel),
+        BranchLinkCond(CS, RuntimeError.funcLabel),
         Pop(ListBuffer(PC))
       )
     )
@@ -115,7 +116,7 @@ object PreDefinedFuncs {
         Push(ListBuffer(LR)),
         Cmp(R1, ImmInt(0)),
         LdrEQ(R0, DataLabel(Label(DivideByZero.msgName(0)))),
-        BranchLinkEQ(RuntimeError.funcLabel),
+        BranchLinkCond(EQ, RuntimeError.funcLabel),
         Pop(ListBuffer(PC))
       )
     )
@@ -173,7 +174,7 @@ object PreDefinedFuncs {
         Push(ListBuffer(LR)),
         Cmp(R0, ImmInt(0)),
         LdrEQ(R0, DataLabel(Label(NullPointer.msgName(0)))),
-        BranchLinkEQ(RuntimeError.funcLabel),
+        BranchLinkCond(EQ, RuntimeError.funcLabel),
         Pop(ListBuffer(PC))
       )
     )
