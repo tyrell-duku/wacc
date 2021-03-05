@@ -4,6 +4,7 @@ import backend.CodeGeneration.Arrays.transArrayElem
 import backend.CodeGeneration.Pairs.transPairElem
 import backend.CodeGenerator._
 import backend.DefinedFuncs.ReadInstructions.{charRead, intRead}
+import backend.DefinedFuncs.PreDefinedFuncs.{ReadInt, ReadChar}
 import backend.IR.InstructionSet._
 import backend.IR.Operand._
 import frontend.Rules._
@@ -18,6 +19,23 @@ object Read {
       if (isFst) baseType else null
     case Pair(PairElemT(baseTypeFst), PairElemT(baseTypeSnd)) =>
       if (isFst) baseTypeFst else baseTypeSnd
+    case _ => null
+  }
+
+  /* Pattern matches on type T and returns the respective BranchLink
+     instruction. Adds the respective function to the funcTable. */
+  private def readBranch(t: Type): Instruction = t match {
+    case CharT =>
+      funcTable.addEntry(
+        charRead(dataTable.addDataEntry(ReadChar.functionMsg(0)))
+      )
+      BranchLink(ReadChar.funcLabel)
+    case IntT =>
+      funcTable.addEntry(
+        intRead(dataTable.addDataEntry(ReadInt.functionMsg(0)))
+      )
+      BranchLink(ReadInt.funcLabel)
+    // Semantically incorrect
     case _ => null
   }
 
@@ -36,16 +54,7 @@ object Read {
     // value must be in R0 for branch
     instructions += Mov(resultReg, freeReg)
     addUnusedReg(freeReg)
-    t match {
-      case CharT =>
-        instructions += BranchLink(Label("p_read_char"))
-        funcTable.addEntry(charRead(dataTable.addDataEntry(" %c\\0")))
-      case IntT =>
-        instructions += BranchLink(Label("p_read_int"))
-        funcTable.addEntry(intRead(dataTable.addDataEntry("%d\\0")))
-      // Semantically incorrect
-      case _ =>
-    }
+    instructions += readBranch(t)
     instructions
   }
 
@@ -64,17 +73,7 @@ object Read {
     // variable must be in R0 for the branch
     instructions += Mov(resultReg, freeReg)
     addUnusedReg(freeReg)
-    // pattern matching for which read label to use
-    identType match {
-      case CharT =>
-        instructions += BranchLink(Label("p_read_char"))
-        funcTable.addEntry(charRead(dataTable.addDataEntry(" %c\\0")))
-      case IntT =>
-        instructions += BranchLink(Label("p_read_int"))
-        funcTable.addEntry(intRead(dataTable.addDataEntry("%d\\0")))
-      // Semantically incorrect
-      case _ => ListBuffer.empty[Instruction]
-    }
+    instructions += readBranch(identType)
     instructions
   }
 
@@ -91,16 +90,7 @@ object Read {
     addUnusedReg(resReg)
     // Gets base type of the arrayElem
     val t = getExprType(ae)
-    t match {
-      case CharT =>
-        instructions += BranchLink(Label("p_read_char"))
-        funcTable.addEntry(charRead(dataTable.addDataEntry(" %c\\0")))
-      case IntT =>
-        instructions += BranchLink(Label("p_read_int"))
-        funcTable.addEntry(intRead(dataTable.addDataEntry("%d\\0")))
-      // Semantically incorrect
-      case _ =>
-    }
+    instructions += readBranch(t)
     instructions
   }
 
