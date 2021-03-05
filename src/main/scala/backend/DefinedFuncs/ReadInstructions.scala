@@ -1,7 +1,8 @@
-package backend
+package backend.DefinedFuncs
 
-import InstructionSet._
-import frontend.Rules._
+import backend.IR.InstructionSet._
+import backend.IR.Operand._
+
 import scala.collection.mutable.ListBuffer
 
 object ReadInstructions {

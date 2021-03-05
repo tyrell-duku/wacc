@@ -12,6 +12,7 @@ compile:
 test:
   stage: test
   script:
+    - sbt assembly
     - apt-get install gcc-arm-linux-gnueabi qemu qemu-user -y
     - sbt test
   needs: []

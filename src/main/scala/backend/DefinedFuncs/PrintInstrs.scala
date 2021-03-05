@@ -1,7 +1,11 @@
-package backend
+package backend.DefinedFuncs
 
-import InstructionSet._
-import frontend.Rules._
+import backend.CodeGeneration.Expressions._
+import backend.CodeGenerator._
+import backend.IR.Condition.{EQ, NE}
+import backend.IR.InstructionSet._
+import backend.IR.Operand._
+
 import scala.collection.mutable.ListBuffer
 
 object PrintInstrs {
@@ -28,8 +32,8 @@ object PrintInstrs {
     List[Instruction](
       Push(ListBuffer(LR)),
       Cmp(resultReg, ImmInt(0)),
-      LdrCond(backend.NE, resultReg, DataLabel(Label("msg_true"))),
-      LdrCond(backend.EQ, resultReg, DataLabel(Label("msg_false"))),
+      LdrCond(NE, resultReg, DataLabel(Label("msg_true"))),
+      LdrCond(EQ, resultReg, DataLabel(Label("msg_false"))),
       Add(resultReg, resultReg, ImmInt(4)),
       BranchLink(Label("printf")),
       Mov(resultReg, ImmInt(0)),

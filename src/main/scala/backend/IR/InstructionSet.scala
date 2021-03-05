@@ -1,8 +1,10 @@
-package backend
+package backend.IR
 
 import scala.collection.mutable.ListBuffer
+import backend.IR.Operand._
+import backend.IR.Condition._
 
-package object InstructionSet {
+object InstructionSet {
 
   sealed trait Instruction
 
@@ -10,22 +12,24 @@ package object InstructionSet {
   case class Add(rd: Reg, rn: Reg, op2: Operand) extends Instruction {
     override def toString: String = "ADD " + rd + ", " + rn + ", " + op2
   }
+
   case class AddS(rd: Reg, rn: Reg, op2: Operand) extends Instruction {
     override def toString: String = "ADDS " + rd + ", " + rn + ", " + op2
   }
+
   case class Sub(rd: Reg, rn: Reg, op2: Operand) extends Instruction {
     override def toString: String = "SUB " + rd + ", " + rn + ", " + op2
   }
+
   case class SubS(rd: Reg, rn: Reg, op2: Operand) extends Instruction {
     override def toString: String = "SUBS " + rd + ", " + rn + ", " + op2
   }
-  case class Mul(rd: Reg, rm: Reg, rs: Reg) extends Instruction {
-    override def toString: String = "MUL " + rd + ", " + rm + ", " + rs
-  }
+
   case class SMul(rdLo: Reg, rdHi: Reg, rn: Reg, rm: Reg) extends Instruction {
     override def toString: String =
       "SMULL " + rdLo + ", " + rdHi + ", " + rn + ", " + rm
   }
+
   case class RsbS(rd: Reg, rn: Reg, op2: Operand) extends Instruction {
     override def toString: String = "RSBS " + rd + ", " + rn + ", " + op2
   }
@@ -39,9 +43,11 @@ package object InstructionSet {
   case class And(rd: Reg, rn: Reg, op2: Operand) extends Instruction {
     override def toString: String = "AND " + rd + ", " + rn + ", " + op2
   }
+
   case class Or(rd: Reg, rn: Reg, op2: Operand) extends Instruction {
     override def toString: String = "ORR " + rd + ", " + rn + ", " + op2
   }
+
   case class Eor(rd: Reg, rn: Reg, op2: Operand) extends Instruction {
     override def toString: String = "EOR " + rd + ", " + rn + ", " + op2
   }
@@ -50,28 +56,35 @@ package object InstructionSet {
   case class Branch(label: Label) extends Instruction {
     override def toString: String = "B " + label
   }
+
   case class BranchLink(label: Label) extends Instruction {
     override def toString: String = "BL " + label
   }
+
   // Branch Link Not Equal
   case class BranchLinkNE(label: Label) extends Instruction {
     override def toString: String = "BLNE " + label
   }
+
   // Branch Link Overflow
   case class BranchLinkVS(label: Label) extends Instruction {
     override def toString: String = "BLVS " + label
   }
+
   // Branch Link Less Than
   case class BranchLinkLT(label: Label) extends Instruction {
     override def toString: String = "BLLT " + label
   }
+
   // Branch Link Equal
   case class BranchLinkEQ(label: Label) extends Instruction {
     override def toString: String = "BLEQ " + label
   }
+
   case class BranchEq(label: Label) extends Instruction {
     override def toString: String = "BEQ " + label
   }
+
   // Branch Link Carry Set
   case class BranchLinkCS(label: Label) extends Instruction {
     override def toString: String = "BLCS " + label
@@ -81,33 +94,54 @@ package object InstructionSet {
   case class Push(rs: ListBuffer[Reg]) extends Instruction {
     override def toString: String = "PUSH " + "{" + rs.mkString(", ") + "}"
   }
+
   case class Pop(rs: ListBuffer[Reg]) extends Instruction {
     override def toString: String = "POP " + "{" + rs.mkString(", ") + "}"
   }
+
   case class Ldr(rd: Reg, op2: LoadOperand) extends Instruction {
     override def toString: String = "LDR " + rd + ", " + op2
   }
-  case class LdrB(rd: Reg, op2: LoadOperand) extends Instruction {
-    override def toString: String = "LDRB " + rd + ", " + op2
+  object Ldr {
+    def apply(isByte: Boolean, src: Reg, dst: Reg, offset: Int): Instruction = {
+      if (isByte) {
+        return LdrSB.apply(src, dst, offset)
+      }
+      apply(src, dst, offset)
+    }
+    def apply(src: Reg, dst: Reg, offset: Int): Instruction = {
+      if (offset == 0) {
+        return Ldr(src, RegAdd(dst))
+      }
+      Ldr(src, RegisterOffset(dst, offset))
+    }
   }
+
+  case class LdrSB(rd: Reg, op2: LoadOperand) extends Instruction {
+    override def toString: String = "LDRSB " + rd + ", " + op2
+  }
+  object LdrSB {
+    def apply(src: Reg, dst: Reg, offset: Int): Instruction = {
+      if (offset == 0) {
+        return LdrSB(src, RegAdd(dst))
+      }
+      LdrSB(src, RegisterOffset(dst, offset))
+    }
+  }
+
   // LDR Equal
   case class LdrEQ(rd: Reg, op2: LoadOperand) extends Instruction {
     override def toString: String = "LDREQ " + rd + ", " + op2
   }
+
   // LDR Less Than
   case class LdrLT(rd: Reg, op2: LoadOperand) extends Instruction {
     override def toString: String = "LDRLT " + rd + ", " + op2
   }
+
   // LDR Carry Set
   case class LdrCS(rd: Reg, op2: LoadOperand) extends Instruction {
     override def toString: String = "LDRCS " + rd + ", " + op2
-  }
-  case class LdrOffset(rd: Reg, regAdd: Reg, offset: Int) extends Instruction {
-    override def toString: String =
-      "LDR " + rd + ", " + "[" + regAdd + ", #" + offset + "]"
-  }
-  case class LdrSB(rd: Reg, op2: LoadOperand) extends Instruction {
-    override def toString: String = "LDRSB " + rd + ", " + op2
   }
 
   case class LdrCond(cond: Condition, rd: Reg, op2: LoadOperand)
@@ -128,20 +162,45 @@ package object InstructionSet {
   case class Str(rd: Reg, add: Address) extends Instruction {
     override def toString: String = "STR " + rd + ", " + add
   }
+  object Str {
+    def apply(isByte: Boolean, src: Reg, dst: Reg, offset: Int): Instruction = {
+      if (isByte) {
+        return StrB.apply(src, dst, offset)
+      }
+      apply(src, dst, offset)
+    }
+    def apply(src: Reg, dst: Reg, offset: Int): Instruction = {
+      if (offset == 0) {
+        return Str(src, RegAdd(dst))
+      }
+      Str(src, RegisterOffset(dst, offset))
+    }
+  }
 
   case class StrB(rd: Reg, add: Address) extends Instruction {
     override def toString: String = "STRB " + rd + ", " + add
   }
-
-  case class StrOffset(rd: Reg, regAdd: Reg, offset: Int) extends Instruction {
-    override def toString: String =
-      "STR " + rd + ", " + "[" + regAdd + ", #" + offset + "]"
+  object StrB {
+    def apply(src: Reg, dst: Reg, offset: Int): Instruction = {
+      if (offset == 0) {
+        return StrB(src, RegAdd(dst))
+      }
+      StrB(src, RegisterOffset(dst, offset))
+    }
   }
 
   case class StrOffsetIndex(rd: Reg, regAdd: Reg, offset: Int)
       extends Instruction {
     override def toString: String =
       "STR " + rd + ", " + "[" + regAdd + ", #" + offset + "]!"
+  }
+  object StrOffsetIndex {
+    def apply(isByte: Boolean, src: Reg, dst: Reg, offset: Int): Instruction = {
+      if (isByte) {
+        return StrBOffsetIndex(src, dst, offset)
+      }
+      StrOffsetIndex(src, dst, offset)
+    }
   }
 
   case class StrBOffsetIndex(rd: Reg, regAdd: Reg, offset: Int)
@@ -159,4 +218,5 @@ package object InstructionSet {
   }
 
   case class Data(label: Label, s: String)
+
 }
