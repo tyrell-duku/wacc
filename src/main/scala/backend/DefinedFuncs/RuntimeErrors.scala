@@ -13,8 +13,8 @@ object RuntimeErrors {
     funcTable.addEntry(RuntimeError.func)
     funcTable.addEntry(stringPrintInstrs)
     dataTable.addDataEntryWithLabel("msg_string", "%.*s\\0")
-    for (i <- 0 until err.functionMsg.length) {
-      dataTable.addDataEntryWithLabel(err.msgName(i), err.functionMsg(i))
+    for (i <- 0 until err.msgs.length) {
+      dataTable.addDataEntryWithLabel(err.msgName(i), err.msgs(i))
     }
     funcTable.addEntry(err.func)
     err.funcLabel

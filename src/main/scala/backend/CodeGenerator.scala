@@ -31,7 +31,6 @@ object CodeGenerator {
   var sTable: SymbolTable = null
   var scopeSP = 0
   var currentLabel = Label("main")
-  private var labelCounter = 0
   val dataTable = new DataTable
   val userFuncTable = new FuncTable
   val funcTable = new FuncTable
@@ -152,12 +151,6 @@ object CodeGenerator {
       case _: EqOps      => BoolT
       case _: LogicalOps => BoolT
     }
-  }
-
-  def assignLabel(): Label = {
-    val nextLabel = Label("L" + labelCounter)
-    labelCounter += 1
-    nextLabel
   }
 
   private def transExit(

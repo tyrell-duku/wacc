@@ -27,12 +27,12 @@ object Read {
   private def readBranch(t: Type): Instruction = t match {
     case CharT =>
       funcTable.addEntry(
-        charRead(dataTable.addDataEntry(ReadChar.functionMsg(0)))
+        charRead(dataTable.addDataEntry(ReadChar.msgs(0)))
       )
       BranchLink(ReadChar.funcLabel)
     case IntT =>
       funcTable.addEntry(
-        intRead(dataTable.addDataEntry(ReadInt.functionMsg(0)))
+        intRead(dataTable.addDataEntry(ReadInt.msgs(0)))
       )
       BranchLink(ReadInt.funcLabel)
     // Semantically incorrect

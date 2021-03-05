@@ -48,10 +48,10 @@ object Print {
       case CharT => instrs += BranchLink(Label("putchar"))
       case _ =>
         val printFunc = typeToPreDefFunc(t)
-        for (i <- 0 until printFunc.functionMsg.length) {
+        for (i <- 0 until printFunc.msgs.length) {
           dataTable.addDataEntryWithLabel(
             printFunc.msgName(i),
-            printFunc.functionMsg(i)
+            printFunc.msgs(i)
           )
         }
         instrs += BranchLink(printFunc.funcLabel)
@@ -64,7 +64,7 @@ object Print {
       )
       dataTable.addDataEntryWithLabel(
         PrintLn.msgName(0),
-        PrintLn.functionMsg(0)
+        PrintLn.msgs(0)
       )
       funcTable.addEntry(PrintLn.func)
     }

@@ -5,6 +5,7 @@ import backend.IR.InstructionSet.{Instruction, Label}
 import scala.collection.mutable.ListBuffer
 
 class FuncTable {
+  private var labelCounter = 0
   var table = ListBuffer.empty[(Label, List[Instruction])]
 
   def addEntry(label: Label, instrs: List[Instruction]): Unit = {
@@ -29,5 +30,11 @@ class FuncTable {
       }
     }
     false
+  }
+
+  def assignLabel(): Label = {
+    val nextLabel = Label("L" + labelCounter)
+    labelCounter += 1
+    nextLabel
   }
 }

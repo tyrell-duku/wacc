@@ -51,11 +51,11 @@ object Scope {
     // check if condition is false
     curInstrs += Cmp(reg, ImmInt(0))
     addUnusedReg(reg)
-    val elseBranch = assignLabel()
+    val elseBranch = funcTable.assignLabel()
     curInstrs += BranchCond(EQ, elseBranch)
     // statement if the condition was true
     val instructions = transNextScope(s1, curInstrs)
-    val afterLabel = assignLabel()
+    val afterLabel = funcTable.assignLabel()
     instructions += Branch(afterLabel)
     userFuncTable.addEntry(currentLabel, instructions.toList)
     currentLabel = elseBranch
@@ -74,10 +74,10 @@ object Scope {
       curInstrs: ListBuffer[Instruction]
   ): ListBuffer[Instruction] = {
     val instructions = ListBuffer.empty[Instruction]
-    val afterLabel = assignLabel()
+    val afterLabel = funcTable.assignLabel()
     curInstrs += Branch(afterLabel)
     userFuncTable.addEntry(currentLabel, curInstrs.toList)
-    val insideWhile = assignLabel()
+    val insideWhile = funcTable.assignLabel()
     currentLabel = insideWhile
     val transInnerWhile = transNextScope(s, ListBuffer.empty[Instruction])
     userFuncTable.addEntry(currentLabel, transInnerWhile.toList)
