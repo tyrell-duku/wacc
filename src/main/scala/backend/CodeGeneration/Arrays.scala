@@ -12,6 +12,7 @@ import scala.collection.mutable.ListBuffer
 
 object Arrays {
 
+  /* Loads an array elem into register Reg */
   def loadArrayElem(
       id: Ident,
       es: List[Expr],
@@ -21,6 +22,7 @@ object Arrays {
     instructions += Ldr(isByte, reg, reg, 0)
   }
 
+  /* Stores an expression from Reg into the array elem */
   def storeArrayElem(
       id: Ident,
       es: List[Expr],
@@ -33,26 +35,32 @@ object Arrays {
     instructions
   }
 
+  /* Translates an array elem to the internal representation. */
   def transArrayElem(
       id: Ident,
       es: List[Expr],
       reg: Reg
   ): (Boolean, ListBuffer[Instruction]) = {
-    var (index, t) = sTable(id)
     val instructions = ListBuffer.empty[Instruction]
+    var (index, t) = sTable(id)
     val baseTypeSize = getBaseTypeSize(t)
     val spOffset = currentSP - index
-    instructions += backend.IR.InstructionSet.Add(reg, SP, ImmInt(spOffset))
+    // Gets the SP address where the address for the array is stored
+    instructions += Add(reg, SP, ImmInt(spOffset))
     val nextReg = getFreeReg()
+    // Handles nested array elems
     for (exp <- es) {
+      // Gets type of array elem at current depth
       t = getInnerType(t)
       instructions ++= transExp(exp, nextReg)
       instructions += Ldr(reg, RegAdd(reg))
-      // Values must be in R0 & R1 for branch
+      // Values must be in R0 & R1 for array bounds check
       instructions += Mov(R0, nextReg)
       instructions += Mov(R1, reg)
       instructions += BranchLink(addRuntimeError(ArrayBounds))
+      // Add offset to account for array size at start of array in memory
       instructions += Add(reg, reg, ImmInt(INT_SIZE))
+      // Gets address of array elem
       if (isByte(t)) {
         instructions += Add(reg, reg, nextReg)
       } else {
@@ -61,6 +69,44 @@ object Arrays {
     }
     addUnusedReg(nextReg)
     (isByte(t), instructions)
+  }
+
+  /* Translates an array literal to the internal representation. */
+  def transArrayLiter(
+      t: Type,
+      opArr: Option[List[Expr]],
+      freeReg: Reg
+  ): ListBuffer[Instruction] = {
+    val ArrayT(innerType) = t
+    val arr = opArr match {
+      case Some(arr) => arr
+      case None      => List.empty[Expr]
+    }
+    val listSize = arr.size
+    // Type of each array elem
+    val baseTypeSize = getBaseTypeSize(innerType)
+    // Size needed to store all elems of array + array size in memory
+    val sizeToMalloc = INT_SIZE + (listSize * baseTypeSize)
+    instructions += Ldr(R0, ImmMem(sizeToMalloc))
+    instructions += BranchLink(Label("malloc"))
+    // Malloc size must be in R0 for "malloc"
+    instructions += Mov(freeReg, R0)
+    val nextFreeReg = getFreeReg()
+    val typeSizeIsByte = isByte(innerType)
+    // If array elems are of size byte, offset increments by 1 for each
+    // elem, otherwise increments by 4
+    val offset: (Int => Int) =
+      if (typeSizeIsByte) (i => i + INT_SIZE)
+      else (i => (i + 1) * ADDRESS_SIZE)
+    // Store all array elements into memory
+    for (i <- 0 until listSize) {
+      instructions ++= transExp(arr(i), nextFreeReg)
+      instructions += Str(typeSizeIsByte, nextFreeReg, freeReg, offset(i))
+    }
+    // Store array size into memory at start of malloced memory
+    instructions += Ldr(nextFreeReg, ImmMem(listSize))
+    instructions += Str(nextFreeReg, RegAdd(freeReg))
+    addUnusedReg(nextFreeReg)
   }
 
 }
