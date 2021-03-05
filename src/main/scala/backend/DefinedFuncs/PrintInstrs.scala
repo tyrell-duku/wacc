@@ -44,12 +44,12 @@ object PrintInstrs {
   final val resultReg: Reg = R0
 
   val stringPrintInstrs: (Label, List[Instruction]) = (
-    Label("p_print_string"),
+    PrintString.funcLabel,
     List[Instruction](
       Push(ListBuffer(LR)),
       Ldr(R1, RegAdd(resultReg)),
       Add(R2, resultReg, ImmInt(4)),
-      Ldr(resultReg, DataLabel(Label("msg_string"))),
+      Ldr(resultReg, DataLabel(Label(PrintString.msgName(0)))),
       Add(resultReg, resultReg, ImmInt(4)),
       BranchLink(Label("printf")),
       Mov(resultReg, ImmInt(0)),
@@ -59,12 +59,12 @@ object PrintInstrs {
   )
 
   val boolPrintInstrs: (Label, List[Instruction]) = (
-    Label("p_print_bool"),
+    PrintBool.funcLabel,
     List[Instruction](
       Push(ListBuffer(LR)),
       Cmp(resultReg, ImmInt(0)),
-      LdrCond(NE, resultReg, DataLabel(Label("msg_true"))),
-      LdrCond(EQ, resultReg, DataLabel(Label("msg_false"))),
+      LdrCond(NE, resultReg, DataLabel(Label(PrintBool.msgName(0)))),
+      LdrCond(EQ, resultReg, DataLabel(Label(PrintBool.msgName(1)))),
       Add(resultReg, resultReg, ImmInt(4)),
       BranchLink(Label("printf")),
       Mov(resultReg, ImmInt(0)),
@@ -74,11 +74,11 @@ object PrintInstrs {
   )
 
   val intPrintInstrs: (Label, List[Instruction]) = (
-    Label("p_print_int"),
+    PrintInt.funcLabel,
     List[Instruction](
       Push(ListBuffer(LR)),
       Mov(R1, resultReg),
-      Ldr(resultReg, DataLabel(Label("msg_int"))),
+      Ldr(resultReg, DataLabel(Label(PrintInt.msgName(0)))),
       Add(resultReg, resultReg, ImmInt(4)),
       BranchLink(Label("printf")),
       Mov(resultReg, ImmInt(0)),
@@ -89,11 +89,11 @@ object PrintInstrs {
 
   val referencePrintInstrs: (Label, List[Instruction]) =
     (
-      Label("p_print_reference"),
+      PrintReference.funcLabel,
       List[Instruction](
         Push(ListBuffer(LR)),
         Mov(R1, resultReg),
-        Ldr(resultReg, DataLabel(Label("msg_reference"))),
+        Ldr(resultReg, DataLabel(Label(PrintReference.msgName(0)))),
         Add(resultReg, resultReg, ImmInt(4)),
         BranchLink(Label("printf")),
         Mov(resultReg, ImmInt(0)),
@@ -104,10 +104,10 @@ object PrintInstrs {
 
   val newLinePrintInstrs: (Label, List[Instruction]) =
     (
-      Label("p_print_ln"),
+      PrintLn.funcLabel,
       List[Instruction](
         Push(ListBuffer(LR)),
-        Ldr(resultReg, DataLabel(Label("msg_new_line"))),
+        Ldr(resultReg, DataLabel(Label(PrintLn.msgName(0)))),
         Add(resultReg, resultReg, ImmInt(4)),
         BranchLink(Label("puts")),
         Mov(resultReg, ImmInt(0)),
