@@ -41,8 +41,6 @@ object PrintInstrs {
     override val func = newLinePrintInstrs
   }
 
-  final val resultReg: Reg = R0
-
   def stringPrintInstrs: (Label, List[Instruction]) = (
     PrintString.funcLabel,
     List[Instruction](
