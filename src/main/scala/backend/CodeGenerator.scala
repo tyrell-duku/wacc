@@ -188,9 +188,9 @@ object CodeGenerator {
     var curSp = spToSub
     while (curSp > MAX_INT_IMM) {
       curSp -= MAX_INT_IMM
-      instrs += backend.IR.InstructionSet.Sub(SP, SP, ImmInt(MAX_INT_IMM))
+      instrs += IR.InstructionSet.Sub(SP, SP, ImmInt(MAX_INT_IMM))
     }
-    instrs += backend.IR.InstructionSet.Sub(SP, SP, ImmInt(curSp))
+    instrs += IR.InstructionSet.Sub(SP, SP, ImmInt(curSp))
     instrs
   }
 
