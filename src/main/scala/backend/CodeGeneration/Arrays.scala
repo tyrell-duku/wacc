@@ -2,6 +2,7 @@ package backend.CodeGeneration
 
 import backend.CodeGeneration.Expressions.transExp
 import backend.CodeGenerator._
+import backend.CodeGenerator
 import backend.DefinedFuncs.PreDefinedFuncs.{ArrayBounds, addRuntimeError}
 import backend.DefinedFuncs.ReadInstructions.{charRead, intRead}
 import backend.IR.InstructionSet._
@@ -12,6 +13,9 @@ import scala.collection.mutable.ListBuffer
 
 object Arrays {
 
+  private val NO_OFFSET = 0
+  private val SHIFT_TWO = 2
+
   /* Loads an array elem into register Reg */
   def loadArrayElem(
       id: Ident,
@@ -19,7 +23,7 @@ object Arrays {
       reg: Reg
   ): ListBuffer[Instruction] = {
     val (isByte, instructions) = transArrayElem(id, es, reg)
-    instructions += Ldr(isByte, reg, reg, 0)
+    instructions += Ldr(isByte, reg, reg, NO_OFFSET)
   }
 
   /* Stores an expression from Reg into the array elem */
@@ -30,7 +34,7 @@ object Arrays {
   ): ListBuffer[Instruction] = {
     val freeReg = getFreeReg()
     val (isByte, instructions) = transArrayElem(id, es, freeReg)
-    instructions += Str(isByte, reg, freeReg, 0)
+    instructions += Str(isByte, reg, freeReg, NO_OFFSET)
     addUnusedReg(freeReg)
     instructions
   }
@@ -59,12 +63,13 @@ object Arrays {
       instructions += Mov(R1, reg)
       instructions += BranchLink(addRuntimeError(ArrayBounds))
       // Add offset to account for array size at start of array in memory
-      instructions += Add(reg, reg, ImmInt(INT_SIZE))
+      instructions += Add(reg, reg, ImmInt(CodeGenerator.INT_SIZE))
       // Gets address of array elem
       if (isByte(t)) {
         instructions += Add(reg, reg, nextReg)
       } else {
-        instructions += Add(reg, reg, LSL(nextReg, ImmInt(2)))
+        // LSL to account for 4 byte increment between elems
+        instructions += Add(reg, reg, LSL(nextReg, ImmInt(SHIFT_TWO)))
       }
     }
     addUnusedReg(nextReg)
@@ -77,6 +82,7 @@ object Arrays {
       opArr: Option[List[Expr]],
       freeReg: Reg
   ): ListBuffer[Instruction] = {
+    val instructions = ListBuffer.empty[Instruction]
     val ArrayT(innerType) = t
     val arr = opArr match {
       case Some(arr) => arr
@@ -96,8 +102,8 @@ object Arrays {
     // If array elems are of size byte, offset increments by 1 for each
     // elem, otherwise increments by 4
     val offset: (Int => Int) =
-      if (typeSizeIsByte) (i => i + INT_SIZE)
-      else (i => (i + 1) * ADDRESS_SIZE)
+      if (typeSizeIsByte) (i => i + CodeGenerator.INT_SIZE)
+      else (i => (i + 1) * CodeGenerator.ADDRESS_SIZE)
     // Store all array elements into memory
     for (i <- 0 until listSize) {
       instructions ++= transExp(arr(i), nextFreeReg)
@@ -107,6 +113,7 @@ object Arrays {
     instructions += Ldr(nextFreeReg, ImmMem(listSize))
     instructions += Str(nextFreeReg, RegAdd(freeReg))
     addUnusedReg(nextFreeReg)
+    instructions
   }
 
 }
