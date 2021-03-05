@@ -29,7 +29,7 @@ object Expressions {
           RsbS(rd, rd, ImmInt(0)),
           BranchLinkCond(IR.Condition.VS, addRuntimeError(Overflow))
         )
-      case Not(e, _) => transExp(e, rd) += Eor(rd, rd, ImmInt(1))
+      case Not(e, _) => transExp(e, rd) += Eor(rd, rd, ImmInt(TRUE_INT))
       case Ord(e, _) => transExp(e, rd)
       case _         => ListBuffer.empty[Instruction]
     }
@@ -58,8 +58,8 @@ object Expressions {
     val instructions = ListBuffer.empty[Instruction]
     val cmp = rulesCmpToInstrCmp(op)
     instructions += Cmp(rd, rm)
-    instructions += MovCond(cmp, rd, TRUE_CMP_INT)
-    instructions += MovCond(cmp.oppositeCmp, rd, FALSE_CMP_INT)
+    instructions += MovCond(cmp, rd, ImmInt(TRUE_INT))
+    instructions += MovCond(cmp.oppositeCmp, rd, ImmInt(FALSE_INT))
     instructions
   }
 

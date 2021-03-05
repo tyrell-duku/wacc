@@ -91,7 +91,7 @@ object Scope {
     val reg = getFreeReg()
     instructions ++= transExp(cond, reg)
     // check if condition is true
-    instructions += Cmp(reg, TRUE_CMP_INT)
+    instructions += Cmp(reg, ImmInt(TRUE_INT))
     addUnusedReg(reg)
     instructions += BranchCond(EQ, insideWhile)
   }

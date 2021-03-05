@@ -15,27 +15,23 @@ import backend.IR.InstructionSet._
 import backend.IR.Operand._
 
 object CodeGenerator {
-  /* Registers */
-  final val allRegs: ListBuffer[Reg] =
-    ListBuffer(R0, R1, R2, R3, R4, R5, R6, R7, R8, R9, R10)
-
-  var freeRegs = allRegs
+  /* Registers. */
+  private var freeRegs = ListBuffer[Reg](R4, R5, R6, R7, R8, R9, R10)
   final val resultReg: Reg = R0
   final val popReg = R11
-  freeRegs -= resultReg
-  freeRegs -= R1
-  freeRegs -= R2
-  freeRegs -= R3
 
+  /* Values required for code generation. */
   var currentSP = 0
   var sTable: SymbolTable = null
   var scopeSP = 0
   var currentLabel = Label("main")
+
+  /* Data types used for code generation. */
   val dataTable = new DataTable
   val userFuncTable = new FuncTable
   val funcTable = new FuncTable
 
-  /* Type sizes */
+  /* Type sizes. */
   val INT_SIZE = 4
   val CHAR_SIZE = 1
   val BOOL_SIZE = 1
@@ -49,23 +45,19 @@ object CodeGenerator {
   val IS_FST_ELEM = true
   val IS_SND_ELEM = false
 
-  val TRUE_CMP_INT = ImmInt(1)
-  val FALSE_CMP_INT = ImmInt(0)
+  /* Constants defined for comparison operators. */
+  val TRUE_INT = 1
+  val FALSE_INT = 0
 
-  private def saveRegs(
-      regsNotInUse: ListBuffer[Reg]
-  ): Instruction = {
-    val regsToPush = allRegs.filter(r => !regsNotInUse.contains(r))
-    Push(regsToPush)
-  }
+  /* Constant defined for getBaseTypeSize error case. */
+  private val ERROR = -1
 
-  private def restoreRegs(
-      regsNotInUse: ListBuffer[Reg]
-  ): Instruction = {
-    val regsToPush = allRegs.filter(r => !regsNotInUse.contains(r)).reverse
-    new Pop(regsToPush)
-  }
+  /* Constants used for translating print statements. */
+  private val HAS_NEW_LINE = true
+  private val NO_NEW_LINE = false
 
+  /* Translates program into our internal representation. Output is used
+     by ARMPrinter to generate .s file*/
   def transProg(
       prog: Program,
       sTable: SymbolTable
@@ -94,6 +86,7 @@ object CodeGenerator {
     (dataTable.table.toList, funcList.toList)
   }
 
+  /* Translates statements into our internal representation. */
   def transStat(
       stat: Stat,
       instructions: ListBuffer[Instruction]
@@ -105,10 +98,8 @@ object CodeGenerator {
       case Free(id: Ident)  => instructions ++= transFree(id)
       case Return(e)        => instructions ++= transReturn(e)
       case Exit(e)          => instructions ++= transExit(e)
-      // isNewLine = false
-      case Print(e) => instructions ++= transPrint(e, false)
-      // isNewLine = true
-      case PrintLn(e)       => instructions ++= transPrint(e, true)
+      case Print(e)         => instructions ++= transPrint(e, NO_NEW_LINE)
+      case PrintLn(e)       => instructions ++= transPrint(e, HAS_NEW_LINE)
       case If(cond, s1, s2) => transIf(cond, s1, s2, instructions)
       case While(cond, s)   => transWhile(cond, s, instructions)
       case Seq(statList) =>
@@ -122,12 +113,14 @@ object CodeGenerator {
     }
   }
 
-  def getInnerType(t: Type): Type = t match {
+  /* Gets the inner type of the array. */
+  def getArrayInnerType(t: Type): Type = t match {
     case ArrayT(inner) => inner
     // invalid case, will never enter
     case _ => null
   }
 
+  /* Gets the type of the given expression E. */
   def getExprType(e: Expr): Type = {
     e match {
       case _: IntLiter  => IntT
@@ -141,7 +134,7 @@ object CodeGenerator {
       case ArrayElem(id, es, _) =>
         var (_, t) = sTable(id)
         for (_ <- es) {
-          t = getInnerType(t)
+          t = getArrayInnerType(t)
         }
         t
       case _: Not        => BoolT
@@ -156,6 +149,8 @@ object CodeGenerator {
     }
   }
 
+  /* Translates Exit statement, first translate E into a free register,
+     FREEREG, then Mov contents of FREEREG to RESULTREG. */
   private def transExit(
       e: Expr
   ): ListBuffer[Instruction] = {
@@ -169,6 +164,8 @@ object CodeGenerator {
     instructions
   }
 
+  /* Adds SPTOSUB to the Stack Pointer, splits SPTOADD smaller
+     intstructions if SPTOSUB > MAX_INT_IMM. */
   def addSP(spToAdd: Int): ListBuffer[Instruction] = {
     val instrs = ListBuffer.empty[Instruction]
     if (spToAdd == 0) {
@@ -183,6 +180,8 @@ object CodeGenerator {
     instrs
   }
 
+  /* Subtracts SPTOSUB to the Stack Pointer, splits SPTOADD smaller
+     intstructions if SPTOSUB > MAX_INT_IMM. */
   def subSP(spToSub: Int): ListBuffer[Instruction] = {
     val instrs = ListBuffer.empty[Instruction]
     if (spToSub == 0) {
@@ -201,6 +200,8 @@ object CodeGenerator {
     t == BoolT || t == CharT
   }
 
+  /* Get a free register from freeRegs list. If none available the popReg
+     is used. */
   def getFreeReg(): Reg = {
     if (freeRegs.isEmpty) {
       return popReg
@@ -210,14 +211,17 @@ object CodeGenerator {
     reg
   }
 
+  /* Add register back to freeRegs list once finished with. */
   def addUnusedReg(r: Reg): Unit = {
     r +=: freeRegs
   }
 
+  /* Convert boolean B to its Int counterpart. */
   def boolToInt(b: Boolean): Int = {
-    if (b) 1 else 0
+    if (b) TRUE_INT else FALSE_INT
   }
 
+  /* Return size of T in SP. */
   def getBaseTypeSize(t: Type): Int = {
     t match {
       case IntT           => INT_SIZE
@@ -226,7 +230,7 @@ object CodeGenerator {
       case StringT        => STR_SIZE
       case ArrayT(innerT) => ARRAY_SIZE
       case Pair(_, _)     => PAIR_SIZE
-      case _              => -1
+      case _              => ERROR
     }
   }
 
