@@ -10,7 +10,7 @@ import backend.IR.Condition._
 
 object PreDefinedFuncs {
 
-  sealed trait PreDefFunc {
+  trait PreDefFunc {
     val funcLabel: Label
     val msgName: List[String]
     val functionMsg: List[String]
