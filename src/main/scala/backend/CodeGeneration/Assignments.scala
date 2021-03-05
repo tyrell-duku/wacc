@@ -21,15 +21,11 @@ object Assignments {
     val instructions = ListBuffer.empty[Instruction]
     scopeSP += getBaseTypeSize(t)
     sTable.add(id, scopeSP, t)
-
     val spOffset = currentSP - scopeSP
-
     val freeReg = getFreeReg()
     val (isByte, instrs) = assignRHS(t, aRHS, freeReg)
     instructions ++= instrs
-
     instructions += Str(isByte, freeReg, SP, spOffset)
-
     addUnusedReg(freeReg)
     instructions
   }
@@ -57,24 +53,22 @@ object Assignments {
           case Some(arr) => arr
           case None      => List.empty[Expr]
         }
-
         val listSize = arr.size
         val baseTypeSize = getBaseTypeSize(innerType)
+        // TODO: remove magic numbers
         val sizeToMalloc = 4 + (listSize * baseTypeSize)
         instructions += Ldr(R0, ImmMem(sizeToMalloc))
         instructions += BranchLink(Label("malloc"))
         instructions += Mov(freeReg, R0)
         val nextFreeReg = getFreeReg()
         val typeSizeIsByte = isByte(innerType)
-
+        // TODO: remove magic numbers
         val offset: (Int => Int) =
           if (typeSizeIsByte) (i => i + 4) else (i => (i + 1) * 4)
-
         for (i <- 0 until listSize) {
           instructions ++= transExp(arr(i), nextFreeReg)
           instructions += Str(typeSizeIsByte, nextFreeReg, freeReg, offset(i))
         }
-
         instructions += Ldr(nextFreeReg, ImmMem(listSize))
         instructions += Str(nextFreeReg, RegAdd(freeReg))
         addUnusedReg(nextFreeReg)
@@ -101,9 +95,7 @@ object Assignments {
         val (isByte, instrs) = assignRHS(t, aRHS, freeReg)
         instructions ++= instrs
         val spOffset = currentSP - index
-
         instructions += Str(isByte, freeReg, SP, spOffset)
-
       case ae @ ArrayElem(id, es, _) =>
         val (_, instrs) = assignRHS(getExprType(ae), aRHS, freeReg)
         instructions ++= instrs

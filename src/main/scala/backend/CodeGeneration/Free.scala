@@ -5,11 +5,9 @@ import backend.DefinedFuncs.PreDefinedFuncs._
 import backend.IR.InstructionSet._
 import backend.IR.Operand._
 import frontend.Rules.{ArrayT, Ident, Pair}
-
 import scala.collection.mutable.ListBuffer
 
 object Free {
-
   def transFree(id: Ident): ListBuffer[Instruction] = {
     val instructions = ListBuffer.empty[Instruction]
     val freeReg = getFreeReg()
@@ -18,16 +16,13 @@ object Free {
     instructions += Mov(R0, freeReg)
     addUnusedReg(freeReg)
     t match {
-      case Pair(_, _) =>
+      case _: Pair =>
         instructions += BranchLink(addRuntimeError(FreePair))
-
-      case ArrayT(_) =>
+      case _: ArrayT =>
         instructions += BranchLink(addRuntimeError(FreeArray))
-
       // Semantically incorrect
       case _ => ListBuffer.empty[Instruction]
     }
     instructions
-
   }
 }

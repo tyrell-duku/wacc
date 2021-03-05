@@ -16,7 +16,6 @@ object Functions {
       freeReg: Reg
   ): ListBuffer[Instruction] = {
     val (argInstrs, toAdd) = loadArgs(args, freeReg)
-    val instrs = addSP(toAdd)
     argInstrs += BranchLink(Label("f_" + id))
     argInstrs ++= addSP(toAdd)
     argInstrs += Mov(freeReg, resultReg)
@@ -31,12 +30,10 @@ object Functions {
     var totalOff = 0
     args match {
       case None =>
-      case Some(argList) =>
-        val ArgList(aList) = argList
+      case Some(ArgList(aList)) =>
         val pList = aList.reverse
         for (e <- pList) {
           val t = getExprType(e)
-
           instrs ++= transExp(e, reg)
           instrs += StrOffsetIndex(isByte(t), reg, SP, -getBaseTypeSize(t))
           currentSP += getBaseTypeSize(t)
@@ -49,8 +46,7 @@ object Functions {
 
   private def transFuncParams(ps: Option[ParamList]): Unit = ps match {
     case None =>
-    case Some(paramList) =>
-      val ParamList(plist) = paramList
+    case Some(ParamList(plist)) =>
       var currSp = 4
       var prevSize = 0
       for (param <- plist) {
@@ -64,29 +60,21 @@ object Functions {
   def transFunc(func: Func): Unit = {
     val Func(t, id, ps, s) = func
     currentLabel = Label("f_" + id)
-
     val oldScopeSP = scopeSP
-
     sTable = sTable.getNextScope
     val curScopeMaxSPDepth = sTable.spMaxDepth(id)
-
     transFuncParams(ps)
-
     scopeSP = currentSP
     currentSP += curScopeMaxSPDepth
-
     val instructions = transStat(
       s,
       Push(ListBuffer(LR)) +=: subSP(curScopeMaxSPDepth)
     )
-
     if (curScopeMaxSPDepth > 0) {
       currentSP -= curScopeMaxSPDepth
     }
-
     scopeSP = oldScopeSP
     sTable = sTable.getPrevScope
-
     userFuncTable.addEntry(currentLabel, instructions.toList)
   }
 
@@ -102,7 +90,6 @@ object Functions {
       Pop(ListBuffer(PC)),
       Ltorg
     )
-
     addUnusedReg(reg)
     instructions
   }
