@@ -43,7 +43,7 @@ object PrintInstrs {
 
   final val resultReg: Reg = R0
 
-  val stringPrintInstrs: (Label, List[Instruction]) = (
+  def stringPrintInstrs: (Label, List[Instruction]) = (
     PrintString.funcLabel,
     List[Instruction](
       Push(ListBuffer(LR)),
@@ -58,7 +58,7 @@ object PrintInstrs {
     )
   )
 
-  val boolPrintInstrs: (Label, List[Instruction]) = (
+  def boolPrintInstrs: (Label, List[Instruction]) = (
     PrintBool.funcLabel,
     List[Instruction](
       Push(ListBuffer(LR)),
@@ -73,7 +73,7 @@ object PrintInstrs {
     )
   )
 
-  val intPrintInstrs: (Label, List[Instruction]) = (
+  def intPrintInstrs: (Label, List[Instruction]) = (
     PrintInt.funcLabel,
     List[Instruction](
       Push(ListBuffer(LR)),
@@ -87,7 +87,7 @@ object PrintInstrs {
     )
   )
 
-  val referencePrintInstrs: (Label, List[Instruction]) =
+  def referencePrintInstrs: (Label, List[Instruction]) =
     (
       PrintReference.funcLabel,
       List[Instruction](
@@ -102,7 +102,7 @@ object PrintInstrs {
       )
     )
 
-  val newLinePrintInstrs: (Label, List[Instruction]) =
+  def newLinePrintInstrs: (Label, List[Instruction]) =
     (
       PrintLn.funcLabel,
       List[Instruction](
