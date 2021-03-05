@@ -6,7 +6,7 @@ class BackendIOTest extends AnyFunSuite {
     val name = f.getName()
     val (file, out, command) = createOutputFiles(f)
     test(s"IO exit code test for $name") {
-      assert(checkExitCode(file, out, command))
+      assert(checkExitCode(file, command))
     }
     test(s"IO expected test for $name") {
       assert(checkStdOut(file, out))
