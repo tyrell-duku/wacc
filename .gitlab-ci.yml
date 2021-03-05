@@ -9,12 +9,24 @@ compile:
   script: sbt compile
   needs: []
 
-test:
+frontendTest:
+  stage: test
+  script:
+    - sbt "testOnly Parser*"
+    - sbt "testOnly Semantic*"
+  needs: []
+  artifacts:
+    when: always
+    reports:
+      junit:
+        - target/test-reports/TEST-*.xml 
+
+backendTest:
   stage: test
   script:
     - sbt assembly
     - apt-get install gcc-arm-linux-gnueabi qemu qemu-user -y
-    - sbt test
+    - sbt "testOnly Backend*"
   needs: []
   artifacts:
     when: always
