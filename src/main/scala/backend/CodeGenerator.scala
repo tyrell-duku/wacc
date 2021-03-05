@@ -46,6 +46,8 @@ object CodeGenerator {
   val PAIR_SIZE = ADDRESS_SIZE
   val MAX_INT_IMM = 1024
 
+  val NO_OFFSET = 0
+
   private def saveRegs(
       regsNotInUse: ListBuffer[Reg]
   ): Instruction = {

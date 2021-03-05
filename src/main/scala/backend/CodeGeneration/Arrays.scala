@@ -12,8 +12,6 @@ import frontend.Rules._
 import scala.collection.mutable.ListBuffer
 
 object Arrays {
-
-  private val NO_OFFSET = 0
   private val SHIFT_TWO = 2
 
   /* Loads an array elem into register Reg */

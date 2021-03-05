@@ -81,6 +81,7 @@ object Assignments {
         instructions ++= transArrayLiter(t, opArr, freeReg)
       case Newpair(fst, snd, _) =>
         instructions ++= assignRHSPair(t, fst, snd, freeReg)
+      // Semantically incorrect
       case _ =>
     }
     (isByte(t), instructions)

@@ -132,12 +132,12 @@ object Expressions {
   /* Pushes variable in R10 onto stack if registers are over allocated */
   private def regAccumulate(r: Reg): (Reg, ListBuffer[Instruction]) = {
     val instructions = ListBuffer.empty[Instruction]
-    var nextReg = r
+    var overflowReg = r
     if (r == popReg) {
       instructions += Push(ListBuffer(R10))
-      nextReg = R10
+      overflowReg = R10
     }
-    (nextReg, instructions)
+    (overflowReg, instructions)
   }
 
   private def transStrLiter(

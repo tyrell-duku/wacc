@@ -9,7 +9,6 @@ import scala.collection.mutable.ListBuffer
 import backend.IR.Condition._
 
 object PreDefinedFuncs {
-
   sealed trait PreDefFunc {
     val funcLabel: Label
     val msgName: List[String]

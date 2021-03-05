@@ -47,7 +47,7 @@ object Pairs {
       isFst: Boolean
   ): Instruction = {
     val (_, idType) = sTable(id)
-    Ldr(pairIsByte(idType, isFst), freeReg, freeReg, 0)
+    Ldr(pairIsByte(idType, isFst), freeReg, freeReg, NO_OFFSET)
   }
 
   def assignRHSPair(
@@ -67,13 +67,13 @@ object Pairs {
     // Size of fst rhs
     instructions += Ldr(resultReg, ImmMem(getPairElemTypeSize(fstType)))
     instructions += BranchLink(Label("malloc"))
-    instructions += Str(pairIsByte(p, true), nextFreeReg, resultReg, 0)
+    instructions += Str(pairIsByte(p, true), nextFreeReg, resultReg, NO_OFFSET)
     instructions += Str(resultReg, RegAdd(freeReg))
     instructions ++= transExp(snd, nextFreeReg)
     // Size of snd rhs
     instructions += Ldr(resultReg, ImmMem(getPairElemTypeSize(sndType)))
     instructions += BranchLink(Label("malloc"))
-    instructions += Str(pairIsByte(p, false), nextFreeReg, resultReg, 0)
+    instructions += Str(pairIsByte(p, false), nextFreeReg, resultReg, NO_OFFSET)
     addUnusedReg(nextFreeReg)
     instructions += Str(resultReg, freeReg, PAIR_SIZE)
     instructions
@@ -106,7 +106,7 @@ object Pairs {
     instructions ++= instrs
     val nextReg = getFreeReg()
     instructions ++= transPairElem(id, isFst, nextReg)
-    instructions += Str(isByte, freeReg, nextReg, 0)
+    instructions += Str(isByte, freeReg, nextReg, NO_OFFSET)
     addUnusedReg(nextReg)
     instructions
   }
