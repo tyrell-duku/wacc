@@ -75,6 +75,7 @@ object InstructionSet {
     override def toString: String = "POP " + "{" + rs.mkString(", ") + "}"
   }
 
+  // Loading
   case class Ldr(rd: Reg, op2: LoadOperand) extends Instruction {
     override def toString: String = "LDR " + rd + ", " + op2
   }
@@ -92,7 +93,6 @@ object InstructionSet {
       Ldr(src, RegisterOffset(dst, offset))
     }
   }
-
   case class LdrSB(rd: Reg, op2: LoadOperand) extends Instruction {
     override def toString: String = "LDRSB " + rd + ", " + op2
   }
@@ -104,27 +104,10 @@ object InstructionSet {
       LdrSB(src, RegisterOffset(dst, offset))
     }
   }
-
-  // LDR Equal
-  case class LdrEQ(rd: Reg, op2: LoadOperand) extends Instruction {
-    override def toString: String = "LDREQ " + rd + ", " + op2
-  }
-
-  // LDR Less Than
-  case class LdrLT(rd: Reg, op2: LoadOperand) extends Instruction {
-    override def toString: String = "LDRLT " + rd + ", " + op2
-  }
-
-  // LDR Carry Set
-  case class LdrCS(rd: Reg, op2: LoadOperand) extends Instruction {
-    override def toString: String = "LDRCS " + rd + ", " + op2
-  }
-
   case class LdrCond(cond: Condition, rd: Reg, op2: LoadOperand)
       extends Instruction {
     override def toString: String = "LDR" + cond + " " + rd + ", " + op2
   }
-
   case class Mov(rd: Reg, op2: Operand) extends Instruction {
     override def toString: String = "MOV " + rd + ", " + op2
   }
