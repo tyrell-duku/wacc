@@ -139,7 +139,7 @@ object PreDefinedFuncs {
         Push(ListBuffer(LR)),
         Cmp(R0, ImmInt(0)),
         LdrCond(EQ, R0, DataLabel(Label(FreePair.msgName(0)))),
-        BranchEq(RuntimeError.funcLabel),
+        BranchCond(EQ, RuntimeError.funcLabel),
         Push(ListBuffer(R0)),
         Ldr(R0, RegAdd(R0)),
         BranchLink(Label("free")),
@@ -160,7 +160,7 @@ object PreDefinedFuncs {
         Push(ListBuffer(LR)),
         Cmp(R0, ImmInt(0)),
         LdrCond(EQ, R0, DataLabel(Label(FreeArray.msgName(0)))),
-        BranchEq(RuntimeError.funcLabel),
+        BranchCond(EQ, RuntimeError.funcLabel),
         BranchLink(Label("free")),
         Pop(ListBuffer(PC))
       )

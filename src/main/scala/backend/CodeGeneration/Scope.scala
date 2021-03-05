@@ -4,6 +4,7 @@ import backend.CodeGeneration.Expressions.transExp
 import backend.CodeGenerator._
 import backend.IR.InstructionSet._
 import backend.IR.Operand.ImmInt
+import backend.IR.Condition.EQ
 import frontend.Rules.{Expr, Stat}
 
 import scala.collection.mutable.ListBuffer
@@ -51,7 +52,7 @@ object Scope {
     curInstrs += Cmp(reg, ImmInt(0))
     addUnusedReg(reg)
     val elseBranch = assignLabel()
-    curInstrs += BranchEq(elseBranch)
+    curInstrs += BranchCond(EQ, elseBranch)
     // statement if the condition was true
     val instructions = transNextScope(s1, curInstrs)
     val afterLabel = assignLabel()
@@ -86,6 +87,6 @@ object Scope {
     // check if condition is true
     instructions += Cmp(reg, TRUE_CMP_INT)
     addUnusedReg(reg)
-    instructions += BranchEq(insideWhile)
+    instructions += BranchCond(EQ, insideWhile)
   }
 }
