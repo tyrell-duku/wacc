@@ -3,7 +3,7 @@ import frontend.Rules._
 import frontend.ExprParser._
 import frontend.Lexer._
 
-class ExprTest extends AnyFunSuite {
+class ParserExprTest extends AnyFunSuite {
   test("Successfully parses expr within parentheses") {
     assert(
       expr

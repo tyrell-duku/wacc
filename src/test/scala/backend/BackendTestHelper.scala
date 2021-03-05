@@ -44,7 +44,7 @@ object BackendTestHelper extends AnyFunSuite {
       if (inputString.isEmpty()) {
         s"qemu-arm -L /usr/arm-linux-gnueabi/ $name" #> output
       } else {
-        (s"printf '$inputString'" #| s"timeout 5s qemu-arm -L /usr/arm-linux-gnueabi/ $name" #> output)
+        (s"printf '$inputString'" #| s"qemu-arm -L /usr/arm-linux-gnueabi/ $name" #> output)
       }
     (file, output, command)
   }
@@ -71,7 +71,7 @@ object BackendTestHelper extends AnyFunSuite {
     getFilePath(file, "wacc_expected")
   }
 
-  def checkExitCode(file: File, out: File, command: ProcessBuilder): Boolean = {
+  def checkExitCode(file: File, command: ProcessBuilder): Boolean = {
     val expExitCode = readFile(getExitCodeFile(file)).toInt
     val exitCode = command.!
     val name = file.getName().replaceAll(".wacc", "")

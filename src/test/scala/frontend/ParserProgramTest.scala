@@ -6,7 +6,7 @@ import java.io.File
 import parsley.Parsley
 import frontend.Lexer._
 
-class ProgramTest extends AnyFunSuite {
+class ParserProgramTest extends AnyFunSuite {
   val programWhitespace: Parsley[Program] = lexer.whiteSpace *> program <* eof
 
   private def listAllFiles(dir: File): Array[File] = {
@@ -25,9 +25,7 @@ class ProgramTest extends AnyFunSuite {
   for (file <- listAllFiles(new File("wacc_examples/invalid/syntaxErr"))) {
     if (file.isFile) {
       test("Successfully fails to parse file " + file.getName) {
-        if (programWhitespace.parseFromFile(file).isSuccess) {
-          assert(programWhitespace.parseFromFile(file).contains())
-        }
+        assert(programWhitespace.parseFromFile(file).isFailure)
       }
     }
   }
