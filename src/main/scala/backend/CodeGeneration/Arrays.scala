@@ -87,10 +87,11 @@ object Arrays {
       case None      => List.empty[Expr]
     }
     val listSize = arr.size
-    // Type of each array elem
-    val baseTypeSize = getBaseTypeSize(innerType)
     // Size needed to store all elems of array + array size in memory
-    instructions += Ldr(resultReg, ImmMem(INT_SIZE + (listSize * baseTypeSize)))
+    instructions += Ldr(
+      resultReg,
+      ImmMem(INT_SIZE + (listSize * getBaseTypeSize(innerType)))
+    )
     instructions += BranchLink(Label("malloc"))
     // Malloc size must be in R0 for "malloc"
     instructions += Mov(freeReg, resultReg)

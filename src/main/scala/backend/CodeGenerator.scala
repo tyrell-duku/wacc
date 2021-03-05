@@ -49,8 +49,8 @@ object CodeGenerator {
   val IS_FST_ELEM = true
   val IS_SND_ELEM = false
 
-  val TRUE_CMP_INT = ImmInt(1)
-  val FALSE_CMP_INT = ImmInt(0)
+  val TRUE_INT = 1
+  val FALSE_INT = 0
 
   private def saveRegs(
       regsNotInUse: ListBuffer[Reg]
@@ -215,7 +215,7 @@ object CodeGenerator {
   }
 
   def boolToInt(b: Boolean): Int = {
-    if (b) 1 else 0
+    if (b) TRUE_INT else FALSE_INT
   }
 
   def getBaseTypeSize(t: Type): Int = {
