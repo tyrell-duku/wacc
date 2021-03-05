@@ -3,6 +3,7 @@ package backend
 import java.io.{File, FileWriter}
 
 import backend.IR.InstructionSet._
+import scala.util.matching.Regex
 
 object ARMPrinter {
   val tab = "\t"
@@ -42,12 +43,9 @@ object ARMPrinter {
     fileWriter.write(tab2 + ".ascii \"" + s + "\"" + "\n")
   }
 
-  private def getStringSize(s: String) = {
-    var size = s.length()
-    if (s.contains("\\0")) {
-      size -= 1
-    }
-    size
+  private def getStringSize(s: String): Int = {
+    val escapeChar = """\\[0btnfr"'\\]""".r
+    s.length - escapeChar.findAllIn(s).length
   }
 
   private def printInstrs(
