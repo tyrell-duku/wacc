@@ -9,16 +9,15 @@ import backend.CodeGeneration.Read.transRead
 import backend.CodeGeneration.Scope._
 import frontend.Rules._
 import frontend.Semantics.SymbolTable
-
 import scala.collection.mutable.ListBuffer
 import backend.DataTypes.{DataTable, FuncTable}
 import backend.IR.InstructionSet._
 import backend.IR.Operand._
 
 object CodeGenerator {
+  // Registers
   final val allRegs: ListBuffer[Reg] =
     ListBuffer(R0, R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12)
-
   var freeRegs = allRegs
   final val resultReg: Reg = R0
   freeRegs -= resultReg
@@ -30,13 +29,12 @@ object CodeGenerator {
   var sTable: SymbolTable = null
   var scopeSP = 0
   var currentLabel = Label("main")
-
   private var labelCounter = 0
-
   val dataTable = new DataTable
   val userFuncTable = new FuncTable
   val funcTable = new FuncTable
 
+  // Type sizes
   val INT_SIZE = 4
   val CHAR_SIZE = 1
   val BOOL_SIZE = 1
@@ -68,18 +66,14 @@ object CodeGenerator {
     for (f <- funcs) {
       transFunc(f)
     }
-
     currentLabel = Label("main")
-
     scopeSP = currentSP
     val curScopeMaxSPDepth = sTable.spMaxDepth
     currentSP += curScopeMaxSPDepth
-
     val instructions = transStat(
       stat,
       Push(ListBuffer(LR)) +=: subSP(curScopeMaxSPDepth)
     )
-
     var toAdd = addSP(currentSP) ++ ListBuffer(
       Ldr(resultReg, ImmMem(0)),
       Pop(ListBuffer(PC)),
@@ -88,7 +82,6 @@ object CodeGenerator {
     instructions ++= toAdd
     userFuncTable.addEntry(currentLabel, instructions.toList)
     val funcList = userFuncTable.table ++ funcTable.table
-
     (dataTable.table.toList, funcList.toList)
   }
 
@@ -103,7 +96,9 @@ object CodeGenerator {
       case Free(id: Ident)  => instructions ++= transFree(id)
       case Return(e)        => instructions ++= transReturn(e)
       case Exit(e)          => instructions ++= transExit(e)
-      case Print(e)         => instructions ++= transPrint(e, false)
+      // isNewLine = false
+      case Print(e) => instructions ++= transPrint(e, false)
+      // isNewLine = true
       case PrintLn(e)       => instructions ++= transPrint(e, true)
       case If(cond, s1, s2) => transIf(cond, s1, s2, instructions)
       case While(cond, s)   => transWhile(cond, s, instructions)
@@ -126,11 +121,11 @@ object CodeGenerator {
 
   def getExprType(e: Expr): Type = {
     e match {
-      case IntLiter(_, _)  => IntT
-      case BoolLiter(_, _) => BoolT
-      case CharLiter(_, _) => CharT
-      case StrLiter(_, _)  => StringT
-      case PairLiter(_)    => Pair(null, null)
+      case _: IntLiter  => IntT
+      case _: BoolLiter => BoolT
+      case _: CharLiter => CharT
+      case _: StrLiter  => StringT
+      case _: PairLiter => Pair(null, null)
       case id: Ident =>
         val (_, t) = sTable(id)
         t
@@ -140,15 +135,15 @@ object CodeGenerator {
           t = getInnerType(t)
         }
         t
-      case Not(_, _)      => BoolT
-      case Negation(_, _) => IntT
-      case Len(_, _)      => IntT
-      case Ord(_, _)      => IntT
-      case Chr(_, _)      => CharT
-      case _: ArithOps    => IntT
-      case _: ComparOps   => BoolT
-      case _: EqOps       => BoolT
-      case _: LogicalOps  => BoolT
+      case _: Not        => BoolT
+      case _: Negation   => IntT
+      case _: Len        => IntT
+      case _: Ord        => IntT
+      case _: Chr        => CharT
+      case _: ArithOps   => IntT
+      case _: ComparOps  => BoolT
+      case _: EqOps      => BoolT
+      case _: LogicalOps => BoolT
     }
   }
 
@@ -176,7 +171,6 @@ object CodeGenerator {
     if (spToAdd == 0) {
       return instrs
     }
-
     var curSp = spToAdd
     while (curSp > MAX_INT_IMM) {
       curSp -= MAX_INT_IMM
@@ -191,7 +185,6 @@ object CodeGenerator {
     if (spToSub == 0) {
       return instrs
     }
-
     var curSp = spToSub
     while (curSp > MAX_INT_IMM) {
       curSp -= MAX_INT_IMM
@@ -220,8 +213,7 @@ object CodeGenerator {
   }
 
   def boolToInt(b: Boolean): Int = {
-    if (b) { 1 }
-    else { 0 }
+    if (b) 1 else 0
   }
 
   def getBaseTypeSize(t: Type): Int = {
