@@ -56,38 +56,14 @@ object InstructionSet {
   case class Branch(label: Label) extends Instruction {
     override def toString: String = "B " + label
   }
-
-  case class BranchLink(label: Label) extends Instruction {
-    override def toString: String = "BL " + label
-  }
-
-  // Branch Link Not Equal
-  case class BranchLinkNE(label: Label) extends Instruction {
-    override def toString: String = "BLNE " + label
-  }
-
-  // Branch Link Overflow
-  case class BranchLinkVS(label: Label) extends Instruction {
-    override def toString: String = "BLVS " + label
-  }
-
-  // Branch Link Less Than
-  case class BranchLinkLT(label: Label) extends Instruction {
-    override def toString: String = "BLLT " + label
-  }
-
-  // Branch Link Equal
-  case class BranchLinkEQ(label: Label) extends Instruction {
-    override def toString: String = "BLEQ " + label
-  }
-
   case class BranchEq(label: Label) extends Instruction {
     override def toString: String = "BEQ " + label
   }
-
-  // Branch Link Carry Set
-  case class BranchLinkCS(label: Label) extends Instruction {
-    override def toString: String = "BLCS " + label
+  case class BranchLink(label: Label) extends Instruction {
+    override def toString: String = "BL " + label
+  }
+  case class BranchLinkCond(cond: Condition, label: Label) extends Instruction {
+    override def toString: String = "BL" + cond + " " + label
   }
 
   // Creating labels
