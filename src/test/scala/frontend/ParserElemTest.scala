@@ -56,7 +56,7 @@ class ParserArrayElemTest extends AnyFunSuite {
   }
 }
 
-class PairElemTest extends AnyFunSuite {
+class ParserPairElemTest extends AnyFunSuite {
   val pairElemWhitespace = lexer.whiteSpace *> pairElem <* eof
 
   test("Successfully parses fst") {

@@ -43,7 +43,7 @@ class ParserAssignLHSTest extends AnyFunSuite {
   }
 }
 
-class AssignRHSTest extends AnyFunSuite {
+class ParserAssignRHSTest extends AnyFunSuite {
   val assignRHSWhitespace = lexer.whiteSpace *> assignRHS <* eof
 
   test("Successfully parses call with no arguments") {

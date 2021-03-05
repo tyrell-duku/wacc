@@ -36,7 +36,7 @@ class ParserUnaryOpTest extends AnyFunSuite {
   }
 }
 
-class BinaryOpTest extends AnyFunSuite {
+class ParserBinaryOpTest extends AnyFunSuite {
   test("Successful parses * operator") {
     assert(
       expr

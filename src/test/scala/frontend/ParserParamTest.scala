@@ -56,7 +56,7 @@ class ParserParamTest extends AnyFunSuite {
   }
 }
 
-class ParamListTest extends AnyFunSuite {
+class ParserParamListTest extends AnyFunSuite {
   val paramWhitespace = lexer.whiteSpace *> paramList <* eof
 
   test("Successfully parses singleton param-list") {
