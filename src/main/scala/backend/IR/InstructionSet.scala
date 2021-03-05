@@ -8,74 +8,78 @@ object InstructionSet {
 
   sealed trait Instruction
 
-  // arithmetic
+  /* Arithmetic */
   case class Add(rd: Reg, rn: Reg, op2: Operand) extends Instruction {
     override def toString: String = "ADD " + rd + ", " + rn + ", " + op2
   }
-
   case class AddS(rd: Reg, rn: Reg, op2: Operand) extends Instruction {
     override def toString: String = "ADDS " + rd + ", " + rn + ", " + op2
   }
-
   case class Sub(rd: Reg, rn: Reg, op2: Operand) extends Instruction {
     override def toString: String = "SUB " + rd + ", " + rn + ", " + op2
   }
-
   case class SubS(rd: Reg, rn: Reg, op2: Operand) extends Instruction {
     override def toString: String = "SUBS " + rd + ", " + rn + ", " + op2
   }
-
   case class SMul(rdLo: Reg, rdHi: Reg, rn: Reg, rm: Reg) extends Instruction {
     override def toString: String =
       "SMULL " + rdLo + ", " + rdHi + ", " + rn + ", " + rm
   }
-
   case class RsbS(rd: Reg, rn: Reg, op2: Operand) extends Instruction {
     override def toString: String = "RSBS " + rd + ", " + rn + ", " + op2
   }
 
-  // comparison
+  /* Comparison */
   case class Cmp(rn: Reg, op2: Operand) extends Instruction {
     override def toString: String = "CMP " + rn + ", " + op2
   }
 
-  // logical
+  /* Logical */
   case class And(rd: Reg, rn: Reg, op2: Operand) extends Instruction {
     override def toString: String = "AND " + rd + ", " + rn + ", " + op2
   }
-
   case class Or(rd: Reg, rn: Reg, op2: Operand) extends Instruction {
     override def toString: String = "ORR " + rd + ", " + rn + ", " + op2
   }
-
   case class Eor(rd: Reg, rn: Reg, op2: Operand) extends Instruction {
     override def toString: String = "EOR " + rd + ", " + rn + ", " + op2
   }
 
-  // Branching
+  /* Branching */
   case class Branch(label: Label) extends Instruction {
     override def toString: String = "B " + label
   }
   case class BranchEq(label: Label) extends Instruction {
     override def toString: String = "BEQ " + label
   }
+  // Branch Link
   case class BranchLink(label: Label) extends Instruction {
     override def toString: String = "BL " + label
   }
+  // Branch Link {Condition}
   case class BranchLinkCond(cond: Condition, label: Label) extends Instruction {
     override def toString: String = "BL" + cond + " " + label
   }
 
-  // Creating labels
+  /* Stack Operations */
   case class Push(rs: ListBuffer[Reg]) extends Instruction {
     override def toString: String = "PUSH " + "{" + rs.mkString(", ") + "}"
   }
-
   case class Pop(rs: ListBuffer[Reg]) extends Instruction {
     override def toString: String = "POP " + "{" + rs.mkString(", ") + "}"
   }
 
-  // Loading
+  /* Move Operations */
+  case class Mov(rd: Reg, op2: Operand) extends Instruction {
+    override def toString: String = "MOV " + rd + ", " + op2
+  }
+  // Move {Condition}
+  case class MovCond(cond: Condition, rd: Reg, op2: Operand)
+      extends Instruction {
+    override def toString: String = "MOV" + cond + " " + rd + ", " + op2
+  }
+
+  /* Loading */
   case class Ldr(rd: Reg, op2: LoadOperand) extends Instruction {
     override def toString: String = "LDR " + rd + ", " + op2
   }
@@ -93,6 +97,7 @@ object InstructionSet {
       Ldr(src, RegisterOffset(dst, offset))
     }
   }
+  // Load byte signed
   case class LdrSB(rd: Reg, op2: LoadOperand) extends Instruction {
     override def toString: String = "LDRSB " + rd + ", " + op2
   }
@@ -104,20 +109,13 @@ object InstructionSet {
       LdrSB(src, RegisterOffset(dst, offset))
     }
   }
+  // Load {Condition}
   case class LdrCond(cond: Condition, rd: Reg, op2: LoadOperand)
       extends Instruction {
     override def toString: String = "LDR" + cond + " " + rd + ", " + op2
   }
-  case class Mov(rd: Reg, op2: Operand) extends Instruction {
-    override def toString: String = "MOV " + rd + ", " + op2
-  }
 
-  case class MovCond(cond: Condition, rd: Reg, op2: Operand)
-      extends Instruction {
-    override def toString: String = "MOV" + cond + " " + rd + ", " + op2
-  }
-
-  // Branching
+  /* Storing */
   case class Str(rd: Reg, add: Address) extends Instruction {
     override def toString: String = "STR " + rd + ", " + add
   }
@@ -135,7 +133,7 @@ object InstructionSet {
       Str(src, RegisterOffset(dst, offset))
     }
   }
-
+  // Store byte
   case class StrB(rd: Reg, add: Address) extends Instruction {
     override def toString: String = "STRB " + rd + ", " + add
   }
@@ -147,7 +145,6 @@ object InstructionSet {
       StrB(src, RegisterOffset(dst, offset))
     }
   }
-
   case class StrOffsetIndex(rd: Reg, regAdd: Reg, offset: Int)
       extends Instruction {
     override def toString: String =
@@ -161,7 +158,6 @@ object InstructionSet {
       StrOffsetIndex(src, dst, offset)
     }
   }
-
   case class StrBOffsetIndex(rd: Reg, regAdd: Reg, offset: Int)
       extends Instruction {
     override def toString: String =
@@ -172,10 +168,10 @@ object InstructionSet {
     override def toString: String = ".ltorg"
   }
 
+  /* Labels */
   case class Label(s: String) {
     override def toString: String = s
   }
-
   case class Data(label: Label, s: String)
 
 }
