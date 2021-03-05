@@ -8,11 +8,8 @@ class FuncTable {
   private var labelCounter = 0
   var table = ListBuffer.empty[(Label, List[Instruction])]
 
-  def addEntry(label: Label, instrs: List[Instruction]): Unit = {
-    if (!contains(label)) {
-      val entry = (label, instrs)
-      table += entry
-    }
+  def addEntry(label: Label, instrs: ListBuffer[Instruction]): Unit = {
+    addEntry((label, instrs.toList))
   }
 
   def addEntry(tup: (Label, List[Instruction])): Unit = {

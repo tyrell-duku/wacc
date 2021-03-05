@@ -74,7 +74,7 @@ object Functions {
     }
     scopeSP = oldScopeSP
     sTable = sTable.getPrevScope
-    userFuncTable.addEntry(currentLabel, instructions.toList)
+    userFuncTable.addEntry(currentLabel, instructions)
   }
 
   def transReturn(e: Expr): ListBuffer[Instruction] = {

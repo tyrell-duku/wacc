@@ -86,7 +86,7 @@ object CodeGenerator {
       Ltorg
     )
     instructions ++= toAdd
-    userFuncTable.addEntry(currentLabel, instructions.toList)
+    userFuncTable.addEntry(currentLabel, instructions)
     val funcList = userFuncTable.table ++ funcTable.table
     (dataTable.table.toList, funcList.toList)
   }

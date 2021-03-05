@@ -57,12 +57,12 @@ object Scope {
     val instructions = transNextScope(s1, curInstrs)
     val afterLabel = funcTable.assignLabel()
     instructions += Branch(afterLabel)
-    userFuncTable.addEntry(currentLabel, instructions.toList)
+    userFuncTable.addEntry(currentLabel, instructions)
     currentLabel = elseBranch
     val elseInstrs = transNextScope(s2, ListBuffer.empty[Instruction])
     userFuncTable.addEntry(
       currentLabel,
-      elseInstrs.toList
+      elseInstrs
     )
     currentLabel = afterLabel
     ListBuffer.empty[Instruction]
@@ -76,11 +76,11 @@ object Scope {
     val instructions = ListBuffer.empty[Instruction]
     val afterLabel = funcTable.assignLabel()
     curInstrs += Branch(afterLabel)
-    userFuncTable.addEntry(currentLabel, curInstrs.toList)
+    userFuncTable.addEntry(currentLabel, curInstrs)
     val insideWhile = funcTable.assignLabel()
     currentLabel = insideWhile
     val transInnerWhile = transNextScope(s, ListBuffer.empty[Instruction])
-    userFuncTable.addEntry(currentLabel, transInnerWhile.toList)
+    userFuncTable.addEntry(currentLabel, transInnerWhile)
     currentLabel = afterLabel
     val reg = getFreeReg()
     instructions ++= transExp(cond, reg)
