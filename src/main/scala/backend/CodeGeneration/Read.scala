@@ -99,8 +99,8 @@ object Read {
     lhs match {
       case ident: Ident  => transReadIdent(ident)
       case ae: ArrayElem => transReadArrayElem(ae)
-      case fst: Fst      => transReadPairElem(fst, true)
-      case snd: Snd      => transReadPairElem(snd, false)
+      case fst: Fst      => transReadPairElem(fst, IS_FST_ELEM)
+      case snd: Snd      => transReadPairElem(snd, IS_SND_ELEM)
     }
   }
 

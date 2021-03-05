@@ -39,7 +39,7 @@ object Assignments {
     val freeReg = getFreeReg()
     aLHS match {
       case Fst(id: Ident, _) =>
-        instructions ++= transEqAssignPairElem(aRHS, id, true, freeReg)
+        instructions ++= transEqAssignPairElem(aRHS, id, IS_FST_ELEM, freeReg)
       case Snd(id: Ident, _) =>
         instructions ++= transEqAssignPairElem(aRHS, id, false, freeReg)
       case id: Ident =>
@@ -70,11 +70,11 @@ object Assignments {
       case ex: Expr => instructions ++= transExp(ex, freeReg)
       // PairElem
       case Fst(id: Ident, _) =>
-        instructions ++= transPairElem(id, true, freeReg)
-        instructions += loadPairElem(id, freeReg, true)
+        instructions ++= transPairElem(id, IS_FST_ELEM, freeReg)
+        instructions += loadPairElem(id, freeReg, IS_FST_ELEM)
       case Snd(id: Ident, _) =>
-        instructions ++= transPairElem(id, false, freeReg)
-        instructions += loadPairElem(id, freeReg, false)
+        instructions ++= transPairElem(id, IS_SND_ELEM, freeReg)
+        instructions += loadPairElem(id, freeReg, IS_SND_ELEM)
       case Call(id, args, _) =>
         instructions ++= transCall(id, args, freeReg)
       case ArrayLiter(opArr, _) =>

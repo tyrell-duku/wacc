@@ -67,13 +67,23 @@ object Pairs {
     // Size of fst rhs
     instructions += Ldr(resultReg, ImmMem(getPairElemTypeSize(fstType)))
     instructions += BranchLink(Label("malloc"))
-    instructions += Str(pairIsByte(p, true), nextFreeReg, resultReg, NO_OFFSET)
+    instructions += Str(
+      pairIsByte(p, IS_FST_ELEM),
+      nextFreeReg,
+      resultReg,
+      NO_OFFSET
+    )
     instructions += Str(resultReg, RegAdd(freeReg))
     instructions ++= transExp(snd, nextFreeReg)
     // Size of snd rhs
     instructions += Ldr(resultReg, ImmMem(getPairElemTypeSize(sndType)))
     instructions += BranchLink(Label("malloc"))
-    instructions += Str(pairIsByte(p, false), nextFreeReg, resultReg, NO_OFFSET)
+    instructions += Str(
+      pairIsByte(p, IS_SND_ELEM),
+      nextFreeReg,
+      resultReg,
+      NO_OFFSET
+    )
     addUnusedReg(nextFreeReg)
     instructions += Str(resultReg, freeReg, PAIR_SIZE)
     instructions

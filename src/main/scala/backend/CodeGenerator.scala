@@ -47,6 +47,8 @@ object CodeGenerator {
   val MAX_INT_IMM = 1024
 
   val NO_OFFSET = 0
+  val IS_FST_ELEM = true
+  val IS_SND_ELEM = false
 
   private def saveRegs(
       regsNotInUse: ListBuffer[Reg]
