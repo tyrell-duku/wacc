@@ -6,7 +6,7 @@ class BackendVariablesTest extends AnyFunSuite {
     val name = f.getName()
     val (file, out, command) = createOutputFiles(f)
     test(s"Variables exit code test: $name") {
-      assert(checkExitCode(file, out, command))
+      assert(checkExitCode(file, command))
     }
     test(s"Variables expected test: $name") {
       assert(checkStdOut(file, out))

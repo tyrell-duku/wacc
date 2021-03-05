@@ -6,7 +6,7 @@ class BackendFunctionTest extends AnyFunSuite {
     val name = f.getName
     val (file, out, command) = createOutputFiles(f)
     test(s"Function exit code test for $name") {
-      assert(checkExitCode(file, out, command))
+      assert(checkExitCode(file, command))
     }
     test(s"Function expected test for $name") {
       assert(checkStdOut(file, out))

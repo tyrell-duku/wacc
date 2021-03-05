@@ -7,7 +7,7 @@ class BackendExpressionTest extends AnyFunSuite {
     val name = f.getName()
     val (file, out, command) = createOutputFiles(f)
     test(s"Expression exit code test: $name") {
-      assert(checkExitCode(file, out, command))
+      assert(checkExitCode(file, command))
     }
     test(s"Expression expected test: $name") {
       assert(checkStdOut(file, out))

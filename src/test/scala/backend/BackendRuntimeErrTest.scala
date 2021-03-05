@@ -7,7 +7,7 @@ class BackendRuntimeErrTest extends AnyFunSuite {
     val name = f.getName()
     val (file, out, command) = createOutputFiles(f)
     test(s"Runtime error exit code test for $name") {
-      assert(checkExitCode(file, out, command))
+      assert(checkExitCode(file, command))
       out.delete()
     }
   }
