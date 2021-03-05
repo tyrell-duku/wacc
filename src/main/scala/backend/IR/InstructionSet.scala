@@ -56,38 +56,14 @@ object InstructionSet {
   case class Branch(label: Label) extends Instruction {
     override def toString: String = "B " + label
   }
-
-  case class BranchLink(label: Label) extends Instruction {
-    override def toString: String = "BL " + label
-  }
-
-  // Branch Link Not Equal
-  case class BranchLinkNE(label: Label) extends Instruction {
-    override def toString: String = "BLNE " + label
-  }
-
-  // Branch Link Overflow
-  case class BranchLinkVS(label: Label) extends Instruction {
-    override def toString: String = "BLVS " + label
-  }
-
-  // Branch Link Less Than
-  case class BranchLinkLT(label: Label) extends Instruction {
-    override def toString: String = "BLLT " + label
-  }
-
-  // Branch Link Equal
-  case class BranchLinkEQ(label: Label) extends Instruction {
-    override def toString: String = "BLEQ " + label
-  }
-
   case class BranchEq(label: Label) extends Instruction {
     override def toString: String = "BEQ " + label
   }
-
-  // Branch Link Carry Set
-  case class BranchLinkCS(label: Label) extends Instruction {
-    override def toString: String = "BLCS " + label
+  case class BranchLink(label: Label) extends Instruction {
+    override def toString: String = "BL " + label
+  }
+  case class BranchLinkCond(cond: Condition, label: Label) extends Instruction {
+    override def toString: String = "BL" + cond + " " + label
   }
 
   // Creating labels
@@ -99,6 +75,7 @@ object InstructionSet {
     override def toString: String = "POP " + "{" + rs.mkString(", ") + "}"
   }
 
+  // Loading
   case class Ldr(rd: Reg, op2: LoadOperand) extends Instruction {
     override def toString: String = "LDR " + rd + ", " + op2
   }
@@ -116,7 +93,6 @@ object InstructionSet {
       Ldr(src, RegisterOffset(dst, offset))
     }
   }
-
   case class LdrSB(rd: Reg, op2: LoadOperand) extends Instruction {
     override def toString: String = "LDRSB " + rd + ", " + op2
   }
@@ -128,27 +104,10 @@ object InstructionSet {
       LdrSB(src, RegisterOffset(dst, offset))
     }
   }
-
-  // LDR Equal
-  case class LdrEQ(rd: Reg, op2: LoadOperand) extends Instruction {
-    override def toString: String = "LDREQ " + rd + ", " + op2
-  }
-
-  // LDR Less Than
-  case class LdrLT(rd: Reg, op2: LoadOperand) extends Instruction {
-    override def toString: String = "LDRLT " + rd + ", " + op2
-  }
-
-  // LDR Carry Set
-  case class LdrCS(rd: Reg, op2: LoadOperand) extends Instruction {
-    override def toString: String = "LDRCS " + rd + ", " + op2
-  }
-
   case class LdrCond(cond: Condition, rd: Reg, op2: LoadOperand)
       extends Instruction {
     override def toString: String = "LDR" + cond + " " + rd + ", " + op2
   }
-
   case class Mov(rd: Reg, op2: Operand) extends Instruction {
     override def toString: String = "MOV " + rd + ", " + op2
   }

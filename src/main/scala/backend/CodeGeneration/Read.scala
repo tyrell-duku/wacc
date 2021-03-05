@@ -35,11 +35,9 @@ object Read {
     val instructions = transPairElem(ident, isFst, freeReg)
     val (_, pairT) = sTable(ident)
     val t = getPairElemType(pairT, isFst)
-
     // value must be in R0 for branch
     instructions += Mov(R0, freeReg)
     addUnusedReg(freeReg)
-
     t match {
       case CharT =>
         instructions += BranchLink(Label("p_read_char"))
@@ -87,14 +85,12 @@ object Read {
     val ArrayElem(ident, exprs, _) = ae
     val instructions = ListBuffer.empty[Instruction]
     val resReg = getFreeReg()
-
     // Handles nested arrays
     val (_, instrs) = transArrayElem(ident, exprs, resReg)
     instructions ++= instrs
     // value must be in R0 for branch
     instructions += Mov(R0, resReg)
     addUnusedReg(resReg)
-
     // Gets base type of the arrayElem
     val t = getExprType(ae)
     t match {

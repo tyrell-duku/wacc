@@ -6,10 +6,11 @@ import backend.IR.InstructionSet._
 import backend.IR.Operand._
 
 import scala.collection.mutable.ListBuffer
+import backend.IR.Condition._
 
 object PreDefinedFuncs {
 
-  sealed trait PreDefFunc {
+  trait PreDefFunc {
     val funcLabel: Label
     val msgName: List[String]
     val functionMsg: List[String]
@@ -97,12 +98,12 @@ object PreDefinedFuncs {
       List[Instruction](
         Push(ListBuffer(LR)),
         Cmp(R0, ImmInt(0)),
-        LdrLT(R0, DataLabel(Label(ArrayBounds.msgName(0)))),
-        BranchLinkLT(RuntimeError.funcLabel),
+        LdrCond(LT, R0, DataLabel(Label(ArrayBounds.msgName(0)))),
+        BranchLinkCond(LT, RuntimeError.funcLabel),
         Ldr(R1, RegAdd(R1)),
         Cmp(R0, R1),
-        LdrCS(R0, DataLabel(Label(ArrayBounds.msgName(1)))),
-        BranchLinkCS(RuntimeError.funcLabel),
+        LdrCond(CS, R0, DataLabel(Label(ArrayBounds.msgName(1)))),
+        BranchLinkCond(CS, RuntimeError.funcLabel),
         Pop(ListBuffer(PC))
       )
     )
@@ -114,8 +115,8 @@ object PreDefinedFuncs {
       List[Instruction](
         Push(ListBuffer(LR)),
         Cmp(R1, ImmInt(0)),
-        LdrEQ(R0, DataLabel(Label(DivideByZero.msgName(0)))),
-        BranchLinkEQ(RuntimeError.funcLabel),
+        LdrCond(EQ, R0, DataLabel(Label(DivideByZero.msgName(0)))),
+        BranchLinkCond(EQ, RuntimeError.funcLabel),
         Pop(ListBuffer(PC))
       )
     )
@@ -137,7 +138,7 @@ object PreDefinedFuncs {
       List[Instruction](
         Push(ListBuffer(LR)),
         Cmp(R0, ImmInt(0)),
-        LdrEQ(R0, DataLabel(Label(FreePair.msgName(0)))),
+        LdrCond(EQ, R0, DataLabel(Label(FreePair.msgName(0)))),
         BranchEq(RuntimeError.funcLabel),
         Push(ListBuffer(R0)),
         Ldr(R0, RegAdd(R0)),
@@ -158,7 +159,7 @@ object PreDefinedFuncs {
       List[Instruction](
         Push(ListBuffer(LR)),
         Cmp(R0, ImmInt(0)),
-        LdrEQ(R0, DataLabel(Label(FreeArray.msgName(0)))),
+        LdrCond(EQ, R0, DataLabel(Label(FreeArray.msgName(0)))),
         BranchEq(RuntimeError.funcLabel),
         BranchLink(Label("free")),
         Pop(ListBuffer(PC))
@@ -172,8 +173,8 @@ object PreDefinedFuncs {
       List[Instruction](
         Push(ListBuffer(LR)),
         Cmp(R0, ImmInt(0)),
-        LdrEQ(R0, DataLabel(Label(NullPointer.msgName(0)))),
-        BranchLinkEQ(RuntimeError.funcLabel),
+        LdrCond(EQ, R0, DataLabel(Label(NullPointer.msgName(0)))),
+        BranchLinkCond(EQ, RuntimeError.funcLabel),
         Pop(ListBuffer(PC))
       )
     )

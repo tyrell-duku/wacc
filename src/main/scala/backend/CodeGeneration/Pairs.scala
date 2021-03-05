@@ -31,7 +31,6 @@ object Pairs {
     instructions += Mov(R0, freeReg)
     // Runtime error
     instructions += BranchLink(addRuntimeError(NullPointer))
-
     if (fst) {
       // For Fst
       instructions += Ldr(freeReg, RegAdd(freeReg))
@@ -48,9 +47,7 @@ object Pairs {
       isFst: Boolean
   ): Instruction = {
     val (_, idType) = sTable(id)
-
     Ldr(pairIsByte(idType, isFst), freeReg, freeReg, 0)
-
   }
 
   def assignRHSPair(
@@ -60,7 +57,6 @@ object Pairs {
       freeReg: Reg
   ): ListBuffer[Instruction] = {
     val instructions = ListBuffer.empty[Instruction]
-
     val Pair(fstType, sndType) = p
     val nextFreeReg = getFreeReg()
     // Every pair requires 8 bytes
@@ -80,7 +76,6 @@ object Pairs {
     instructions += Str(pairIsByte(p, false), nextFreeReg, R0, 0)
     addUnusedReg(nextFreeReg)
     instructions += Str(R0, freeReg, PAIR_SIZE)
-
     instructions
   }
 
@@ -112,7 +107,6 @@ object Pairs {
     val nextReg = getFreeReg()
     instructions ++= transPairElem(id, isFst, nextReg)
     instructions += Str(isByte, freeReg, nextReg, 0)
-
     addUnusedReg(nextReg)
     instructions
   }

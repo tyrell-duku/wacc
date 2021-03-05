@@ -8,8 +8,22 @@ import backend.IR.Operand.R0
 import frontend.Rules._
 
 import scala.collection.mutable.ListBuffer
+import backend.DefinedFuncs.PreDefinedFuncs
 
 object Print {
+
+  private def typeToPreDefFunc(t: Type): PreDefinedFuncs.PreDefFunc = {
+    t match {
+      case IntT          => PrintInt
+      case BoolT         => PrintBool
+      case StringT       => PrintString
+      case _: Pair       => PrintReference
+      case ArrayT(CharT) => PrintString
+      case ArrayT(_)     => PrintReference
+      // CharT does not have a pre defined function
+      case _ => null
+    }
+  }
 
   def transPrint(
       e: Expr,
@@ -19,40 +33,29 @@ object Print {
     val freeReg = getFreeReg()
     val instrs = transExp(e, freeReg)
     instrs += Mov(R0, freeReg)
-    t match {
-      case CharT =>
-        instrs += BranchLink(Label("putchar"))
-      case IntT =>
-        dataTable.addDataEntryWithLabel("msg_int", "%d\\0")
-        instrs += BranchLink(Label("p_print_int"))
-        funcTable.addEntry(intPrintInstrs)
-      case BoolT =>
-        dataTable.addDataEntryWithLabel("msg_true", "true\\0")
-        dataTable.addDataEntryWithLabel("msg_false", "false\\0")
-        instrs += BranchLink(Label("p_print_bool"))
-        funcTable.addEntry(boolPrintInstrs)
-      case StringT =>
-        dataTable.addDataEntryWithLabel("msg_string", "%.*s\\0")
-        instrs += BranchLink(Label("p_print_string"))
-        funcTable.addEntry(stringPrintInstrs)
-      case Pair(_, _) =>
-        dataTable.addDataEntryWithLabel("msg_reference", "%p\\0")
-        instrs += BranchLink(Label("p_print_reference"))
-        funcTable.addEntry(referencePrintInstrs)
-      case ArrayT(CharT) =>
-        dataTable.addDataEntryWithLabel("msg_string", "%.*s\\0")
-        instrs += BranchLink(Label("p_print_string"))
-        funcTable.addEntry(stringPrintInstrs)
-      case ArrayT(_) =>
-        dataTable.addDataEntryWithLabel("msg_reference", "%p\\0")
-        instrs += BranchLink(Label("p_print_reference"))
-        funcTable.addEntry(referencePrintInstrs)
 
+    t match {
+      case CharT => instrs += BranchLink(Label("putchar"))
       case _ =>
+        val printFunc = typeToPreDefFunc(t)
+        for (i <- 0 until printFunc.functionMsg.length) {
+          dataTable.addDataEntryWithLabel(
+            printFunc.msgName(i),
+            printFunc.functionMsg(i)
+          )
+        }
+        instrs += BranchLink(printFunc.funcLabel)
+        funcTable.addEntry(printFunc.func)
     }
+
     if (isNewLine) {
-      instrs += BranchLink(Label("p_print_ln"))
-      dataTable.addDataEntryWithLabel("msg_new_line", "\\0")
+      instrs += BranchLink(
+        backend.DefinedFuncs.PrintInstrs.PrintLn.funcLabel
+      )
+      dataTable.addDataEntryWithLabel(
+        backend.DefinedFuncs.PrintInstrs.PrintLn.msgName(0),
+        backend.DefinedFuncs.PrintInstrs.PrintLn.functionMsg(0)
+      )
       funcTable.addEntry(newLinePrintInstrs)
     }
     addUnusedReg(freeReg)
