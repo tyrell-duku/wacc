@@ -8,7 +8,7 @@ object InstructionSet {
 
   sealed trait Instruction
 
-  /* Arithmetic */
+  /* Arithmetic operations */
   case class Add(rd: Reg, rn: Reg, op2: Operand) extends Instruction {
     override def toString: String = "ADD " + rd + ", " + rn + ", " + op2
   }
@@ -34,7 +34,7 @@ object InstructionSet {
     override def toString: String = "CMP " + rn + ", " + op2
   }
 
-  /* Logical */
+  /* Logical operations */
   case class And(rd: Reg, rn: Reg, op2: Operand) extends Instruction {
     override def toString: String = "AND " + rd + ", " + rn + ", " + op2
   }
@@ -49,8 +49,9 @@ object InstructionSet {
   case class Branch(label: Label) extends Instruction {
     override def toString: String = "B " + label
   }
-  case class BranchEq(label: Label) extends Instruction {
-    override def toString: String = "BEQ " + label
+  // Branch {Condition}
+  case class BranchCond(cond: Condition, label: Label) extends Instruction {
+    override def toString: String = "B" + cond + " " + label
   }
   // Branch Link
   case class BranchLink(label: Label) extends Instruction {
