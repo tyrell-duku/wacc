@@ -27,8 +27,8 @@ object Pairs {
     val instructions = ListBuffer.empty[Instruction]
     // Loads in pair from ident into freeReg
     instructions ++= transExp(id, freeReg)
-    // Value must be in R0 for branch
-    instructions += Mov(R0, freeReg)
+    // Value must be in resultReg for branch
+    instructions += Mov(resultReg, freeReg)
     // Runtime error
     instructions += BranchLink(addRuntimeError(NullPointer))
     if (fst) {
@@ -60,22 +60,22 @@ object Pairs {
     val Pair(fstType, sndType) = p
     val nextFreeReg = getFreeReg()
     // Every pair requires 8 bytes
-    instructions += Ldr(R0, ImmMem(2 * PAIR_SIZE))
+    instructions += Ldr(resultReg, ImmMem(2 * PAIR_SIZE))
     instructions += BranchLink(Label("malloc"))
-    instructions += Mov(freeReg, R0)
+    instructions += Mov(freeReg, resultReg)
     instructions ++= transExp(fst, nextFreeReg)
     // Size of fst rhs
-    instructions += Ldr(R0, ImmMem(getPairElemTypeSize(fstType)))
+    instructions += Ldr(resultReg, ImmMem(getPairElemTypeSize(fstType)))
     instructions += BranchLink(Label("malloc"))
-    instructions += Str(pairIsByte(p, true), nextFreeReg, R0, 0)
-    instructions += Str(R0, RegAdd(freeReg))
+    instructions += Str(pairIsByte(p, true), nextFreeReg, resultReg, 0)
+    instructions += Str(resultReg, RegAdd(freeReg))
     instructions ++= transExp(snd, nextFreeReg)
     // Size of snd rhs
-    instructions += Ldr(R0, ImmMem(getPairElemTypeSize(sndType)))
+    instructions += Ldr(resultReg, ImmMem(getPairElemTypeSize(sndType)))
     instructions += BranchLink(Label("malloc"))
-    instructions += Str(pairIsByte(p, false), nextFreeReg, R0, 0)
+    instructions += Str(pairIsByte(p, false), nextFreeReg, resultReg, 0)
     addUnusedReg(nextFreeReg)
-    instructions += Str(R0, freeReg, PAIR_SIZE)
+    instructions += Str(resultReg, freeReg, PAIR_SIZE)
     instructions
   }
 
