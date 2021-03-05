@@ -40,8 +40,9 @@ object CodeGenerator {
   val CHAR_SIZE = 1
   val BOOL_SIZE = 1
   val STR_SIZE = 4
-  val ARRAY_SIZE = 4
-  val PAIR_SIZE = 4
+  val ADDRESS_SIZE = 4
+  val ARRAY_SIZE = ADDRESS_SIZE
+  val PAIR_SIZE = ADDRESS_SIZE
   val MAX_INT_IMM = 1024
 
   private def saveRegs(
