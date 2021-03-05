@@ -15,6 +15,7 @@ clean:
 	rm -rf *.s
 
 test:
+	sbt assembly
 	sbt test
 
 .PHONY: all rules clean test
