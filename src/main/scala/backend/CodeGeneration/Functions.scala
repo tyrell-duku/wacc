@@ -31,8 +31,7 @@ object Functions {
     args match {
       case None =>
       case Some(ArgList(aList)) =>
-        val pList = aList.reverse
-        for (e <- pList) {
+        for (e <- aList.reverse) {
           val t = getExprType(e)
           instrs ++= transExp(e, reg)
           instrs += StrOffsetIndex(isByte(t), reg, SP, -getBaseTypeSize(t))
