@@ -7,11 +7,9 @@ import backend.DefinedFuncs.ReadInstructions.{charRead, intRead}
 import backend.IR.InstructionSet._
 import backend.IR.Operand._
 import frontend.Rules._
-import backend.DefinedFuncs.PrintInstrs.PrintInt
 import scala.collection.mutable.ListBuffer
 
 object Read {
-
   private def getPairElemType(t: Type, isFst: Boolean): Type = t match {
     case Pair(PairElemPair, PairElemPair) => null
     case Pair(PairElemPair, PairElemT(baseType)) =>
@@ -43,10 +41,8 @@ object Read {
         instructions += BranchLink(Label("p_read_char"))
         funcTable.addEntry(charRead(dataTable.addDataEntry(" %c\\0")))
       case IntT =>
-        instructions += BranchLink(PrintInt.funcLabel)
-        funcTable.addEntry(
-          intRead(dataTable.addDataEntry(PrintInt.functionMsg(0)))
-        )
+        instructions += BranchLink(Label("p_read_int"))
+        funcTable.addEntry(intRead(dataTable.addDataEntry("%d\\0")))
       // Semantically incorrect
       case _ =>
     }
@@ -74,10 +70,8 @@ object Read {
         instructions += BranchLink(Label("p_read_char"))
         funcTable.addEntry(charRead(dataTable.addDataEntry(" %c\\0")))
       case IntT =>
-        instructions += BranchLink(PrintInt.funcLabel)
-        funcTable.addEntry(
-          intRead(dataTable.addDataEntry(PrintInt.functionMsg(0)))
-        )
+        instructions += BranchLink(Label("p_read_int"))
+        funcTable.addEntry(intRead(dataTable.addDataEntry("%d\\0")))
       // Semantically incorrect
       case _ => ListBuffer.empty[Instruction]
     }
@@ -102,10 +96,8 @@ object Read {
         instructions += BranchLink(Label("p_read_char"))
         funcTable.addEntry(charRead(dataTable.addDataEntry(" %c\\0")))
       case IntT =>
-        instructions += BranchLink(PrintInt.funcLabel)
-        funcTable.addEntry(
-          intRead(dataTable.addDataEntry(PrintInt.functionMsg(0)))
-        )
+        instructions += BranchLink(Label("p_read_int"))
+        funcTable.addEntry(intRead(dataTable.addDataEntry("%d\\0")))
       // Semantically incorrect
       case _ =>
     }
