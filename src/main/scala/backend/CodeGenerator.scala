@@ -21,6 +21,7 @@ object CodeGenerator {
 
   var freeRegs = allRegs
   final val resultReg: Reg = R0
+  final val popReg = R11
   freeRegs -= resultReg
   freeRegs -= R1
   freeRegs -= R2
@@ -202,7 +203,7 @@ object CodeGenerator {
 
   def getFreeReg(): Reg = {
     if (freeRegs.isEmpty) {
-      return R11
+      return popReg
     }
     val reg = freeRegs(0)
     freeRegs.remove(0)
