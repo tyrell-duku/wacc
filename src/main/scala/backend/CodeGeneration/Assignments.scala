@@ -13,6 +13,7 @@ import scala.collection.mutable.ListBuffer
 
 object Assignments {
 
+  /* Translates the decleration of a new variable */
   def transEqIdent(
       t: Type,
       id: Ident,
@@ -30,32 +31,7 @@ object Assignments {
     instructions
   }
 
-  def assignRHS(
-      t: Type,
-      aRHS: AssignRHS,
-      freeReg: Reg
-  ): (Boolean, ListBuffer[Instruction]) = {
-    val instructions = ListBuffer.empty[Instruction]
-    aRHS match {
-      case ex: Expr => instructions ++= transExp(ex, freeReg)
-      // PairElem
-      case Fst(id: Ident, _) =>
-        instructions ++= transPairElem(id, true, freeReg)
-        instructions += loadPairElem(id, freeReg, true)
-      case Snd(id: Ident, _) =>
-        instructions ++= transPairElem(id, false, freeReg)
-        instructions += loadPairElem(id, freeReg, false)
-      case Call(id, args, _) =>
-        instructions ++= transCall(id, args, freeReg)
-      case ArrayLiter(opArr, _) =>
-        instructions ++= transArrayLiter(t, opArr, freeReg)
-      case Newpair(fst, snd, _) =>
-        instructions ++= assignRHSPair(t, fst, snd, freeReg)
-      case _ =>
-    }
-    (isByte(t), instructions)
-  }
-
+  /* Translates the re-assignment of a new variable */
   def transEqAssign(
       aLHS: AssignLHS,
       aRHS: AssignRHS
@@ -81,6 +57,33 @@ object Assignments {
     }
     addUnusedReg(freeReg)
     instructions
+  }
+
+  /* Translates the AssignRHS Rule, returns the RHS size and instructions */
+  def assignRHS(
+      t: Type,
+      aRHS: AssignRHS,
+      freeReg: Reg
+  ): (Boolean, ListBuffer[Instruction]) = {
+    val instructions = ListBuffer.empty[Instruction]
+    aRHS match {
+      case ex: Expr => instructions ++= transExp(ex, freeReg)
+      // PairElem
+      case Fst(id: Ident, _) =>
+        instructions ++= transPairElem(id, true, freeReg)
+        instructions += loadPairElem(id, freeReg, true)
+      case Snd(id: Ident, _) =>
+        instructions ++= transPairElem(id, false, freeReg)
+        instructions += loadPairElem(id, freeReg, false)
+      case Call(id, args, _) =>
+        instructions ++= transCall(id, args, freeReg)
+      case ArrayLiter(opArr, _) =>
+        instructions ++= transArrayLiter(t, opArr, freeReg)
+      case Newpair(fst, snd, _) =>
+        instructions ++= assignRHSPair(t, fst, snd, freeReg)
+      case _ =>
+    }
+    (isByte(t), instructions)
   }
 
 }
