@@ -6,7 +6,7 @@ import frontend.ExprParser._
 import frontend.StatParser._
 import frontend.Lexer._
 
-class BaseTypeTest extends AnyFunSuite {
+class ParserBaseTypeTest extends AnyFunSuite {
   test("Successfully parses int type") {
     assert(baseType.runParser("int").contains(IntT))
   }

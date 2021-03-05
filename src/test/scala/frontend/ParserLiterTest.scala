@@ -5,7 +5,7 @@ import frontend.LiterParser._
 import frontend.ExprParser._
 import frontend.Lexer._
 
-class IntLiterTest extends AnyFunSuite {
+class ParserIntLiterTest extends AnyFunSuite {
   test("Successfully parses digit without sign") {
     assert(
       intLiter.runParser("100").contains(IntLiter(100, (1, 1)))

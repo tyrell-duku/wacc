@@ -3,7 +3,7 @@ import frontend.Rules._
 import frontend.ExprParser._
 import frontend.Lexer._
 
-class UnaryOpTest extends AnyFunSuite {
+class ParserUnaryOpTest extends AnyFunSuite {
 
   test("Successful parses not operator") {
     assert(expr.runParser("!var").contains(Not(Ident("var", (1, 2)), (1, 1))))
