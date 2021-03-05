@@ -10,24 +10,32 @@ import scala.collection.mutable.ListBuffer
 import backend.{ARMPrinter, CodeGenerator}
 
 object Main {
-  val syntaxError = 100
-  val semanticError = 200
+  // Constants for error codes
+  private val syntaxError = 100
+  private val semanticError = 200
 
-  def syntaxExit(errorMessage: String): Nothing = {
+  /* Exit with code 100 & print error msg from Parser */
+  private def syntaxExit(errorMessage: String): Nothing = {
     println("Syntax Error")
     println(errorMessage)
     sys.exit(syntaxError)
   }
 
-  def semanticExit(errorMessages: ListBuffer[SemanticError]): Nothing = {
+  /* Exit with code 200 & print all semantic errors returned by
+     SemanticChecker. */
+  private def semanticExit(
+      errorMessages: ListBuffer[SemanticError]
+  ): Nothing = {
     println("Semantic Error")
     errorMessages.foreach((semErr: SemanticError) => println(semErr))
     sys.exit(semanticError)
   }
 
-  def semanticAnalysis(result: Program): SymbolTable = {
+  /* Perform semanticAnalysis on AST returned by Parser. */
+  private def semanticAnalysis(result: Program): SymbolTable = {
     val semanticChecker = new SemanticChecker
     val (sTable, semanticResult) = semanticChecker.progAnalysis(result)
+    // If nonEmpty, semantic errors occur so semantic exit
     if (semanticResult.nonEmpty) {
       semanticExit(semanticResult)
     }
@@ -48,9 +56,9 @@ object Main {
 
     parserResult match {
       case Failure(msg) => syntaxExit(msg)
-      case Success(x) =>
-        val sTable = semanticAnalysis(x)
-        val (data, instrs) = CodeGenerator.transProg(x, sTable)
+      case Success(ast) =>
+        val sTable = semanticAnalysis(ast)
+        val (data, instrs) = CodeGenerator.transProg(ast, sTable)
         ARMPrinter.execute(file.getName(), data, instrs)
     }
   }

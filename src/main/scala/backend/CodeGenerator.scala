@@ -15,12 +15,13 @@ import backend.IR.InstructionSet._
 import backend.IR.Operand._
 
 object CodeGenerator {
-  // Registers
+  /* Registers */
   final val allRegs: ListBuffer[Reg] =
     ListBuffer(R0, R1, R2, R3, R4, R5, R6, R7, R8, R9, R10)
 
   var freeRegs = allRegs
   final val resultReg: Reg = R0
+  final val popReg = R11
   freeRegs -= resultReg
   freeRegs -= R1
   freeRegs -= R2
@@ -30,19 +31,26 @@ object CodeGenerator {
   var sTable: SymbolTable = null
   var scopeSP = 0
   var currentLabel = Label("main")
-  private var labelCounter = 0
   val dataTable = new DataTable
   val userFuncTable = new FuncTable
   val funcTable = new FuncTable
 
-  // Type sizes
+  /* Type sizes */
   val INT_SIZE = 4
   val CHAR_SIZE = 1
   val BOOL_SIZE = 1
   val STR_SIZE = 4
-  val ARRAY_SIZE = 4
-  val PAIR_SIZE = 4
+  val ADDRESS_SIZE = 4
+  val ARRAY_SIZE = ADDRESS_SIZE
+  val PAIR_SIZE = ADDRESS_SIZE
   val MAX_INT_IMM = 1024
+
+  val NO_OFFSET = 0
+  val IS_FST_ELEM = true
+  val IS_SND_ELEM = false
+
+  val TRUE_CMP_INT = ImmInt(1)
+  val FALSE_CMP_INT = ImmInt(0)
 
   private def saveRegs(
       regsNotInUse: ListBuffer[Reg]
@@ -81,7 +89,7 @@ object CodeGenerator {
       Ltorg
     )
     instructions ++= toAdd
-    userFuncTable.addEntry(currentLabel, instructions.toList)
+    userFuncTable.addEntry(currentLabel, instructions)
     val funcList = userFuncTable.table ++ funcTable.table
     (dataTable.table.toList, funcList.toList)
   }
@@ -148,19 +156,13 @@ object CodeGenerator {
     }
   }
 
-  def assignLabel(): Label = {
-    val nextLabel = Label("L" + labelCounter)
-    labelCounter += 1
-    nextLabel
-  }
-
   private def transExit(
       e: Expr
   ): ListBuffer[Instruction] = {
     val freeReg = getFreeReg()
     val instructions = transExp(e, freeReg)
     instructions ++= ListBuffer[Instruction](
-      Mov(R0, freeReg),
+      Mov(resultReg, freeReg),
       BranchLink(Label("exit"))
     )
     addUnusedReg(freeReg)
@@ -201,7 +203,7 @@ object CodeGenerator {
 
   def getFreeReg(): Reg = {
     if (freeRegs.isEmpty) {
-      return R11
+      return popReg
     }
     val reg = freeRegs(0)
     freeRegs.remove(0)

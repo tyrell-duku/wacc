@@ -1,182 +1,134 @@
 package backend.DefinedFuncs
 
-import backend.CodeGenerator.{dataTable, funcTable}
-import backend.DefinedFuncs.PrintInstrs.stringPrintInstrs
+import backend.CodeGenerator.{dataTable, funcTable, resultReg}
 import backend.IR.InstructionSet._
 import backend.IR.Operand._
-
+import backend.DefinedFuncs.PrintInstrs._
+import backend.DefinedFuncs.RuntimeErrors._
 import scala.collection.mutable.ListBuffer
 import backend.IR.Condition._
 
 object PreDefinedFuncs {
-
-  trait PreDefFunc {
+  sealed trait PreDefFunc {
     val funcLabel: Label
     val msgName: List[String]
-    val functionMsg: List[String]
+    val msgs: List[String]
     val func: (Label, List[Instruction])
   }
+  /* Runtime errors */
+  // Checks for reference to array element at negative index or index that
+  // exceeds the size of the array
   case object ArrayBounds extends PreDefFunc {
     override val funcLabel = Label("p_check_array_bounds")
     override val msgName = List("msg_neg_index", "msg_index_too_large")
-    override val functionMsg = List(
+    override val msgs = List(
       "ArrayIndexOutOfBoundsError: negative index\\n\\0",
       "ArrayIndexOutOfBoundsError: index too large\\n\\0"
     )
     override val func = checkArrayBounds
   }
+  // Check for division by 0
   case object DivideByZero extends PreDefFunc {
     override val funcLabel = Label("p_check_divide_by_zero")
     override val msgName = List("msg_divide_by_zero")
-    override val functionMsg =
+    override val msgs =
       List("DivideByZeroError: divide or modulo by zero\\n\\0")
     override val func = checkDivideByZero
   }
+  // Check for integer overflow/underflow
   case object Overflow extends PreDefFunc {
     override val funcLabel = Label("p_throw_overflow_error")
     override val msgName = List("msg_overflow")
-    override val functionMsg =
+    override val msgs =
       List(
         "OverflowError: the result is too small/large to store in a 4-byte signed-integer.\\n"
       )
     override val func = throwOverflowError
   }
+  // Check for attempt to call 'free' on pair
   case object FreePair extends PreDefFunc {
     override val funcLabel = Label("p_free_pair")
     override val msgName = List("msg_null_reference")
-    override val functionMsg =
+    override val msgs =
       List("NullReferenceError: dereference a null reference\\n\\0")
     override val func = freePair
-
   }
+  // Check for attempt to free an array
   case object FreeArray extends PreDefFunc {
     override val funcLabel = Label("p_free_array")
     override val msgName = List("msg_null_reference")
-    override val functionMsg =
+    override val msgs =
       List("NullReferenceError: dereference a null reference\\n\\0")
     override val func = freeArray
   }
+  // Dereferencing a null pointer
   case object NullPointer extends PreDefFunc {
     override val funcLabel = Label("p_check_null_pointer")
     override val msgName = List("msg_null_reference")
-    override val functionMsg =
+    override val msgs =
       List("NullReferenceError: dereference a null reference\\n\\0")
     override val func = checkNullPointer
   }
+  // Throws a runtime error
   case object RuntimeError extends PreDefFunc {
     override val funcLabel = Label("p_throw_runtime_error")
     override val msgName = List.empty[String]
-    override val functionMsg = List.empty[String]
+    override val msgs = List.empty[String]
     override val func = throwRuntimeError
   }
 
-  def addRuntimeError(err: PreDefFunc): Label = {
-    funcTable.addEntry(RuntimeError.func)
-    funcTable.addEntry(stringPrintInstrs)
-    dataTable.addDataEntryWithLabel("msg_string", "%.*s\\0")
-    for (i <- 0 until err.functionMsg.length) {
-      dataTable.addDataEntryWithLabel(err.msgName(i), err.functionMsg(i))
-    }
-    funcTable.addEntry(err.func)
-    err.funcLabel
+  /* Printing */
+  case object PrintInt extends PreDefFunc {
+    override val funcLabel = Label("p_print_int")
+    override val msgName = List("msg_int")
+    override val msgs = List("%d\\0")
+    override val func = intPrintInstrs
+  }
+  // Printing booleans
+  case object PrintBool extends PreDefFunc {
+    override val funcLabel = Label("p_print_bool")
+    override val msgName = List("msg_true", "msg_false")
+    override val msgs = List("true\\0", "false\\0")
+    override val func = boolPrintInstrs
+  }
+  // Printing strings
+  case object PrintString extends PreDefFunc {
+    override val funcLabel = Label("p_print_string")
+    override val msgName = List("msg_string")
+    override val msgs = List("%.*s\\0")
+    override val func = stringPrintInstrs
+  }
+  // Printing references to pairs/arrays
+  case object PrintReference extends PreDefFunc {
+    override val funcLabel = Label("p_print_reference")
+    override val msgName = List("msg_reference")
+    override val msgs = List("%p\\0")
+    override val func = referencePrintInstrs
+  }
+  // Prints a new line
+  case object PrintLn extends PreDefFunc {
+    override val funcLabel = Label("p_print_ln")
+    override val msgName = List("msg_new_line")
+    override val msgs = List("\\0")
+    override val func = newLinePrintInstrs
   }
 
-  def throwRuntimeError: (Label, List[Instruction]) = {
-    (
-      RuntimeError.funcLabel,
-      List[Instruction](
-        BranchLink(Label("p_print_string")),
-        Mov(R0, ImmInt(-1)),
-        BranchLink(Label("exit"))
-      )
-    )
+  /* Reading */
+  // Reads an int
+  case object ReadInt extends PreDefFunc {
+    override val funcLabel = Label("p_read_int")
+    // function requires Label argument
+    override val func = null
+    override val msgs = List("%d\\0")
+    override val msgName = List.empty
+  }
+  // Reads a character
+  case object ReadChar extends PreDefFunc {
+    override val funcLabel = Label("p_read_char")
+    // function requires Label argument
+    override val func = null
+    override val msgs = List(" %c\\0")
+    override val msgName = List.empty
   }
 
-  def checkArrayBounds: (Label, List[Instruction]) = {
-    (
-      ArrayBounds.funcLabel,
-      List[Instruction](
-        Push(ListBuffer(LR)),
-        Cmp(R0, ImmInt(0)),
-        LdrCond(LT, R0, DataLabel(Label(ArrayBounds.msgName(0)))),
-        BranchLinkCond(LT, RuntimeError.funcLabel),
-        Ldr(R1, RegAdd(R1)),
-        Cmp(R0, R1),
-        LdrCond(CS, R0, DataLabel(Label(ArrayBounds.msgName(1)))),
-        BranchLinkCond(CS, RuntimeError.funcLabel),
-        Pop(ListBuffer(PC))
-      )
-    )
-  }
-
-  def checkDivideByZero: (Label, List[Instruction]) = {
-    (
-      DivideByZero.funcLabel,
-      List[Instruction](
-        Push(ListBuffer(LR)),
-        Cmp(R1, ImmInt(0)),
-        LdrCond(EQ, R0, DataLabel(Label(DivideByZero.msgName(0)))),
-        BranchLinkCond(EQ, RuntimeError.funcLabel),
-        Pop(ListBuffer(PC))
-      )
-    )
-  }
-
-  def throwOverflowError: (Label, List[Instruction]) = {
-    (
-      Overflow.funcLabel,
-      List[Instruction](
-        Ldr(R0, DataLabel(Label(Overflow.msgName(0)))),
-        BranchLink(RuntimeError.funcLabel)
-      )
-    )
-  }
-
-  def freePair: (Label, List[Instruction]) = {
-    (
-      FreePair.funcLabel,
-      List[Instruction](
-        Push(ListBuffer(LR)),
-        Cmp(R0, ImmInt(0)),
-        LdrCond(EQ, R0, DataLabel(Label(FreePair.msgName(0)))),
-        BranchEq(RuntimeError.funcLabel),
-        Push(ListBuffer(R0)),
-        Ldr(R0, RegAdd(R0)),
-        BranchLink(Label("free")),
-        Ldr(R0, RegAdd(SP)),
-        Ldr(R0, RegisterOffset(R0, 4)),
-        BranchLink(Label("free")),
-        Pop(ListBuffer(R0)),
-        BranchLink(Label("free")),
-        Pop(ListBuffer(PC))
-      )
-    )
-  }
-
-  def freeArray: (Label, List[Instruction]) = {
-    (
-      FreeArray.funcLabel,
-      List[Instruction](
-        Push(ListBuffer(LR)),
-        Cmp(R0, ImmInt(0)),
-        LdrCond(EQ, R0, DataLabel(Label(FreeArray.msgName(0)))),
-        BranchEq(RuntimeError.funcLabel),
-        BranchLink(Label("free")),
-        Pop(ListBuffer(PC))
-      )
-    )
-  }
-
-  def checkNullPointer: (Label, List[Instruction]) = {
-    (
-      NullPointer.funcLabel,
-      List[Instruction](
-        Push(ListBuffer(LR)),
-        Cmp(R0, ImmInt(0)),
-        LdrCond(EQ, R0, DataLabel(Label(NullPointer.msgName(0)))),
-        BranchLinkCond(EQ, RuntimeError.funcLabel),
-        Pop(ListBuffer(PC))
-      )
-    )
-  }
 }

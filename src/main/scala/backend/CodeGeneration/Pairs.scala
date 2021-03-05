@@ -3,87 +3,107 @@ package backend.CodeGeneration
 import backend.CodeGeneration.Assignments.assignRHS
 import backend.CodeGeneration.Expressions.transExp
 import backend.CodeGenerator._
-import backend.DefinedFuncs.PreDefinedFuncs.{NullPointer, addRuntimeError}
+import backend.DefinedFuncs.PreDefinedFuncs.NullPointer
 import backend.IR.InstructionSet._
 import backend.IR.Operand._
 import frontend.Rules._
-
+import backend.DefinedFuncs.RuntimeErrors.addRuntimeError
 import scala.collection.mutable.ListBuffer
 
 object Pairs {
-
-  private def pairIsByte(idType: Type, fst: Boolean): Boolean = {
+  /* Returns whether the type IDTYPE has the size of byte. */
+  private def pairIsByte(idType: Type, isFst: Boolean): Boolean = {
     idType match {
-      case Pair(PairElemT(x), PairElemT(y)) => if (fst) isByte(x) else isByte(y)
-      case _                                => false
+      case Pair(PairElemT(x), PairElemT(y)) =>
+        if (isFst) isByte(x) else isByte(y)
+      case _ => false
     }
   }
 
+  /* Translates pair-elems to the internal representation and loads
+     the result into the register RD.*/
   def transPairElem(
       id: Ident,
       fst: Boolean,
-      freeReg: Reg
+      rd: Reg
   ): ListBuffer[Instruction] = {
     val instructions = ListBuffer.empty[Instruction]
-    // Loads in pair from ident into freeReg
-    instructions ++= transExp(id, freeReg)
-    // Value must be in R0 for branch
-    instructions += Mov(R0, freeReg)
+    // Loads in pair from ident into rd
+    instructions ++= transExp(id, rd)
+    // Value must be in resultReg for branch
+    instructions += Mov(resultReg, rd)
     // Runtime error
     instructions += BranchLink(addRuntimeError(NullPointer))
     if (fst) {
       // For Fst
-      instructions += Ldr(freeReg, RegAdd(freeReg))
+      instructions += Ldr(rd, RegAdd(rd))
     } else {
       // For Snd
-      instructions += Ldr(freeReg, freeReg, PAIR_SIZE)
+      instructions += Ldr(rd, rd, PAIR_SIZE)
     }
     instructions
   }
-
+  /* Loads an element with identifier ID into register RD. Loads the first
+     element of pair ID into RD if ISFST is true, otherwise it laods the second
+     element. */
   def loadPairElem(
       id: Ident,
-      freeReg: Reg,
+      rd: Reg,
       isFst: Boolean
   ): Instruction = {
     val (_, idType) = sTable(id)
-    Ldr(pairIsByte(idType, isFst), freeReg, freeReg, 0)
+    Ldr(pairIsByte(idType, isFst), rd, rd, NO_OFFSET)
   }
 
+  /* Translates a pair P with first element FST and second element SND into the
+     internal representation, loading P into register RD. */
   def assignRHSPair(
       p: Type,
       fst: Expr,
       snd: Expr,
-      freeReg: Reg
+      rd: Reg
   ): ListBuffer[Instruction] = {
     val instructions = ListBuffer.empty[Instruction]
     val Pair(fstType, sndType) = p
     val nextFreeReg = getFreeReg()
     // Every pair requires 8 bytes
-    instructions += Ldr(R0, ImmMem(2 * PAIR_SIZE))
+    instructions += Ldr(resultReg, ImmMem(2 * PAIR_SIZE))
     instructions += BranchLink(Label("malloc"))
-    instructions += Mov(freeReg, R0)
+    instructions += Mov(rd, resultReg)
     instructions ++= transExp(fst, nextFreeReg)
     // Size of fst rhs
-    instructions += Ldr(R0, ImmMem(getPairElemTypeSize(fstType)))
+    instructions += Ldr(resultReg, ImmMem(getPairElemTypeSize(fstType)))
     instructions += BranchLink(Label("malloc"))
-    instructions += Str(pairIsByte(p, true), nextFreeReg, R0, 0)
-    instructions += Str(R0, RegAdd(freeReg))
+    instructions += Str(
+      pairIsByte(p, IS_FST_ELEM),
+      nextFreeReg,
+      resultReg,
+      NO_OFFSET
+    )
+    instructions += Str(resultReg, RegAdd(rd))
     instructions ++= transExp(snd, nextFreeReg)
     // Size of snd rhs
-    instructions += Ldr(R0, ImmMem(getPairElemTypeSize(sndType)))
+    instructions += Ldr(resultReg, ImmMem(getPairElemTypeSize(sndType)))
     instructions += BranchLink(Label("malloc"))
-    instructions += Str(pairIsByte(p, false), nextFreeReg, R0, 0)
+    instructions += Str(
+      pairIsByte(p, IS_SND_ELEM),
+      nextFreeReg,
+      resultReg,
+      NO_OFFSET
+    )
     addUnusedReg(nextFreeReg)
-    instructions += Str(R0, freeReg, PAIR_SIZE)
+    instructions += Str(resultReg, rd, PAIR_SIZE)
     instructions
   }
 
+  /* Translates the assignment of a pair-element into the internal
+     representation, loading the element into register RD.
+     Loads the first element if ISFST is true, and the second otherwise.  */
   def transEqAssignPairElem(
       rhs: AssignRHS,
       id: Ident,
       isFst: Boolean,
-      freeReg: Reg
+      rd: Reg
   ): ListBuffer[Instruction] = {
     val instructions = ListBuffer.empty[Instruction]
     val (index, t) = sTable(id)
@@ -102,15 +122,16 @@ object Pairs {
         case _ => null
       }
     }
-    val (isByte, instrs) = assignRHS(pairElemType, rhs, freeReg)
+    val (isByte, instrs) = assignRHS(pairElemType, rhs, rd)
     instructions ++= instrs
     val nextReg = getFreeReg()
     instructions ++= transPairElem(id, isFst, nextReg)
-    instructions += Str(isByte, freeReg, nextReg, 0)
+    instructions += Str(isByte, rd, nextReg, NO_OFFSET)
     addUnusedReg(nextReg)
     instructions
   }
 
+  /* Returns the size of the pair-elem type PAIRTYPE in bytes, as an int. */
   private def getPairElemTypeSize(pairType: PairElemType): Int = {
     pairType match {
       case PairElemPair        => PAIR_SIZE

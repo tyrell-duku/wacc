@@ -4,14 +4,16 @@ import backend.CodeGeneration.Arrays.transArrayElem
 import backend.CodeGeneration.Pairs.transPairElem
 import backend.CodeGenerator._
 import backend.DefinedFuncs.ReadInstructions.{charRead, intRead}
+import backend.DefinedFuncs.PreDefinedFuncs.{ReadInt, ReadChar}
 import backend.IR.InstructionSet._
 import backend.IR.Operand._
 import frontend.Rules._
-
 import scala.collection.mutable.ListBuffer
 
 object Read {
-
+  /* Obtains the type of an element of a pair. Only works if T is a Pair.
+     Returns the type of the first element of pair T if ISFST is true, and the
+     second element otherwise. */
   private def getPairElemType(t: Type, isFst: Boolean): Type = t match {
     case Pair(PairElemPair, PairElemPair) => null
     case Pair(PairElemPair, PairElemT(baseType)) =>
@@ -23,6 +25,23 @@ object Read {
     case _ => null
   }
 
+  /* Pattern matches on type T and returns the respective BranchLink
+     instruction. Adds the respective function to the funcTable. */
+  private def readBranch(t: Type): Instruction = t match {
+    case CharT =>
+      funcTable.addEntry(
+        charRead(dataTable.addDataEntry(ReadChar.msgs(0)))
+      )
+      BranchLink(ReadChar.funcLabel)
+    case IntT =>
+      funcTable.addEntry(
+        intRead(dataTable.addDataEntry(ReadInt.msgs(0)))
+      )
+      BranchLink(ReadInt.funcLabel)
+    // Semantically incorrect
+    case _ => null
+  }
+  /* Translates read pair elems to the internal representation. */
   def transReadPairElem(
       pe: PairElem,
       isFst: Boolean
@@ -36,23 +55,14 @@ object Read {
     val (_, pairT) = sTable(ident)
     val t = getPairElemType(pairT, isFst)
     // value must be in R0 for branch
-    instructions += Mov(R0, freeReg)
+    instructions += Mov(resultReg, freeReg)
     addUnusedReg(freeReg)
-    t match {
-      case CharT =>
-        instructions += BranchLink(Label("p_read_char"))
-        funcTable.addEntry(charRead(dataTable.addDataEntry(" %c\\0")))
-      case IntT =>
-        instructions += BranchLink(Label("p_read_int"))
-        funcTable.addEntry(intRead(dataTable.addDataEntry("%d\\0")))
-      // Semantically incorrect
-      case _ =>
-    }
+    instructions += readBranch(t)
     instructions
   }
 
   /* Translates read identifiers to the internal representation.
-    Only types int and char are semantically valid. */
+     Only types int and char are semantically valid. */
   private def transReadIdent(ident: Ident): ListBuffer[Instruction] = {
     val instructions = ListBuffer.empty[Instruction]
     val freeReg = getFreeReg()
@@ -64,19 +74,9 @@ object Read {
       ImmInt(spOffset)
     )
     // variable must be in R0 for the branch
-    instructions += Mov(R0, freeReg)
+    instructions += Mov(resultReg, freeReg)
     addUnusedReg(freeReg)
-    // pattern matching for which read label to use
-    identType match {
-      case CharT =>
-        instructions += BranchLink(Label("p_read_char"))
-        funcTable.addEntry(charRead(dataTable.addDataEntry(" %c\\0")))
-      case IntT =>
-        instructions += BranchLink(Label("p_read_int"))
-        funcTable.addEntry(intRead(dataTable.addDataEntry("%d\\0")))
-      // Semantically incorrect
-      case _ => ListBuffer.empty[Instruction]
-    }
+    instructions += readBranch(identType)
     instructions
   }
 
@@ -89,20 +89,11 @@ object Read {
     val (_, instrs) = transArrayElem(ident, exprs, resReg)
     instructions ++= instrs
     // value must be in R0 for branch
-    instructions += Mov(R0, resReg)
+    instructions += Mov(resultReg, resReg)
     addUnusedReg(resReg)
     // Gets base type of the arrayElem
     val t = getExprType(ae)
-    t match {
-      case CharT =>
-        instructions += BranchLink(Label("p_read_char"))
-        funcTable.addEntry(charRead(dataTable.addDataEntry(" %c\\0")))
-      case IntT =>
-        instructions += BranchLink(Label("p_read_int"))
-        funcTable.addEntry(intRead(dataTable.addDataEntry("%d\\0")))
-      // Semantically incorrect
-      case _ =>
-    }
+    instructions += readBranch(t)
     instructions
   }
 
@@ -111,8 +102,8 @@ object Read {
     lhs match {
       case ident: Ident  => transReadIdent(ident)
       case ae: ArrayElem => transReadArrayElem(ae)
-      case fst: Fst      => transReadPairElem(fst, true)
-      case snd: Snd      => transReadPairElem(snd, false)
+      case fst: Fst      => transReadPairElem(fst, IS_FST_ELEM)
+      case snd: Snd      => transReadPairElem(snd, IS_SND_ELEM)
     }
   }
 

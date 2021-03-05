@@ -76,9 +76,6 @@ object Operand {
   case object R11 extends Reg {
     override def toString: String = "r11"
   }
-  case object R12 extends Reg {
-    override def toString: String = "r12"
-  }
 
   // Stack Pointer
   case object SP extends Reg {
