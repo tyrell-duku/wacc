@@ -53,7 +53,7 @@ object Arrays {
     // Handles nested array elems
     for (exp <- es) {
       // Gets type of array elem at current depth
-      t = getInnerType(t)
+      t = getArrayInnerType(t)
       instructions ++= transExp(exp, nextReg)
       instructions += Ldr(reg, RegAdd(reg))
       // Values must be in R0 & R1 for array bounds check

@@ -122,7 +122,7 @@ object CodeGenerator {
     }
   }
 
-  def getInnerType(t: Type): Type = t match {
+  def getArrayInnerType(t: Type): Type = t match {
     case ArrayT(inner) => inner
     // invalid case, will never enter
     case _ => null
@@ -141,7 +141,7 @@ object CodeGenerator {
       case ArrayElem(id, es, _) =>
         var (_, t) = sTable(id)
         for (_ <- es) {
-          t = getInnerType(t)
+          t = getArrayInnerType(t)
         }
         t
       case _: Not        => BoolT
