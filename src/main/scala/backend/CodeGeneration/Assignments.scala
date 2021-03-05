@@ -8,12 +8,11 @@ import backend.CodeGenerator._
 import backend.IR.InstructionSet._
 import backend.IR.Operand._
 import frontend.Rules._
-
 import scala.collection.mutable.ListBuffer
 
 object Assignments {
 
-  /* Translates the decleration of a new variable */
+  /* Translates the declaration of a new variable */
   def transEqIdent(
       t: Type,
       id: Ident,
@@ -53,6 +52,7 @@ object Assignments {
         val (_, instrs) = assignRHS(getExprType(ae), aRHS, freeReg)
         instructions ++= instrs
         instructions ++= storeArrayElem(id, es, freeReg)
+      // Semantically incorrect
       case _ =>
     }
     addUnusedReg(freeReg)
