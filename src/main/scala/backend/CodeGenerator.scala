@@ -16,16 +16,9 @@ import backend.IR.Operand._
 
 object CodeGenerator {
   /* Registers */
-  final val allRegs: ListBuffer[Reg] =
-    ListBuffer(R0, R1, R2, R3, R4, R5, R6, R7, R8, R9, R10)
-
-  var freeRegs = allRegs
+  private var freeRegs = ListBuffer[Reg](R4, R5, R6, R7, R8, R9, R10)
   final val resultReg: Reg = R0
   final val popReg = R11
-  freeRegs -= resultReg
-  freeRegs -= R1
-  freeRegs -= R2
-  freeRegs -= R3
 
   var currentSP = 0
   var sTable: SymbolTable = null
@@ -52,19 +45,9 @@ object CodeGenerator {
   val TRUE_INT = 1
   val FALSE_INT = 0
 
-  private def saveRegs(
-      regsNotInUse: ListBuffer[Reg]
-  ): Instruction = {
-    val regsToPush = allRegs.filter(r => !regsNotInUse.contains(r))
-    Push(regsToPush)
-  }
-
-  private def restoreRegs(
-      regsNotInUse: ListBuffer[Reg]
-  ): Instruction = {
-    val regsToPush = allRegs.filter(r => !regsNotInUse.contains(r)).reverse
-    new Pop(regsToPush)
-  }
+  private val ERROR = -1
+  private val HAS_NEW_LINE = true
+  private val NO_NEW_LINE = false
 
   def transProg(
       prog: Program,
@@ -105,10 +88,8 @@ object CodeGenerator {
       case Free(id: Ident)  => instructions ++= transFree(id)
       case Return(e)        => instructions ++= transReturn(e)
       case Exit(e)          => instructions ++= transExit(e)
-      // isNewLine = false
-      case Print(e) => instructions ++= transPrint(e, false)
-      // isNewLine = true
-      case PrintLn(e)       => instructions ++= transPrint(e, true)
+      case Print(e)         => instructions ++= transPrint(e, NO_NEW_LINE)
+      case PrintLn(e)       => instructions ++= transPrint(e, HAS_NEW_LINE)
       case If(cond, s1, s2) => transIf(cond, s1, s2, instructions)
       case While(cond, s)   => transWhile(cond, s, instructions)
       case Seq(statList) =>
@@ -226,7 +207,7 @@ object CodeGenerator {
       case StringT        => STR_SIZE
       case ArrayT(innerT) => ARRAY_SIZE
       case Pair(_, _)     => PAIR_SIZE
-      case _              => -1
+      case _              => ERROR
     }
   }
 
