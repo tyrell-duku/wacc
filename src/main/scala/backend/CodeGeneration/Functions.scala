@@ -53,7 +53,7 @@ object Functions {
   private def transFuncParams(ps: Option[ParamList]): Unit = ps match {
     case None =>
     case Some(ParamList(plist)) =>
-      var currSp = 4
+      var currSp = ADDRESS_SIZE
       var prevSize = 0
       for (param <- plist) {
         val Param(t, id) = param
