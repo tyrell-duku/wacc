@@ -13,7 +13,7 @@ object Free {
     val freeReg = getFreeReg()
     val (index, t) = sTable(id)
     instructions += Ldr(freeReg, SP, currentSP - index)
-    instructions += Mov(R0, freeReg)
+    instructions += Mov(resultReg, freeReg)
     addUnusedReg(freeReg)
     t match {
       case _: Pair =>

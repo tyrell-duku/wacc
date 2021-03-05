@@ -87,16 +87,16 @@ object Expressions {
         )
       case _: Div =>
         // Values need to be in R0 and R1 for "__aeabi_idiv"
-        instructions += Mov(R0, newReg)
+        instructions += Mov(resultReg, newReg)
         instructions += Mov(R1, rReg)
         // Runtime error check
         instructions += BranchLink(addRuntimeError(DivideByZero))
         // Divide function
         instructions += BranchLink(Label("__aeabi_idiv"))
-        instructions += Mov(newReg, R0)
+        instructions += Mov(newReg, resultReg)
       case _: Mod =>
         // Needs to be in R0 and R1 for "__aeabi_idivmod"
-        instructions += Mov(R0, newReg)
+        instructions += Mov(resultReg, newReg)
         instructions += Mov(R1, rReg)
         // Runtime error check
         instructions += BranchLink(addRuntimeError(DivideByZero))
@@ -171,7 +171,6 @@ object Expressions {
       case e: BinOp =>
         instructions ++= transBinOp(e, reg)
     }
-
     instructions
   }
 

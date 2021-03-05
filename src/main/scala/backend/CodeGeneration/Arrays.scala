@@ -59,7 +59,7 @@ object Arrays {
       instructions ++= transExp(exp, nextReg)
       instructions += Ldr(reg, RegAdd(reg))
       // Values must be in R0 & R1 for array bounds check
-      instructions += Mov(R0, nextReg)
+      instructions += Mov(resultReg, nextReg)
       instructions += Mov(R1, reg)
       instructions += BranchLink(addRuntimeError(ArrayBounds))
       // Add offset to account for array size at start of array in memory
@@ -92,11 +92,10 @@ object Arrays {
     // Type of each array elem
     val baseTypeSize = getBaseTypeSize(innerType)
     // Size needed to store all elems of array + array size in memory
-    val sizeToMalloc = INT_SIZE + (listSize * baseTypeSize)
-    instructions += Ldr(R0, ImmMem(sizeToMalloc))
+    instructions += Ldr(resultReg, ImmMem(INT_SIZE + (listSize * baseTypeSize)))
     instructions += BranchLink(Label("malloc"))
     // Malloc size must be in R0 for "malloc"
-    instructions += Mov(freeReg, R0)
+    instructions += Mov(freeReg, resultReg)
     val nextFreeReg = getFreeReg()
     val typeSizeIsByte = isByte(innerType)
     // If array elems are of size byte, offset increments by 1 for each

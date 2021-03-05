@@ -15,7 +15,7 @@ import backend.IR.InstructionSet._
 import backend.IR.Operand._
 
 object CodeGenerator {
-  // Registers
+  /* Registers */
   final val allRegs: ListBuffer[Reg] =
     ListBuffer(R0, R1, R2, R3, R4, R5, R6, R7, R8, R9, R10)
 
@@ -36,7 +36,7 @@ object CodeGenerator {
   val userFuncTable = new FuncTable
   val funcTable = new FuncTable
 
-  // Type sizes
+  /* Type sizes */
   val INT_SIZE = 4
   val CHAR_SIZE = 1
   val BOOL_SIZE = 1
@@ -162,7 +162,7 @@ object CodeGenerator {
     val freeReg = getFreeReg()
     val instructions = transExp(e, freeReg)
     instructions ++= ListBuffer[Instruction](
-      Mov(R0, freeReg),
+      Mov(resultReg, freeReg),
       BranchLink(Label("exit"))
     )
     addUnusedReg(freeReg)

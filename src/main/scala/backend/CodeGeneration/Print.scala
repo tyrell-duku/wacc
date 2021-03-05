@@ -32,7 +32,7 @@ object Print {
     val t = getExprType(e)
     val freeReg = getFreeReg()
     val instrs = transExp(e, freeReg)
-    instrs += Mov(R0, freeReg)
+    instrs += Mov(resultReg, freeReg)
 
     t match {
       case CharT => instrs += BranchLink(Label("putchar"))

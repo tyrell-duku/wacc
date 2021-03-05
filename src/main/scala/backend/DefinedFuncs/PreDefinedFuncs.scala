@@ -1,6 +1,6 @@
 package backend.DefinedFuncs
 
-import backend.CodeGenerator.{dataTable, funcTable}
+import backend.CodeGenerator.{dataTable, funcTable, resultReg}
 import backend.DefinedFuncs.PrintInstrs.stringPrintInstrs
 import backend.IR.InstructionSet._
 import backend.IR.Operand._
@@ -86,7 +86,7 @@ object PreDefinedFuncs {
       RuntimeError.funcLabel,
       List[Instruction](
         BranchLink(Label("p_print_string")),
-        Mov(R0, ImmInt(-1)),
+        Mov(resultReg, ImmInt(-1)),
         BranchLink(Label("exit"))
       )
     )
@@ -97,12 +97,12 @@ object PreDefinedFuncs {
       ArrayBounds.funcLabel,
       List[Instruction](
         Push(ListBuffer(LR)),
-        Cmp(R0, ImmInt(0)),
-        LdrCond(LT, R0, DataLabel(Label(ArrayBounds.msgName(0)))),
+        Cmp(resultReg, ImmInt(0)),
+        LdrCond(LT, resultReg, DataLabel(Label(ArrayBounds.msgName(0)))),
         BranchLinkCond(LT, RuntimeError.funcLabel),
         Ldr(R1, RegAdd(R1)),
-        Cmp(R0, R1),
-        LdrCond(CS, R0, DataLabel(Label(ArrayBounds.msgName(1)))),
+        Cmp(resultReg, R1),
+        LdrCond(CS, resultReg, DataLabel(Label(ArrayBounds.msgName(1)))),
         BranchLinkCond(CS, RuntimeError.funcLabel),
         Pop(ListBuffer(PC))
       )
@@ -115,7 +115,7 @@ object PreDefinedFuncs {
       List[Instruction](
         Push(ListBuffer(LR)),
         Cmp(R1, ImmInt(0)),
-        LdrCond(EQ, R0, DataLabel(Label(DivideByZero.msgName(0)))),
+        LdrCond(EQ, resultReg, DataLabel(Label(DivideByZero.msgName(0)))),
         BranchLinkCond(EQ, RuntimeError.funcLabel),
         Pop(ListBuffer(PC))
       )
@@ -126,7 +126,7 @@ object PreDefinedFuncs {
     (
       Overflow.funcLabel,
       List[Instruction](
-        Ldr(R0, DataLabel(Label(Overflow.msgName(0)))),
+        Ldr(resultReg, DataLabel(Label(Overflow.msgName(0)))),
         BranchLink(RuntimeError.funcLabel)
       )
     )
@@ -137,16 +137,16 @@ object PreDefinedFuncs {
       FreePair.funcLabel,
       List[Instruction](
         Push(ListBuffer(LR)),
-        Cmp(R0, ImmInt(0)),
-        LdrCond(EQ, R0, DataLabel(Label(FreePair.msgName(0)))),
+        Cmp(resultReg, ImmInt(0)),
+        LdrCond(EQ, resultReg, DataLabel(Label(FreePair.msgName(0)))),
         BranchCond(EQ, RuntimeError.funcLabel),
-        Push(ListBuffer(R0)),
-        Ldr(R0, RegAdd(R0)),
+        Push(ListBuffer(resultReg)),
+        Ldr(resultReg, RegAdd(resultReg)),
         BranchLink(Label("free")),
-        Ldr(R0, RegAdd(SP)),
-        Ldr(R0, RegisterOffset(R0, 4)),
+        Ldr(resultReg, RegAdd(SP)),
+        Ldr(resultReg, RegisterOffset(resultReg, 4)),
         BranchLink(Label("free")),
-        Pop(ListBuffer(R0)),
+        Pop(ListBuffer(resultReg)),
         BranchLink(Label("free")),
         Pop(ListBuffer(PC))
       )
@@ -158,8 +158,8 @@ object PreDefinedFuncs {
       FreeArray.funcLabel,
       List[Instruction](
         Push(ListBuffer(LR)),
-        Cmp(R0, ImmInt(0)),
-        LdrCond(EQ, R0, DataLabel(Label(FreeArray.msgName(0)))),
+        Cmp(resultReg, ImmInt(0)),
+        LdrCond(EQ, resultReg, DataLabel(Label(FreeArray.msgName(0)))),
         BranchCond(EQ, RuntimeError.funcLabel),
         BranchLink(Label("free")),
         Pop(ListBuffer(PC))
@@ -172,8 +172,8 @@ object PreDefinedFuncs {
       NullPointer.funcLabel,
       List[Instruction](
         Push(ListBuffer(LR)),
-        Cmp(R0, ImmInt(0)),
-        LdrCond(EQ, R0, DataLabel(Label(NullPointer.msgName(0)))),
+        Cmp(resultReg, ImmInt(0)),
+        LdrCond(EQ, resultReg, DataLabel(Label(NullPointer.msgName(0)))),
         BranchLinkCond(EQ, RuntimeError.funcLabel),
         Pop(ListBuffer(PC))
       )
