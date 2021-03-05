@@ -1,6 +1,6 @@
 package backend.CodeGeneration
 
-import backend.CodeGeneration.Arrays.storeArrayElem
+import backend.CodeGeneration.Arrays._
 import backend.CodeGeneration.Expressions.transExp
 import backend.CodeGeneration.Functions.transCall
 import backend.CodeGeneration.Pairs._
