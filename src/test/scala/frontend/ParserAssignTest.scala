@@ -4,7 +4,7 @@ import frontend.StatParser._
 import frontend.Lexer._
 import parsley.combinator.eof
 
-class AssignLHSTest extends AnyFunSuite {
+class ParserAssignLHSTest extends AnyFunSuite {
   val assignLHSWhitespace = lexer.whiteSpace *> assignLHS <* eof
 
   test("Successfully parses ident") {
@@ -43,7 +43,7 @@ class AssignLHSTest extends AnyFunSuite {
   }
 }
 
-class AssignRHSTest extends AnyFunSuite {
+class ParserAssignRHSTest extends AnyFunSuite {
   val assignRHSWhitespace = lexer.whiteSpace *> assignRHS <* eof
 
   test("Successfully parses call with no arguments") {

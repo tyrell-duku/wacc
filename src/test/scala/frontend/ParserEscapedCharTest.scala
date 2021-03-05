@@ -6,7 +6,7 @@ import frontend.StatParser._
 import frontend.ExprParser._
 import frontend.Lexer._
 
-class EscapedCharTest extends AnyFunSuite {
+class ParserEscapedCharTest extends AnyFunSuite {
   test("Successfully parses character 0") {
     assert(escapedChar.runParser("0").contains('0'))
   }

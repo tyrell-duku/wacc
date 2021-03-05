@@ -6,7 +6,7 @@ class BackendScopeTest extends AnyFunSuite {
     val name = f.getName()
     val (file, out, command) = createOutputFiles(f)
     test(s"Scope exit code test: $name") {
-      assert(checkExitCode(file, out, command))
+      assert(checkExitCode(file, command))
     }
     test(s"Scope expected test: $name") {
       assert(checkStdOut(file, out))
