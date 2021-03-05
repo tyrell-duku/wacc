@@ -7,7 +7,7 @@ import backend.DefinedFuncs.ReadInstructions.{charRead, intRead}
 import backend.IR.InstructionSet._
 import backend.IR.Operand._
 import frontend.Rules._
-
+import backend.DefinedFuncs.PrintInstrs.PrintInt
 import scala.collection.mutable.ListBuffer
 
 object Read {
@@ -36,15 +36,17 @@ object Read {
     val (_, pairT) = sTable(ident)
     val t = getPairElemType(pairT, isFst)
     // value must be in R0 for branch
-    instructions += Mov(R0, freeReg)
+    instructions += Mov(resultReg, freeReg)
     addUnusedReg(freeReg)
     t match {
       case CharT =>
         instructions += BranchLink(Label("p_read_char"))
         funcTable.addEntry(charRead(dataTable.addDataEntry(" %c\\0")))
       case IntT =>
-        instructions += BranchLink(Label("p_read_int"))
-        funcTable.addEntry(intRead(dataTable.addDataEntry("%d\\0")))
+        instructions += BranchLink(PrintInt.funcLabel)
+        funcTable.addEntry(
+          intRead(dataTable.addDataEntry(PrintInt.functionMsg(0)))
+        )
       // Semantically incorrect
       case _ =>
     }
@@ -64,7 +66,7 @@ object Read {
       ImmInt(spOffset)
     )
     // variable must be in R0 for the branch
-    instructions += Mov(R0, freeReg)
+    instructions += Mov(resultReg, freeReg)
     addUnusedReg(freeReg)
     // pattern matching for which read label to use
     identType match {
@@ -72,8 +74,10 @@ object Read {
         instructions += BranchLink(Label("p_read_char"))
         funcTable.addEntry(charRead(dataTable.addDataEntry(" %c\\0")))
       case IntT =>
-        instructions += BranchLink(Label("p_read_int"))
-        funcTable.addEntry(intRead(dataTable.addDataEntry("%d\\0")))
+        instructions += BranchLink(PrintInt.funcLabel)
+        funcTable.addEntry(
+          intRead(dataTable.addDataEntry(PrintInt.functionMsg(0)))
+        )
       // Semantically incorrect
       case _ => ListBuffer.empty[Instruction]
     }
@@ -89,7 +93,7 @@ object Read {
     val (_, instrs) = transArrayElem(ident, exprs, resReg)
     instructions ++= instrs
     // value must be in R0 for branch
-    instructions += Mov(R0, resReg)
+    instructions += Mov(resultReg, resReg)
     addUnusedReg(resReg)
     // Gets base type of the arrayElem
     val t = getExprType(ae)
@@ -98,8 +102,10 @@ object Read {
         instructions += BranchLink(Label("p_read_char"))
         funcTable.addEntry(charRead(dataTable.addDataEntry(" %c\\0")))
       case IntT =>
-        instructions += BranchLink(Label("p_read_int"))
-        funcTable.addEntry(intRead(dataTable.addDataEntry("%d\\0")))
+        instructions += BranchLink(PrintInt.funcLabel)
+        funcTable.addEntry(
+          intRead(dataTable.addDataEntry(PrintInt.functionMsg(0)))
+        )
       // Semantically incorrect
       case _ =>
     }
