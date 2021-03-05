@@ -48,30 +48,7 @@ object Assignments {
       case Call(id, args, _) =>
         instructions ++= transCall(id, args, freeReg)
       case ArrayLiter(opArr, _) =>
-        val ArrayT(innerType) = t
-        val arr = opArr match {
-          case Some(arr) => arr
-          case None      => List.empty[Expr]
-        }
-        val listSize = arr.size
-        val baseTypeSize = getBaseTypeSize(innerType)
-        // TODO: remove magic numbers
-        val sizeToMalloc = 4 + (listSize * baseTypeSize)
-        instructions += Ldr(R0, ImmMem(sizeToMalloc))
-        instructions += BranchLink(Label("malloc"))
-        instructions += Mov(freeReg, R0)
-        val nextFreeReg = getFreeReg()
-        val typeSizeIsByte = isByte(innerType)
-        // TODO: remove magic numbers
-        val offset: (Int => Int) =
-          if (typeSizeIsByte) (i => i + 4) else (i => (i + 1) * 4)
-        for (i <- 0 until listSize) {
-          instructions ++= transExp(arr(i), nextFreeReg)
-          instructions += Str(typeSizeIsByte, nextFreeReg, freeReg, offset(i))
-        }
-        instructions += Ldr(nextFreeReg, ImmMem(listSize))
-        instructions += Str(nextFreeReg, RegAdd(freeReg))
-        addUnusedReg(nextFreeReg)
+        instructions ++= transArrayLiter(t, opArr, freeReg)
       case Newpair(fst, snd, _) =>
         instructions ++= assignRHSPair(t, fst, snd, freeReg)
       case _ =>
