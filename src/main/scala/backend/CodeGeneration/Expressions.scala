@@ -50,14 +50,14 @@ object Expressions {
   }
 
   /* Translates a comparator operator to the internal representation. */
-  private def transCond(op: BinOp, reg: Reg): ListBuffer[Instruction] = {
+  private def transCond(
+      op: BinOp,
+      reg: Reg,
+      rReg: Reg
+  ): ListBuffer[Instruction] = {
     val instructions = ListBuffer.empty[Instruction]
-    val rReg = getFreeReg()
-    instructions ++= transExp(op.lExpr, reg)
-    instructions ++= transExp(op.rExpr, rReg)
     val cmp = rulesCmpToInstrCmp(op)
     instructions += Cmp(reg, rReg)
-    addUnusedReg(rReg)
     instructions += MovCond(cmp, reg, ImmInt(1))
     instructions += MovCond(cmp.oppositeCmp, reg, ImmInt(0))
     instructions
@@ -66,11 +66,11 @@ object Expressions {
   /* Translates a binary operator to the internal representation. */
   private def transBinOp(op: BinOp, reg: Reg): ListBuffer[Instruction] = {
     val instructions = ListBuffer.empty[Instruction]
+    val rReg = getFreeReg()
+    instructions ++= transExp(op.lExpr, reg)
+    instructions ++= transExp(op.rExpr, rReg)
     op match {
-      case frontend.Rules.Mul(l, r, _) =>
-        val rReg = getFreeReg()
-        instructions ++= transExp(l, reg)
-        instructions ++= transExp(r, rReg)
+      case _: frontend.Rules.Mul =>
         // Runtime error check
         instructions += SMul(reg, rReg, reg, rReg)
         instructions += Cmp(rReg, ASR(reg, ImmInt(31)))
@@ -78,24 +78,16 @@ object Expressions {
           IR.Condition.NE,
           addRuntimeError(Overflow)
         )
-        addUnusedReg(rReg)
-      case Div(l, r, _) =>
-        val rReg = getFreeReg()
-        instructions ++= transExp(l, reg)
-        instructions ++= transExp(r, rReg)
-        // Needs to be in R0 and R1 for "__aeabi_idiv"
+      case _: Div =>
+        // Values need to be in R0 and R1 for "__aeabi_idiv"
         instructions += Mov(R0, reg)
         instructions += Mov(R1, rReg)
         // Runtime error check
         instructions += BranchLink(addRuntimeError(DivideByZero))
         // Divide function
         instructions += BranchLink(Label("__aeabi_idiv"))
-        addUnusedReg(rReg)
         instructions += Mov(reg, R0)
-      case Mod(l, r, _) =>
-        val rReg = getFreeReg()
-        instructions ++= transExp(l, reg)
-        instructions ++= transExp(r, rReg)
+      case _: Mod =>
         // Needs to be in R0 and R1 for "__aeabi_idivmod"
         instructions += Mov(R0, reg)
         instructions += Mov(R1, rReg)
@@ -103,45 +95,29 @@ object Expressions {
         instructions += BranchLink(addRuntimeError(DivideByZero))
         // Mod function
         instructions += BranchLink(Label("__aeabi_idivmod"))
-        addUnusedReg(rReg)
         instructions += Mov(reg, R1)
-      case Plus(l, r, _) =>
-        val rReg = getFreeReg()
-        instructions ++= transExp(l, reg)
-        instructions ++= transExp(r, rReg)
+      case _: Plus =>
         instructions += AddS(reg, reg, rReg)
         // Runtime error check
         instructions += BranchLinkCond(
           IR.Condition.VS,
           addRuntimeError(Overflow)
         )
-        addUnusedReg(rReg)
-      case frontend.Rules.Sub(l, r, _) =>
-        val rReg = getFreeReg()
-        instructions ++= transExp(l, reg)
-        instructions ++= transExp(r, rReg)
+      case _: frontend.Rules.Sub =>
         instructions += SubS(reg, reg, rReg)
         // Runtime error check
         instructions += BranchLinkCond(
           IR.Condition.VS,
           addRuntimeError(Overflow)
         )
-        addUnusedReg(rReg)
-      case frontend.Rules.And(l, r, _) =>
-        val rReg = getFreeReg()
-        instructions ++= transExp(l, reg)
-        instructions ++= transExp(r, rReg)
+      case _: frontend.Rules.And =>
         instructions += IR.InstructionSet.And(reg, reg, rReg)
-        addUnusedReg(rReg)
-      case frontend.Rules.Or(l, r, _) =>
-        val rReg = getFreeReg()
-        instructions ++= transExp(l, reg)
-        instructions ++= transExp(r, rReg)
+      case _: frontend.Rules.Or =>
         instructions += IR.InstructionSet.Or(reg, reg, rReg)
-        addUnusedReg(rReg)
       // Comparison binary operators
-      case cmpOp => instructions ++= transCond(cmpOp, reg)
+      case cmpOp => instructions ++= transCond(cmpOp, reg, rReg)
     }
+    addUnusedReg(rReg)
     instructions
   }
 
