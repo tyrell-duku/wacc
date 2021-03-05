@@ -3,11 +3,11 @@ package backend.CodeGeneration
 import backend.CodeGeneration.Assignments.assignRHS
 import backend.CodeGeneration.Expressions.transExp
 import backend.CodeGenerator._
-import backend.DefinedFuncs.PreDefinedFuncs.{NullPointer, addRuntimeError}
+import backend.DefinedFuncs.PreDefinedFuncs.NullPointer
 import backend.IR.InstructionSet._
 import backend.IR.Operand._
 import frontend.Rules._
-
+import backend.DefinedFuncs.RuntimeErrors.addRuntimeError
 import scala.collection.mutable.ListBuffer
 
 object Pairs {

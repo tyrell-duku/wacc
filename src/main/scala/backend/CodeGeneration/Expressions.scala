@@ -3,7 +3,8 @@ package backend.CodeGeneration
 import backend.CodeGeneration.Arrays.loadArrayElem
 import backend.CodeGenerator
 import backend.CodeGenerator._
-import backend.DefinedFuncs.PreDefinedFuncs._
+import backend.DefinedFuncs.PreDefinedFuncs.{Overflow, DivideByZero}
+import backend.DefinedFuncs.RuntimeErrors.addRuntimeError
 import backend.IR.Condition.Condition
 import backend.IR.InstructionSet._
 import backend.IR.Operand._

@@ -1,7 +1,8 @@
 package backend.CodeGeneration
 
 import backend.CodeGenerator._
-import backend.DefinedFuncs.PreDefinedFuncs._
+import backend.DefinedFuncs.PreDefinedFuncs.{FreePair, FreeArray}
+import backend.DefinedFuncs.RuntimeErrors.addRuntimeError
 import backend.IR.InstructionSet._
 import backend.IR.Operand._
 import frontend.Rules.{ArrayT, Ident, Pair}

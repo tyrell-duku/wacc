@@ -1,10 +1,10 @@
 package backend.DefinedFuncs
 
 import backend.CodeGenerator.{dataTable, funcTable, resultReg}
-import backend.DefinedFuncs.PrintInstrs.stringPrintInstrs
 import backend.IR.InstructionSet._
 import backend.IR.Operand._
-
+import backend.DefinedFuncs.PrintInstrs._
+import backend.DefinedFuncs.RuntimeErrors._
 import scala.collection.mutable.ListBuffer
 import backend.IR.Condition._
 
@@ -70,113 +70,36 @@ object PreDefinedFuncs {
     override val func = throwRuntimeError
   }
 
-  def addRuntimeError(err: PreDefFunc): Label = {
-    funcTable.addEntry(RuntimeError.func)
-    funcTable.addEntry(stringPrintInstrs)
-    dataTable.addDataEntryWithLabel("msg_string", "%.*s\\0")
-    for (i <- 0 until err.functionMsg.length) {
-      dataTable.addDataEntryWithLabel(err.msgName(i), err.functionMsg(i))
-    }
-    funcTable.addEntry(err.func)
-    err.funcLabel
+  /* Printing */
+  case object PrintInt extends PreDefFunc {
+    override val funcLabel = Label("p_print_int")
+    override val msgName = List("msg_int")
+    override val functionMsg = List("%d\\0")
+    override val func = intPrintInstrs
+  }
+  case object PrintBool extends PreDefFunc {
+    override val funcLabel = Label("p_print_bool")
+    override val msgName = List("msg_true", "msg_false")
+    override val functionMsg = List("true\\0", "false\\0")
+    override val func = boolPrintInstrs
+  }
+  case object PrintString extends PreDefFunc {
+    override val funcLabel = Label("p_print_string")
+    override val msgName = List("msg_string")
+    override val functionMsg = List("%.*s\\0")
+    override val func = stringPrintInstrs
+  }
+  case object PrintReference extends PreDefFunc {
+    override val funcLabel = Label("p_print_reference")
+    override val msgName = List("msg_reference")
+    override val functionMsg = List("%p\\0")
+    override val func = referencePrintInstrs
+  }
+  case object PrintLn extends PreDefFunc {
+    override val funcLabel = Label("p_print_ln")
+    override val msgName = List("msg_new_line")
+    override val functionMsg = List("\\0")
+    override val func = newLinePrintInstrs
   }
 
-  def throwRuntimeError: (Label, List[Instruction]) = {
-    (
-      RuntimeError.funcLabel,
-      List[Instruction](
-        BranchLink(Label("p_print_string")),
-        Mov(resultReg, ImmInt(-1)),
-        BranchLink(Label("exit"))
-      )
-    )
-  }
-
-  def checkArrayBounds: (Label, List[Instruction]) = {
-    (
-      ArrayBounds.funcLabel,
-      List[Instruction](
-        Push(ListBuffer(LR)),
-        Cmp(resultReg, ImmInt(0)),
-        LdrCond(LT, resultReg, DataLabel(Label(ArrayBounds.msgName(0)))),
-        BranchLinkCond(LT, RuntimeError.funcLabel),
-        Ldr(R1, RegAdd(R1)),
-        Cmp(resultReg, R1),
-        LdrCond(CS, resultReg, DataLabel(Label(ArrayBounds.msgName(1)))),
-        BranchLinkCond(CS, RuntimeError.funcLabel),
-        Pop(ListBuffer(PC))
-      )
-    )
-  }
-
-  def checkDivideByZero: (Label, List[Instruction]) = {
-    (
-      DivideByZero.funcLabel,
-      List[Instruction](
-        Push(ListBuffer(LR)),
-        Cmp(R1, ImmInt(0)),
-        LdrCond(EQ, resultReg, DataLabel(Label(DivideByZero.msgName(0)))),
-        BranchLinkCond(EQ, RuntimeError.funcLabel),
-        Pop(ListBuffer(PC))
-      )
-    )
-  }
-
-  def throwOverflowError: (Label, List[Instruction]) = {
-    (
-      Overflow.funcLabel,
-      List[Instruction](
-        Ldr(resultReg, DataLabel(Label(Overflow.msgName(0)))),
-        BranchLink(RuntimeError.funcLabel)
-      )
-    )
-  }
-
-  def freePair: (Label, List[Instruction]) = {
-    (
-      FreePair.funcLabel,
-      List[Instruction](
-        Push(ListBuffer(LR)),
-        Cmp(resultReg, ImmInt(0)),
-        LdrCond(EQ, resultReg, DataLabel(Label(FreePair.msgName(0)))),
-        BranchCond(EQ, RuntimeError.funcLabel),
-        Push(ListBuffer(resultReg)),
-        Ldr(resultReg, RegAdd(resultReg)),
-        BranchLink(Label("free")),
-        Ldr(resultReg, RegAdd(SP)),
-        Ldr(resultReg, RegisterOffset(resultReg, 4)),
-        BranchLink(Label("free")),
-        Pop(ListBuffer(resultReg)),
-        BranchLink(Label("free")),
-        Pop(ListBuffer(PC))
-      )
-    )
-  }
-
-  def freeArray: (Label, List[Instruction]) = {
-    (
-      FreeArray.funcLabel,
-      List[Instruction](
-        Push(ListBuffer(LR)),
-        Cmp(resultReg, ImmInt(0)),
-        LdrCond(EQ, resultReg, DataLabel(Label(FreeArray.msgName(0)))),
-        BranchCond(EQ, RuntimeError.funcLabel),
-        BranchLink(Label("free")),
-        Pop(ListBuffer(PC))
-      )
-    )
-  }
-
-  def checkNullPointer: (Label, List[Instruction]) = {
-    (
-      NullPointer.funcLabel,
-      List[Instruction](
-        Push(ListBuffer(LR)),
-        Cmp(resultReg, ImmInt(0)),
-        LdrCond(EQ, resultReg, DataLabel(Label(NullPointer.msgName(0)))),
-        BranchLinkCond(EQ, RuntimeError.funcLabel),
-        Pop(ListBuffer(PC))
-      )
-    )
-  }
 }

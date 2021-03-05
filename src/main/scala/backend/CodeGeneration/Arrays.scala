@@ -3,7 +3,8 @@ package backend.CodeGeneration
 import backend.CodeGeneration.Expressions.transExp
 import backend.CodeGenerator._
 import backend.CodeGenerator
-import backend.DefinedFuncs.PreDefinedFuncs.{ArrayBounds, addRuntimeError}
+import backend.DefinedFuncs.PreDefinedFuncs.ArrayBounds
+import backend.DefinedFuncs.RuntimeErrors.addRuntimeError
 import backend.DefinedFuncs.ReadInstructions.{charRead, intRead}
 import backend.IR.InstructionSet._
 import backend.IR.Operand._

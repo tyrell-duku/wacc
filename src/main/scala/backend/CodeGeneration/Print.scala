@@ -2,10 +2,20 @@ package backend.CodeGeneration
 
 import backend.CodeGeneration.Expressions.transExp
 import backend.CodeGenerator._
-import backend.DefinedFuncs.PrintInstrs._
+import backend.DefinedFuncs.PreDefinedFuncs._
 import backend.IR.InstructionSet._
 import backend.IR.Operand.R0
-import frontend.Rules._
+import frontend.Rules.{
+  Type,
+  CharT,
+  IntT,
+  BoolT,
+  StringT,
+  Pair,
+  ArrayT,
+  Expr,
+  PrintLn => _
+}
 
 import scala.collection.mutable.ListBuffer
 import backend.DefinedFuncs.PreDefinedFuncs
@@ -50,13 +60,13 @@ object Print {
 
     if (isNewLine) {
       instrs += BranchLink(
-        backend.DefinedFuncs.PrintInstrs.PrintLn.funcLabel
+        PrintLn.funcLabel
       )
       dataTable.addDataEntryWithLabel(
-        backend.DefinedFuncs.PrintInstrs.PrintLn.msgName(0),
-        backend.DefinedFuncs.PrintInstrs.PrintLn.functionMsg(0)
+        PrintLn.msgName(0),
+        PrintLn.functionMsg(0)
       )
-      funcTable.addEntry(newLinePrintInstrs)
+      funcTable.addEntry(PrintLn.func)
     }
     addUnusedReg(freeReg)
     instrs
