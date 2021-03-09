@@ -14,7 +14,7 @@ object Peephole {
     val (label, instructions) = block
     val remaining = ListBuffer.empty[Instruction]
     remaining.addAll(instructions)
-    val instructionsBuff = ListBuffer.empty[Instruction]
+    var instructionsBuff = ListBuffer.empty[Instruction]
 
     if (!instructions.isEmpty) {
       instructionsBuff = compareMovs(instructions(0), remaining.tail)
