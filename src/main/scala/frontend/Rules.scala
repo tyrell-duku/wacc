@@ -49,12 +49,20 @@ object Rules {
       inner
     }
   }
+  object DerefPtr {
+    def apply(ptr: Parsley[Expr]): Parsley[DerefPtr] =
+      pos <**> ptr.map((ptr: Expr) => (p: (Int, Int)) => DerefPtr(ptr, p))
+  }
 
   case class Addr(id: Ident, pos: (Int, Int)) extends Expr {
     override def getType(sTable: SymbolTable): Type = {
       val t = id.getType(sTable)
       PtrT(t)
     }
+  }
+  object Addr {
+    def apply(id: Parsley[Ident]): Parsley[Addr] =
+      pos <**> id.map((id: Ident) => (p: (Int, Int)) => Addr(id, p))
   }
 
   /* FRONTEND */
