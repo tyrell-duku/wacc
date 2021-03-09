@@ -43,14 +43,14 @@ object Rules {
 
   case class PtrT(t: Type) extends Type
 
-  case class DerefPtr(ptr: Expr) extends Expr with AssignLHS {
+  case class DerefPtr(ptr: Expr, pos: (Int, Int)) extends Expr with AssignLHS {
     override def getType(sTable: SymbolTable): Type = {
       val PtrT(inner) = ptr.getType(sTable)
       inner
     }
   }
 
-  case class Addr(id: Ident) extends Expr {
+  case class Addr(id: Ident, pos: (Int, Int)) extends Expr {
     override def getType(sTable: SymbolTable): Type = {
       val t = id.getType(sTable)
       PtrT(t)
