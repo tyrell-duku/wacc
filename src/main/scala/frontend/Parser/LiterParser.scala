@@ -4,7 +4,7 @@ import parsley.Parsley
 import parsley.Parsley._
 import parsley.combinator.{option, many}
 import parsley.implicits.charLift
-import parsley.expr.{Ops, Postfix, precedence}
+import parsley.expr.{Ops, Prefix, Postfix, precedence}
 import parsley.character.{noneOf, oneOf}
 import parsley.lift.lift2
 import frontend.Rules._
@@ -21,7 +21,8 @@ object LiterParser {
   // <base-type> | <array-type> | <pair-type>
   val types: Parsley[Type] = precedence[Type](
     baseType ? "base-type" <|> pairType,
-    Ops[Type](Postfix)("[]" #> ArrayT ? "array-type")
+    Ops[Type](Postfix)("[]" #> ArrayT ? "array-type"),
+    Ops[Type](Postfix)("*" #> PtrT ? "pointer-type")
   )
 
   // <base-type> | <array-type> | 'pair'
