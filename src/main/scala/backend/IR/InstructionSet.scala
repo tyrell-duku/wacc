@@ -86,16 +86,11 @@ object InstructionSet {
   }
   object Ldr {
     def apply(isByte: Boolean, src: Reg, dst: Reg, offset: Int): Instruction = {
-      if (isByte) {
-        return LdrSB.apply(src, dst, offset)
-      }
-      apply(src, dst, offset)
+      if (isByte) LdrSB.apply(src, dst, offset) else apply(src, dst, offset)
     }
     def apply(src: Reg, dst: Reg, offset: Int): Instruction = {
-      if (offset == 0) {
-        return Ldr(src, RegAdd(dst))
-      }
-      Ldr(src, RegisterOffset(dst, offset))
+      if (offset == 0) Ldr(src, RegAdd(dst))
+      else Ldr(src, RegisterOffset(dst, offset))
     }
   }
   // Load byte signed
@@ -104,10 +99,8 @@ object InstructionSet {
   }
   object LdrSB {
     def apply(src: Reg, dst: Reg, offset: Int): Instruction = {
-      if (offset == 0) {
-        return LdrSB(src, RegAdd(dst))
-      }
-      LdrSB(src, RegisterOffset(dst, offset))
+      if (offset == 0) LdrSB(src, RegAdd(dst))
+      else LdrSB(src, RegisterOffset(dst, offset))
     }
   }
   // Load {Condition}
@@ -122,16 +115,11 @@ object InstructionSet {
   }
   object Str {
     def apply(isByte: Boolean, src: Reg, dst: Reg, offset: Int): Instruction = {
-      if (isByte) {
-        return StrB.apply(src, dst, offset)
-      }
-      apply(src, dst, offset)
+      if (isByte) StrB.apply(src, dst, offset) else apply(src, dst, offset)
     }
     def apply(src: Reg, dst: Reg, offset: Int): Instruction = {
-      if (offset == 0) {
-        return Str(src, RegAdd(dst))
-      }
-      Str(src, RegisterOffset(dst, offset))
+      if (offset == 0) Str(src, RegAdd(dst))
+      else Str(src, RegisterOffset(dst, offset))
     }
   }
   // Store byte
@@ -140,10 +128,8 @@ object InstructionSet {
   }
   object StrB {
     def apply(src: Reg, dst: Reg, offset: Int): Instruction = {
-      if (offset == 0) {
-        return StrB(src, RegAdd(dst))
-      }
-      StrB(src, RegisterOffset(dst, offset))
+      if (offset == 0) StrB(src, RegAdd(dst))
+      else StrB(src, RegisterOffset(dst, offset))
     }
   }
   case class StrOffsetIndex(rd: Reg, regAdd: Reg, offset: Int)
@@ -153,10 +139,8 @@ object InstructionSet {
   }
   object StrOffsetIndex {
     def apply(isByte: Boolean, src: Reg, dst: Reg, offset: Int): Instruction = {
-      if (isByte) {
-        return StrBOffsetIndex(src, dst, offset)
-      }
-      StrOffsetIndex(src, dst, offset)
+      if (isByte) StrBOffsetIndex(src, dst, offset)
+      else StrOffsetIndex(src, dst, offset)
     }
   }
   case class StrBOffsetIndex(rd: Reg, regAdd: Reg, offset: Int)
