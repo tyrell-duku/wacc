@@ -15,12 +15,30 @@ object Rules {
   case class Malloc(size: Expr, pos: (Int, Int)) extends MemoryAlloc {
     override def getType(sTable: SymbolTable): Type = PtrT(null)
   }
+  object Malloc {
+    def apply(size: Parsley[Expr]): Parsley[Malloc] =
+      pos <**> size.map((size: Expr) => (p: (Int, Int)) => Malloc(size, p))
+  }
+
   case class Realloc(ptr: Ident, size: Expr, pos: (Int, Int))
       extends MemoryAlloc {
     override def getType(sTable: SymbolTable): Type = PtrT(null)
   }
+  object Realloc {
+    def apply(ptr: Parsley[Ident], size: Parsley[Expr]): Parsley[Realloc] =
+      pos <**> (ptr, size).map((ptr: Ident, size: Expr) =>
+        (p: (Int, Int)) => Realloc(ptr, size, p)
+      )
+  }
+
   case class Calloc(num: Expr, t: Type, pos: (Int, Int)) extends MemoryAlloc {
     override def getType(sTable: SymbolTable): Type = PtrT(null)
+  }
+  object Calloc {
+    def apply(num: Parsley[Expr], t: Parsley[Type]): Parsley[Calloc] =
+      pos <**> (num, t).map((num: Expr, t: Type) =>
+        (p: (Int, Int)) => Calloc(num, t, p)
+      )
   }
 
   case class PtrT(t: Type) extends Type
