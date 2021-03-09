@@ -7,7 +7,7 @@ import parsley.Failure
 import parsley.Success
 
 import scala.collection.mutable.ListBuffer
-import backend.{ARMPrinter, CodeGenerator}
+import backend.{ARMPrinter, CodeGenerator, Peephole}
 
 object Main {
   // Constants for error codes
@@ -59,7 +59,7 @@ object Main {
       case Success(ast) =>
         val sTable = semanticAnalysis(ast)
         val (data, instrs) = CodeGenerator.transProg(ast, sTable)
-        ARMPrinter.execute(file.getName(), data, instrs)
+        ARMPrinter.execute(file.getName(), data, Peephole.optimise(instrs))
     }
   }
 }
