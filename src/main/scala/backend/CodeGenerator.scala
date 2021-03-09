@@ -132,9 +132,7 @@ object CodeGenerator {
         t
       case ArrayElem(id, es, _) =>
         var (_, t) = sTable(id)
-        for (_ <- es) {
-          t = getArrayInnerType(t)
-        }
+        t = es.foldLeft(t)((x, _) => getArrayInnerType(x))
         t
       case _: Not        => BoolT
       case _: Negation   => IntT
