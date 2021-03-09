@@ -1,5 +1,6 @@
 package frontend
 
+import frontend.HeapParser.derefPtr
 import parsley.Parsley
 import parsley.Parsley._
 import parsley.combinator.{manyN, option, sepBy1}
@@ -14,7 +15,7 @@ object ExprParser {
   // '(' <expr> ')'
   val expr: Parsley[Expr] = precedence[Expr](
     intLiter <|> boolLiteral <|> charLiteral <|> strLiteral <|> pairLiteral <|>
-      arrayElem <\> identifier <|> lexer.parens(expr),
+      arrayElem <\> identifier <|> lexer.parens(expr) <|> derefPtr,
     // unary operators
     Ops[Expr](Prefix)(
       Not("!") ? "unary operator",

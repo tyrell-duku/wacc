@@ -8,11 +8,13 @@ import frontend.Rules._
 import frontend.Lexer._
 import frontend.LiterParser._
 import frontend.ExprParser._
+import frontend.HeapParser.derefPtr
 
 object StatParser {
 
   // <ident> | <array-elem> | <pair-elem>
-  val assignLHS: Parsley[AssignLHS] = pairElem <|> arrayElem <\> identifier
+  val assignLHS: Parsley[AssignLHS] =
+    derefPtr <|> pairElem <|> arrayElem <\> identifier
 
   // <expr> | <array-liter> | newpair(<expr>, <expr>) | <pair-elem> | call <ident> (<arg-list>?)
   val assignRHS: Parsley[AssignRHS] =
