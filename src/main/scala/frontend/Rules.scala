@@ -50,9 +50,9 @@ object Rules {
     }
   }
 
-  case class Addr(variable: Ident) extends Expr {
+  case class Addr(id: Ident) extends Expr {
     override def getType(sTable: SymbolTable): Type = {
-      val t = ptr.getType(sTable)
+      val t = id.getType(sTable)
       PtrT(t)
     }
   }
