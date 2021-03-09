@@ -107,7 +107,7 @@ object InstructionSet {
   // Load {Condition}
   case class LdrCond(cond: Condition, rd: Reg, op2: LoadOperand)
       extends Instruction {
-    override def toString: String = s"LDR $cond $rd, $op2"
+    override def toString: String = s"LDR$cond $rd, $op2"
   }
 
   /* Storing */
