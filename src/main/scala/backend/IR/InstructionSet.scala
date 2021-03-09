@@ -63,12 +63,10 @@ object InstructionSet {
 
   /* Stack Operations */
   case class Push(rs: ListBuffer[Reg]) extends Instruction {
-    val regs = rs.mkString(", ")
-    override def toString: String = s"PUSH {$regs}"
+    override def toString: String = s"PUSH {${rs.mkString(", ")}}"
   }
   case class Pop(rs: ListBuffer[Reg]) extends Instruction {
-    val regs = rs.mkString(", ")
-    override def toString: String = s"POP {$regs}"
+    override def toString: String = s"POP {${rs.mkString(", ")}}"
   }
 
   /* Move Operations */
