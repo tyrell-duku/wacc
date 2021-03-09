@@ -114,10 +114,9 @@ object CodeGenerator {
   }
 
   /* Gets the inner type of the array. */
-  def getArrayInnerType(t: Type): Type = t match {
-    case ArrayT(inner) => inner
-    // invalid case, will never enter
-    case _ => null
+  def getArrayInnerType(t: Type): Type = {
+    val ArrayT(inner) = t
+    inner
   }
 
   /* Gets the type of the given expression E. */
