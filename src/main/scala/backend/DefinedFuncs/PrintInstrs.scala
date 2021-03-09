@@ -10,8 +10,6 @@ import PreDefinedFuncs._
 import scala.collection.mutable.ListBuffer
 
 object PrintInstrs {
-  private val RESET_INT = 0
-
   def stringPrintInstrs: (Label, List[Instruction]) = (
     PrintString.funcLabel,
     List[Instruction](
