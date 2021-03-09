@@ -22,7 +22,7 @@ object Read {
       if (isFst) baseType else null
     case Pair(PairElemT(baseTypeFst), PairElemT(baseTypeSnd)) =>
       if (isFst) baseTypeFst else baseTypeSnd
-    case _ => null
+    case _ => ???
   }
 
   /* Pattern matches on type T and returns the respective BranchLink
@@ -39,7 +39,7 @@ object Read {
       )
       BranchLink(ReadInt.funcLabel)
     // Semantically incorrect
-    case _ => null
+    case _ => ???
   }
   /* Translates read pair elems to the internal representation. */
   def transReadPairElem(

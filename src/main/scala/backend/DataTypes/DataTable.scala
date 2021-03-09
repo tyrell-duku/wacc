@@ -25,9 +25,8 @@ class DataTable {
     val msgLabel = Label(label)
     if (!containsLabel(msgLabel)) {
       table += Data(msgLabel, string)
-      return msgLabel
     }
-    null
+    msgLabel
   }
   /* Returns the name of the next label (of the form "msg_[label-count]"). */
   private def getNextLabel(): String = {
