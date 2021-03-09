@@ -43,6 +43,13 @@ object Rules {
 
   case class PtrT(t: Type) extends Type
 
+  case class DerefPtr(ptr: Expr) extends Expr with AssignLHS {
+    override def getType(sTable: SymbolTable): Type ={
+      val PrtT(inner) = ptr.getType(sTable)
+      inner
+    }
+  }
+
   /* FRONTEND */
 
   sealed case class Program(fs: List[Func], s: Stat)
