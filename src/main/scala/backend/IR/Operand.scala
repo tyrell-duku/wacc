@@ -6,37 +6,37 @@ import frontend.Rules.Character
 object Operand {
   sealed trait Operand
   sealed case class ImmInt(n: Int) extends Operand {
-    override def toString: String = "#" + n
+    override def toString: String = s"#$n"
   }
 
   case class LSL(r: Reg, n: ImmInt) extends Operand {
-    override def toString: String = r.toString + ", LSL " + n
+    override def toString: String = s"${r.toString}, LSL $n"
   }
 
   case class ASR(r: Reg, n: ImmInt) extends Operand {
-    override def toString: String = r.toString + ", ASR " + n
+    override def toString: String = s"${r.toString}, ASR $n"
   }
 
   sealed case class ImmChar(c: Character) extends Operand with LoadOperand {
-    override def toString: String = "#'" + c + "'"
+    override def toString: String = s"#'$c'"
   }
 
   sealed trait Address extends LoadOperand
   sealed case class RegisterOffset(r: Reg, n: Int) extends Address {
-    override def toString: String = "[" + r + ", #" + n + "]"
+    override def toString: String = s"[$r, #$n]"
   }
 
   sealed case class RegAdd(r: Reg) extends Address {
-    override def toString: String = "[" + r + "]"
+    override def toString: String = s"[$r]"
   }
 
   sealed trait LoadOperand
   sealed case class ImmMem(n: Int) extends LoadOperand {
-    override def toString: String = "=" + n
+    override def toString: String = s"=$n"
   }
 
   sealed case class DataLabel(label: Label) extends Operand with LoadOperand {
-    override def toString: String = "=" + label
+    override def toString: String = s"=$label"
   }
 
   sealed trait Reg extends Operand

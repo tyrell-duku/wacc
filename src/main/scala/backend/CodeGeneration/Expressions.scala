@@ -36,7 +36,7 @@ object Expressions {
   }
 
   /* Changes a comparison operator to the Condition equivalent.
-     Returns null when not a comparison operator. */
+     Returns ??? when not a comparison operator. */
   private def rulesCmpToInstrCmp(cmp: BinOp): Condition = {
     cmp match {
       case _: GT       => backend.IR.Condition.GT
@@ -45,7 +45,7 @@ object Expressions {
       case _: LTE      => backend.IR.Condition.LE
       case _: Equal    => backend.IR.Condition.EQ
       case _: NotEqual => backend.IR.Condition.NE
-      case _           => null // Undefined
+      case _           => ??? // Undefined
     }
   }
 
