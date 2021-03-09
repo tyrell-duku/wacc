@@ -9,6 +9,24 @@ import scala.collection.mutable
 
 object Rules {
 
+  /* EXTENSION */
+
+  sealed trait MemoryAlloc extends AssignRHS
+  case class Malloc(size: Expr, pos: (Int, Int)) extends MemoryAlloc {
+    override def getType(sTable: SymbolTable): Type = PtrT(null)
+  }
+  case class Realloc(ptr: Ident, size: Expr, pos: (Int, Int))
+      extends MemoryAlloc {
+    override def getType(sTable: SymbolTable): Type = PtrT(null)
+  }
+  case class Calloc(num: Expr, t: Type, pos: (Int, Int)) extends MemoryAlloc {
+    override def getType(sTable: SymbolTable): Type = PtrT(null)
+  }
+
+  case class PtrT(t: Type) extends Type
+
+  /* FRONTEND */
+
   sealed case class Program(fs: List[Func], s: Stat)
 
   sealed case class Func(
