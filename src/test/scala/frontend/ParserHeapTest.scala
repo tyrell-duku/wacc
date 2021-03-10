@@ -4,6 +4,8 @@ import frontend.LiterParser.{types}
 import frontend.Rules._
 
 class FrontendParserHeapTest extends AnyFunSuite {
+  // ignore("Successfully parsers ampersand expression")()
+
   test("Successfully parses base pointer type") {
     assert(types.runParser("int*").contains(PtrT(IntT)))
     assert(types.runParser("bool*").contains(PtrT(BoolT)))
@@ -85,6 +87,30 @@ class FrontendParserHeapTest extends AnyFunSuite {
           )
         )
     )
+  }
+
+  test("Successfully parses memory-allocs") {
+    assert(
+      memoryAlloc
+        .runParser("malloc(12)")
+        .contains(Malloc(IntLiter(12, (1, 8)), (1, 1)))
+    )
+    assert(
+      memoryAlloc
+        .runParser("realloc(ptr, 16)")
+        .contains(Realloc(Ident("ptr", (1, 9)), IntLiter(16, (1, 14)), (1, 1)))
+    )
+    assert(
+      memoryAlloc
+        .runParser("calloc(4, int)")
+        .contains(Calloc(IntLiter(4, (1, 8)), IntT, (1, 1)))
+    )
+  }
+
+  test("Successfully fails to parse memory-allocs with no parens") {
+    assert(memoryAlloc.runParser("malloc 12").isFailure)
+    assert(memoryAlloc.runParser("realloc ptr 16").isFailure)
+    assert(memoryAlloc.runParser("calloc 4 int").isFailure)
   }
 
   test("Successfully parsers ampersand expression") {
