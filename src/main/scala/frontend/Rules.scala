@@ -66,6 +66,16 @@ object Rules {
       pos <**> ptr.map((ptr: Expr) => (p: (Int, Int)) => Addr(ptr, p))
   }
 
+  case class SizeOf(t: Type, pos: (Int, Int)) extends Expr {
+    override def getType(sTable: SymbolTable): Type = {
+      IntT
+    }
+  }
+  object SizeOf {
+    def apply(t: Parsley[Type]): Parsley[SizeOf] =
+      pos <**> t.map((t: Type) => (p: (Int, Int)) => SizeOf(t, p))
+  }
+
   /* FRONTEND */
 
   sealed case class Program(fs: List[Func], s: Stat)

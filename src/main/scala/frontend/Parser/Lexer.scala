@@ -34,7 +34,8 @@ object Lexer {
     "done",
     "begin",
     "end",
-    "call"
+    "call",
+    "sizeof"
   )
 
   val lexer = new Lexer(

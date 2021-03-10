@@ -3,7 +3,15 @@ package frontend
 import frontend.ExprParser.expr
 import frontend.Lexer._
 import frontend.LiterParser.{identifier, types}
-import frontend.Rules.{Addr, Calloc, DerefPtr, Malloc, MemoryAlloc, Realloc}
+import frontend.Rules.{
+  Addr,
+  Calloc,
+  DerefPtr,
+  Malloc,
+  MemoryAlloc,
+  Realloc,
+  SizeOf
+}
 import parsley.Parsley
 import parsley.Parsley._
 
@@ -21,4 +29,7 @@ object HeapParser {
 
   // '&'<expr>
   val addr: Parsley[Addr] = Addr("&" *> (lexer.parens(expr) <|> identifier))
+
+  // "sizeof" '('<type>')'
+  val sizeOf: Parsley[SizeOf] = SizeOf("sizeof" *> lexer.parens(types))
 }
