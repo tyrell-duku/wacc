@@ -15,7 +15,9 @@ object PeepholeMov {
       instructionsBuff: ListBuffer[Instruction],
       remainingTail: ListBuffer[Instruction]
   ): ListBuffer[Instruction] = {
-    instructionsBuff += Mov(rd, op1)
+    if (rd != op1) {
+      instructionsBuff += Mov(rd, op1)
+    }
     instructionsBuff ++= optimise(
       remainingTail.head,
       remainingTail.tail
