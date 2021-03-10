@@ -12,22 +12,26 @@ class FrontendParserHeapTest extends AnyFunSuite {
     assert(types.runParser("char*").contains(PtrT(CharT)))
     assert(types.runParser("string*").contains(PtrT(StringT)))
   }
+
   test("Successfully parses nested pointer type") {
     assert(types.runParser("int**").contains(PtrT(PtrT(IntT))))
     assert(types.runParser("bool**").contains(PtrT(PtrT(BoolT))))
     assert(types.runParser("char**").contains(PtrT(PtrT(CharT))))
     assert(types.runParser("string**").contains(PtrT(PtrT(StringT))))
   }
+
   test("Successfully parses array pointer type") {
     assert(types.runParser("int[]*").contains(PtrT(ArrayT(IntT))))
     assert(types.runParser("bool[]*").contains(PtrT(ArrayT(BoolT))))
     assert(types.runParser("char[]*").contains(PtrT(ArrayT(CharT))))
   }
+
   test("Successfully parses array of pointers") {
     assert(types.runParser("int*[]").contains(ArrayT(PtrT(IntT))))
     assert(types.runParser("bool*[]").contains(ArrayT(PtrT(BoolT))))
     assert(types.runParser("char*[]").contains(ArrayT(PtrT(CharT))))
   }
+
   test("Successfully parses pair pointer type") {
     assert(
       types
@@ -60,6 +64,7 @@ class FrontendParserHeapTest extends AnyFunSuite {
         .contains(PtrT(Pair(PairElemT(ArrayT(IntT)), PairElemT(ArrayT(IntT)))))
     )
   }
+
   test("Successfully parses simple derefrenced pointer") {
     assert(
       derefPtr
@@ -72,10 +77,12 @@ class FrontendParserHeapTest extends AnyFunSuite {
         .contains(DerefPtr(Ident("var", (1, 3)), (1, 1)))
     )
   }
+
   test("Successfully fails to parse deref pointer with no parentheses") {
-    assert(derefPtr.runParser("*ptr").isFailure)
-    assert(derefPtr.runParser("*var").isFailure)
+    assert(derefPtr.runParser("*10").isFailure)
+    assert(derefPtr.runParser("*'c'").isFailure)
   }
+
   test("Successfully parses derefrenced pointer with arithmetic") {
     assert(
       derefPtr
@@ -98,23 +105,36 @@ class FrontendParserHeapTest extends AnyFunSuite {
     assert(
       memoryAlloc
         .runParser("realloc(ptr, 16)")
-        .contains(Realloc(Ident("ptr", (1, 9)), IntLiter(16, (1, 14)), (1, 1)))
+        .contains(Realloc(Ident("ptr", (1, 9)), IntLiter(16, (1, 14)), (1, 9)))
     )
     assert(
       memoryAlloc
-        .runParser("calloc(4, int)")
-        .contains(Calloc(IntLiter(4, (1, 8)), IntT, (1, 1)))
+        .runParser("calloc(2, 4)")
+        .contains(Calloc(IntLiter(2, (1, 8)), IntLiter(4, (1, 11)), (1, 8)))
     )
   }
 
   test("Successfully fails to parse memory-allocs with no parens") {
     assert(memoryAlloc.runParser("malloc 12").isFailure)
     assert(memoryAlloc.runParser("realloc ptr 16").isFailure)
-    assert(memoryAlloc.runParser("calloc 4 int").isFailure)
+    assert(memoryAlloc.runParser("calloc 4 1").isFailure)
   }
 
   test("Successfully parsers ampersand expression") {
-    cancel("Code is still in construction.")
-    // assert(addr.runParser("&x").contains(Addr(Ident("x", (1, 2)), (1, 1))))
+    assert(addr.runParser("&var").contains(Addr(Ident("var", (1, 2)), (1, 1))))
+    assert(
+      addr
+        .runParser("&(*var)")
+        .contains(Addr(DerefPtr(Ident("var", (1, 3)), (1, 3)), (1, 1)))
+    )
+    assert(
+      addr.runParser("&(var)").contains(Addr(Ident("var", (1, 3)), (1, 1)))
+    )
+  }
+
+  test("Successfully fails to parse ampersand expression") {
+    assert(addr.runParser("&*var").isFailure)
+    assert(addr.runParser("&5").isFailure)
+    assert(addr.runParser("&'f'").isFailure)
   }
 }
