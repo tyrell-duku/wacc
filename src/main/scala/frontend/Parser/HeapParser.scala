@@ -9,7 +9,9 @@ import parsley.Parsley._
 
 object HeapParser {
   // '*' '('<expr>')'
-  val derefPtr: Parsley[DerefPtr] = DerefPtr("*" *> lexer.parens(expr))
+  val derefPtr: Parsley[DerefPtr] = DerefPtr(
+    "*" *> (lexer.parens(expr) <|> identifier)
+  )
 
   // "malloc" '('<expr>')' | "realloc" '('<ident>, <expr>')' | "calloc" '('<expr>, <type>')'
   val memoryAlloc: Parsley[MemoryAlloc] =
@@ -18,6 +20,5 @@ object HeapParser {
     )) <|> ("calloc" *> lexer.parens(Calloc(expr, "," *> types)))
 
   // '&'<expr>
-  val addr: Parsley[Addr] = Addr("&" *> identifier)
-
+  val addr: Parsley[Addr] = Addr("&" *> (lexer.parens(expr) <|> identifier))
 }
