@@ -112,6 +112,17 @@ class FrontendParserHeapTest extends AnyFunSuite {
         .runParser("calloc(2, 4)")
         .contains(Calloc(IntLiter(2, (1, 8)), IntLiter(4, (1, 11)), (1, 8)))
     )
+    assert(
+      memoryAlloc
+        .runParser("calloc(2, sizeof(int))")
+        .contains(
+          Calloc(
+            IntLiter(2, (1, 8)),
+            SizeOf(IntT, (1, 11)),
+            (1, 8)
+          )
+        )
+    )
   }
 
   test("Successfully fails to parse memory-allocs with no parens") {
