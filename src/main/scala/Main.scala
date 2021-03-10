@@ -59,7 +59,11 @@ object Main {
       case Success(ast) =>
         val sTable = semanticAnalysis(ast)
         val (data, instrs) = CodeGenerator.transProg(ast, sTable)
-        ARMPrinter.execute(file.getName(), data, Peephole.optimise(instrs))
+        ARMPrinter.execute(
+          file.getName(),
+          data,
+          Peephole.optimiseBlocks(instrs)
+        )
     }
   }
 }
