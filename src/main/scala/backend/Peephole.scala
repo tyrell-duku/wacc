@@ -23,6 +23,7 @@ object Peephole {
       instructionsBuff = compareMovs(instructions(0), remaining.tail)
     }
     (label, instructionsBuff.toList)
+    // (label, instructions)
   }
 
   def compareMovs(
@@ -46,49 +47,53 @@ object Peephole {
                   remainingTail.head,
                   remainingTail.tail
                 )
-              } else {
-                instructionsBuff += cur
-                instructionsBuff ++= compareMovs(remainingHead, remainingTail)
+                return instructionsBuff
               }
             case Cmp(rd, op2) =>
               if (rd == rd) {
                 op1 match {
                   case ImmInt(0) =>
-                    remainingTail.head match {
-                      case BranchCond(EQ, label) =>
-                        instructionsBuff += Branch(label)
-                      case _ =>
-                        instructionsBuff += cur
-                        instructionsBuff ++= compareMovs(
-                          remainingHead,
-                          remainingTail
-                        )
+                    if (op2 == ImmInt(0)) {
+                      remainingTail.head match {
+                        case BranchCond(EQ, label) =>
+                          println("optimiseing")
+                          instructionsBuff += Branch(label)
+                          println(instructionsBuff)
+                          return instructionsBuff
+                        case _ =>
+                      }
+                    } else if (op2 == ImmInt(1)) {
+                      instructionsBuff ++= compareMovs(
+                        remainingTail.tail.head,
+                        remainingTail.tail.tail
+                      )
+                      return instructionsBuff
                     }
                   case ImmInt(1) =>
-                    instructionsBuff += cur
-                    instructionsBuff ++= compareMovs(
-                      remainingHead,
-                      remainingTail
-                    )
+                    if (op2 == ImmInt(1)) {
+                      remainingTail.head match {
+                        case BranchCond(EQ, label) =>
+                          instructionsBuff += Branch(label)
+                          return instructionsBuff
+                        case _ =>
+                      }
+                    } else if (op2 == ImmInt(0)) {
+                      instructionsBuff ++= compareMovs(
+                        remainingTail.tail.head,
+                        remainingTail.tail.tail
+                      )
+                      return instructionsBuff
+                    }
                   case _ =>
-                    instructionsBuff += cur
-                    instructionsBuff ++= compareMovs(
-                      remainingHead,
-                      remainingTail
-                    )
                 }
-              } else {
-                instructionsBuff += cur
-                instructionsBuff ++= compareMovs(remainingHead, remainingTail)
               }
             case _ =>
-              instructionsBuff += cur
-              instructionsBuff ++= compareMovs(remainingHead, remainingTail)
           }
         case _ =>
-          instructionsBuff += cur
-          instructionsBuff ++= compareMovs(remainingHead, remainingTail)
       }
+      instructionsBuff += cur
+      instructionsBuff ++= compareMovs(remainingHead, remainingTail)
+      return instructionsBuff
     }
     instructionsBuff
   }
