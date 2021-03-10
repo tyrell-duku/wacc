@@ -20,13 +20,26 @@ object Peephole {
     var instructionsBuff = ListBuffer.empty[Instruction]
 
     if (!instructions.isEmpty) {
-      instructionsBuff = compareMovs(instructions(0), remaining.tail)
+      instructionsBuff = optimise(instructions(0), remaining.tail)
     }
     (label, instructionsBuff.toList)
-    // (label, instructions)
   }
 
-  def compareMovs(
+  def redundantMov(
+      op1: Operand,
+      rd: Reg,
+      instructionsBuff: ListBuffer[Instruction],
+      remainingTail: ListBuffer[Instruction]
+  ): ListBuffer[Instruction] = {
+    instructionsBuff += Mov(rd, op1)
+    instructionsBuff ++= optimise(
+      remainingTail.head,
+      remainingTail.tail
+    )
+    instructionsBuff
+  }
+
+  def optimise(
       cur: Instruction,
       remaining: ListBuffer[Instruction]
   ): ListBuffer[Instruction] = {
@@ -42,12 +55,7 @@ object Peephole {
           remainingHead match {
             case Mov(rd, r2) =>
               if (r1 == r2) {
-                instructionsBuff += Mov(rd, op1)
-                instructionsBuff ++= compareMovs(
-                  remainingTail.head,
-                  remainingTail.tail
-                )
-                return instructionsBuff
+                return redundantMov(op1, rd, instructionsBuff, remainingTail)
               }
             case Cmp(rd, op2) =>
               if (rd == rd) {
@@ -56,14 +64,12 @@ object Peephole {
                     if (op2 == ImmInt(0)) {
                       remainingTail.head match {
                         case BranchCond(EQ, label) =>
-                          println("optimiseing")
                           instructionsBuff += Branch(label)
-                          println(instructionsBuff)
                           return instructionsBuff
                         case _ =>
                       }
                     } else if (op2 == ImmInt(1)) {
-                      instructionsBuff ++= compareMovs(
+                      instructionsBuff ++= optimise(
                         remainingTail.tail.head,
                         remainingTail.tail.tail
                       )
@@ -78,7 +84,7 @@ object Peephole {
                         case _ =>
                       }
                     } else if (op2 == ImmInt(0)) {
-                      instructionsBuff ++= compareMovs(
+                      instructionsBuff ++= optimise(
                         remainingTail.tail.head,
                         remainingTail.tail.tail
                       )
@@ -92,13 +98,13 @@ object Peephole {
         case _ =>
       }
       instructionsBuff += cur
-      instructionsBuff ++= compareMovs(remainingHead, remainingTail)
+      instructionsBuff ++= optimise(remainingHead, remainingTail)
       return instructionsBuff
     }
     instructionsBuff
   }
 
-  def optimise(
+  def optimiseBlocks(
       blocks: List[(Label, List[Instruction])]
   ): List[(Label, List[Instruction])] = {
     val returnBlocks = ListBuffer.empty[(Label, List[Instruction])]
