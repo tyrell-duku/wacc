@@ -3,7 +3,7 @@ import frontend.Parser._
 import frontend.Rules._
 import frontend.Lexer._
 
-class ParserFuncTest extends AnyFunSuite {
+class FrontendParserFuncTest extends AnyFunSuite {
   test("Successfully parses func with no param-list") {
     assert(
       func

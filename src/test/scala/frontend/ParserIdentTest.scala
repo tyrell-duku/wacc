@@ -3,7 +3,7 @@ import frontend.Rules._
 import frontend.LiterParser._
 import frontend.Lexer._
 
-class ParserIdentifierTest extends AnyFunSuite {
+class FrontendParserIdentifierTest extends AnyFunSuite {
   test("Successfully parses simple letter identifiers") {
     assert(identifier.runParser("x").contains(Ident("x", (1, 1))))
     assert(identifier.runParser("abc").contains(Ident("abc", (1, 1))))
