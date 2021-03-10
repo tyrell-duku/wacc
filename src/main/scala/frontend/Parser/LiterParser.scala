@@ -18,7 +18,7 @@ object LiterParser {
       ("char" #> CharT) <|>
       ("string" #> StringT)
 
-  // <base-type> | <array-type> | <pair-type>
+  // <base-type> | <array-type> | <pair-type> | <pointer-type>
   val types: Parsley[Type] = precedence[Type](
     baseType ? "base-type" <|> pairType,
     Ops[Type](Postfix)("[]" #> ArrayT ? "array-type"),
