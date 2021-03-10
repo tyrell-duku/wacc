@@ -58,7 +58,7 @@ object Peephole {
                 return redundantMov(op1, rd, instructionsBuff, remainingTail)
               }
             case Cmp(rd, op2) =>
-              if (rd == rd) {
+              if (r1 == rd) {
                 op1 match {
                   case ImmInt(0) =>
                     if (op2 == ImmInt(0)) {
