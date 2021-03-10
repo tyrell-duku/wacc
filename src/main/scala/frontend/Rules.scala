@@ -31,13 +31,14 @@ object Rules {
       )
   }
 
-  case class Calloc(num: Expr, t: Type, pos: (Int, Int)) extends MemoryAlloc {
+  case class Calloc(num: Expr, size: Expr, pos: (Int, Int))
+      extends MemoryAlloc {
     override def getType(sTable: SymbolTable): Type = PtrT(null)
   }
   object Calloc {
-    def apply(num: Parsley[Expr], t: Parsley[Type]): Parsley[Calloc] =
-      pos <**> (num, t).map((num: Expr, t: Type) =>
-        (p: (Int, Int)) => Calloc(num, t, p)
+    def apply(num: Parsley[Expr], size: Parsley[Expr]): Parsley[Calloc] =
+      pos <**> (num, size).map((num: Expr, size: Expr) =>
+        (p: (Int, Int)) => Calloc(num, size, p)
       )
   }
 

@@ -17,7 +17,7 @@ object HeapParser {
   val memoryAlloc: Parsley[MemoryAlloc] =
     Malloc("malloc" *> lexer.parens(expr)) <|> ("realloc" *> lexer.parens(
       Realloc(identifier, "," *> expr)
-    )) <|> ("calloc" *> lexer.parens(Calloc(expr, "," *> types)))
+    )) <|> ("calloc" *> lexer.parens(Calloc(expr, "," *> expr)))
 
   // '&'<expr>
   val addr: Parsley[Addr] = Addr("&" *> (lexer.parens(expr) <|> identifier))
