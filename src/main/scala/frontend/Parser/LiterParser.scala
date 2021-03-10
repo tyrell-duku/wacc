@@ -40,13 +40,20 @@ object LiterParser {
   // '+' | '-'
   val intSign: Parsley[IntSign] = ("+" #> Pos) <|> ("-" #> Neg)
 
+  // <oct-liter> "0o" ('0'-'7')+
+  val octalInt: Parsley[Int] = lexer.octal
+
+  // <hex-liter> "0x" ('0' - '9' | 'a' - 'f')+
+  val hexadecimalInt: Parsley[Int] = lexer.hexadecimal
+
   //  <int-sign>? <digit>+  Range[-2^31 < x < 2^31 - 1]
   val intLiter: Parsley[IntLiter] =
     IntLiter(
       (option(lookAhead(intSign)) <~> lexer.integer)
         .guard(notOverflow, "Integer is not between -2^31 and 2^31 - 1")
         .map((x: (Option[IntSign], Int)) => x._2)
-    ) ? "number"
+    ) ? "number" <|> (IntLiter(octalInt) ? "octal (base-8) integer") <|>
+    (IntLiter(hexadecimalInt) ? "hexadecimal (base-16) integer")
 
   // Determines whether the integer X is within the acceptable range for integers
   def notOverflow(x: (Option[IntSign], Int)): Boolean = {
