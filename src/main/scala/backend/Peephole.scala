@@ -39,6 +39,49 @@ object Peephole {
     instructionsBuff
   }
 
+  def redundantBranching(
+      op1: Operand,
+      op2: Operand,
+      instructionsBuff: ListBuffer[Instruction],
+      remainingHead: Instruction,
+      remainingTail: ListBuffer[Instruction]
+  ): ListBuffer[Instruction] = {
+    op1 match {
+      case ImmInt(0) =>
+        if (op2 == ImmInt(0)) {
+          remainingTail.head match {
+            case BranchCond(EQ, label) =>
+              instructionsBuff += Branch(label)
+              return instructionsBuff
+            case _ =>
+          }
+        } else if (op2 == ImmInt(1)) {
+          instructionsBuff ++= optimise(
+            remainingTail.tail.head,
+            remainingTail.tail.tail
+          )
+          return instructionsBuff
+        }
+      case ImmInt(1) =>
+        if (op2 == ImmInt(1)) {
+          remainingTail.head match {
+            case BranchCond(EQ, label) =>
+              instructionsBuff += Branch(label)
+              return instructionsBuff
+            case _ =>
+          }
+        } else if (op2 == ImmInt(0)) {
+          instructionsBuff ++= optimise(
+            remainingTail.tail.head,
+            remainingTail.tail.tail
+          )
+          return instructionsBuff
+        }
+      case _ =>
+    }
+    instructionsBuff ++= optimise(remainingHead, remainingTail)
+  }
+
   def optimise(
       cur: Instruction,
       remaining: ListBuffer[Instruction]
@@ -59,39 +102,13 @@ object Peephole {
               }
             case Cmp(rd, op2) =>
               if (r1 == rd) {
-                op1 match {
-                  case ImmInt(0) =>
-                    if (op2 == ImmInt(0)) {
-                      remainingTail.head match {
-                        case BranchCond(EQ, label) =>
-                          instructionsBuff += Branch(label)
-                          return instructionsBuff
-                        case _ =>
-                      }
-                    } else if (op2 == ImmInt(1)) {
-                      instructionsBuff ++= optimise(
-                        remainingTail.tail.head,
-                        remainingTail.tail.tail
-                      )
-                      return instructionsBuff
-                    }
-                  case ImmInt(1) =>
-                    if (op2 == ImmInt(1)) {
-                      remainingTail.head match {
-                        case BranchCond(EQ, label) =>
-                          instructionsBuff += Branch(label)
-                          return instructionsBuff
-                        case _ =>
-                      }
-                    } else if (op2 == ImmInt(0)) {
-                      instructionsBuff ++= optimise(
-                        remainingTail.tail.head,
-                        remainingTail.tail.tail
-                      )
-                      return instructionsBuff
-                    }
-                  case _ =>
-                }
+                return redundantBranching(
+                  op1,
+                  op2,
+                  instructionsBuff,
+                  remainingHead,
+                  remainingTail
+                )
               }
             case _ =>
           }
