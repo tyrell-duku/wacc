@@ -62,5 +62,4 @@ object PeepholeBranch {
     }
     instructionsBuff ++= optimise(remainingHead, remainingTail)
   }
-
 }

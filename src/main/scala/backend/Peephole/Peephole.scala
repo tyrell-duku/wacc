@@ -6,6 +6,7 @@ import backend.IR.Operand._
 import backend.IR.Condition._
 import backend.PeepholeMov._
 import backend.PeepholeBranch._
+import backend.PeepholeStrong._
 
 import scala.collection.mutable.ListBuffer
 
@@ -56,6 +57,12 @@ object Peephole {
                   remainingTail
                 )
               }
+            case _ =>
+          }
+        case Ldr(r1, op1) =>
+          remainingHead match {
+            case Ldr(r2, op2) =>
+              peepholeStrong(r1, op1, r2, op2, instructionsBuff, remainingTail)
             case _ =>
           }
         case _ =>
