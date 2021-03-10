@@ -35,7 +35,10 @@ object Lexer {
     "begin",
     "end",
     "call",
-    "sizeof"
+    "sizeof",
+    "malloc",
+    "calloc",
+    "realloc"
   )
 
   val lexer = new Lexer(
