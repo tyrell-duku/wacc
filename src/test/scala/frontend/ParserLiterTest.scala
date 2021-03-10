@@ -5,7 +5,7 @@ import frontend.LiterParser._
 import frontend.ExprParser._
 import frontend.Lexer._
 
-class ParserIntLiterTest extends AnyFunSuite {
+class FrontendParserIntLiterTest extends AnyFunSuite {
   test("Successfully parses digit without sign") {
     assert(
       intLiter.runParser("100").contains(IntLiter(100, (1, 1)))
@@ -34,7 +34,7 @@ class ParserIntLiterTest extends AnyFunSuite {
   }
 }
 
-class ParserBoolLiteralTest extends AnyFunSuite {
+class FrontendParserBoolLiteralTest extends AnyFunSuite {
   test("Successfully parses true") {
     assert(boolLiteral.runParser("true").contains(BoolLiter(true, (1, 1))))
   }
@@ -44,7 +44,7 @@ class ParserBoolLiteralTest extends AnyFunSuite {
   }
 }
 
-class ParserCharLitTest extends AnyFunSuite {
+class FrontendParserCharLitTest extends AnyFunSuite {
   test("Successfully parses escaped b char literal") {
     assert(
       charLiteral.runParser("'\\b'").contains(CharLiter(Escape('b'), (1, 1)))
@@ -62,7 +62,7 @@ class ParserCharLitTest extends AnyFunSuite {
   }
 }
 
-class ParserStringLitTest extends AnyFunSuite {
+class FrontendParserStringLitTest extends AnyFunSuite {
   test("Successfully parses string literal \"hello world\"") {
     assert(strLiteral.runParser("\"hello world\"").isSuccess)
   }
@@ -76,7 +76,7 @@ class ParserStringLitTest extends AnyFunSuite {
   }
 }
 
-class ParserArrayLiterTest extends AnyFunSuite {
+class FrontendParserArrayLiterTest extends AnyFunSuite {
   val arrayLiterWhitespace = lexer.whiteSpace *> arrayLiter <* eof
 
   test("Successfully parses double array literal") {
@@ -194,7 +194,7 @@ class ParserArrayLiterTest extends AnyFunSuite {
   }
 }
 
-class ParserPairLiterTest extends AnyFunSuite {
+class FrontendParserPairLiterTest extends AnyFunSuite {
   test("Successfully parses pair-liter") {
     assert(pairLiteral.runParser("null").contains(PairLiter((1, 1))))
   }

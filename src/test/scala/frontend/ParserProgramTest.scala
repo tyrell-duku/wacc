@@ -6,7 +6,7 @@ import java.io.File
 import parsley.Parsley
 import frontend.Lexer._
 
-class ParserProgramTest extends AnyFunSuite {
+class FrontendParserProgramTest extends AnyFunSuite {
   val programWhitespace: Parsley[Program] = lexer.whiteSpace *> program <* eof
 
   private def listAllFiles(dir: File): Array[File] = {

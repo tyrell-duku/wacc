@@ -4,7 +4,7 @@ import frontend.Rules._
 import parsley.combinator.eof
 import frontend.Lexer._
 
-class ParserParamTest extends AnyFunSuite {
+class FrontendParserParamTest extends AnyFunSuite {
   val paramWhitespace = lexer.whiteSpace *> param <* eof
 
   test("Successfully parses param with base-type") {
@@ -56,7 +56,7 @@ class ParserParamTest extends AnyFunSuite {
   }
 }
 
-class ParserParamListTest extends AnyFunSuite {
+class FrontendParserParamListTest extends AnyFunSuite {
   val paramWhitespace = lexer.whiteSpace *> paramList <* eof
 
   test("Successfully parses singleton param-list") {
