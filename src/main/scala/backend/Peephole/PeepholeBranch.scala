@@ -26,11 +26,16 @@ object PeepholeBranch {
             case _ =>
           }
         } else if (op2 == ImmInt(1)) {
-          instructionsBuff ++= optimise(
-            remainingTail.tail.head,
-            remainingTail.tail.tail
-          )
-          return instructionsBuff
+          remainingTail.head match {
+            case BranchCond(EQ, label) =>
+              ignoreBlocks += label
+              instructionsBuff ++= optimise(
+                remainingTail.tail.head,
+                remainingTail.tail.tail
+              )
+              return instructionsBuff
+            case _ =>
+          }
         }
       case ImmInt(1) =>
         if (op2 == ImmInt(1)) {
@@ -41,11 +46,17 @@ object PeepholeBranch {
             case _ =>
           }
         } else if (op2 == ImmInt(0)) {
-          instructionsBuff ++= optimise(
-            remainingTail.tail.head,
-            remainingTail.tail.tail
-          )
-          return instructionsBuff
+          remainingTail.head match {
+            case BranchCond(EQ, label) =>
+              ignoreBlocks += label
+              instructionsBuff ++= optimise(
+                remainingTail.tail.head,
+                remainingTail.tail.tail
+              )
+              return instructionsBuff
+            case _ =>
+          }
+
         }
       case _ =>
     }

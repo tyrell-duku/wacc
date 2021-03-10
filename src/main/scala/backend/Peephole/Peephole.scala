@@ -11,10 +11,13 @@ import scala.collection.mutable.ListBuffer
 
 object Peephole {
 
+  val ignoreBlocks = ListBuffer.empty[Label]
+
   def optimiseBlock(
       block: (Label, List[Instruction])
   ): (Label, List[Instruction]) = {
     val (label, instructions) = block
+
     val remaining = ListBuffer.empty[Instruction]
     remaining.addAll(instructions)
     var instructionsBuff = ListBuffer.empty[Instruction]
@@ -22,6 +25,7 @@ object Peephole {
     if (!instructions.isEmpty) {
       instructionsBuff = optimise(instructions(0), remaining.tail)
     }
+
     (label, instructionsBuff.toList)
   }
 
@@ -35,7 +39,6 @@ object Peephole {
     } else {
       val remainingHead = remaining.head
       val remainingTail = remaining.tail
-
       cur match {
         case Mov(r1, op1) =>
           remainingHead match {
@@ -69,7 +72,10 @@ object Peephole {
   ): List[(Label, List[Instruction])] = {
     val returnBlocks = ListBuffer.empty[(Label, List[Instruction])]
     for (b <- blocks) {
-      returnBlocks += optimiseBlock(b)
+      val (label, _) = b
+      if (!ignoreBlocks.contains(label)) {
+        returnBlocks += optimiseBlock(b)
+      }
     }
     returnBlocks.toList
   }
