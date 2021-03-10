@@ -62,7 +62,14 @@ object Peephole {
         case Ldr(r1, op1) =>
           remainingHead match {
             case Ldr(r2, op2) =>
-              peepholeStrong(r1, op1, r2, op2, instructionsBuff, remainingTail)
+              return peepholeStrong(
+                r1,
+                op1,
+                r2,
+                op2,
+                instructionsBuff,
+                remainingTail
+              )
             case _ =>
           }
         case _ =>

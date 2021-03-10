@@ -24,17 +24,50 @@ object PeepholeStrong {
   ): ListBuffer[Instruction] = {
     val operation = remainingTail.head
     if (operation == SMul(r1, r2, r1, r2)) {
-      val ImmMem(n) = op2
-      var shiftAmount = log2(n)
-      if (shiftAmount == floor(shiftAmount)) {
-        instructionsBuff += Ldr(r1, op1)
-        instructionsBuff += Mov(r1, LSL(r1, ImmInt(shiftAmount.toInt)))
+      op2 match {
+        case ImmMem(n) =>
+          val shiftAmount = log2(n)
+          if (shiftAmount == floor(shiftAmount)) {
+            instructionsBuff += Ldr(r1, op1)
 
-        instructionsBuff ++= optimise(
-          remainingTail.tail.tail.head,
-          remainingTail.tail.tail.tail
-        )
-        return instructionsBuff
+            if (shiftAmount != 0) {
+              instructionsBuff += Mov(r1, LSL(r1, ImmInt(shiftAmount.toInt)))
+              instructionsBuff += BranchLinkCond(
+                VS,
+                Label("p_throw_overflow_error")
+              )
+            }
+
+            instructionsBuff ++= optimise(
+              remainingTail.tail.tail.tail.head,
+              remainingTail.tail.tail.tail.tail
+            )
+            return instructionsBuff
+          }
+        case _ =>
+      }
+
+      op1 match {
+        case ImmMem(n) =>
+          val shiftAmount = log2(n)
+          if (shiftAmount == floor(shiftAmount)) {
+            instructionsBuff += Ldr(r1, op2)
+
+            if (shiftAmount != 0) {
+              instructionsBuff += Mov(r1, LSL(r1, ImmInt(shiftAmount.toInt)))
+              instructionsBuff += BranchLinkCond(
+                VS,
+                Label("p_throw_overflow_error")
+              )
+            }
+
+            instructionsBuff ++= optimise(
+              remainingTail.tail.tail.tail.head,
+              remainingTail.tail.tail.tail.tail
+            )
+            return instructionsBuff
+          }
+        case _ =>
       }
     }
     instructionsBuff += Ldr(r1, op1)
