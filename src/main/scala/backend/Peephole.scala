@@ -2,6 +2,9 @@ package backend
 
 import java.io.{File, FileWriter}
 import backend.IR.InstructionSet._
+import backend.IR.Operand._
+import backend.IR.Condition._
+
 import scala.util.matching.Regex
 import scala.collection.mutable.ListBuffer
 import scala.collection.mutable.ArrayBuffer
@@ -34,15 +37,46 @@ object Peephole {
       val remainingTail = remaining.tail
 
       cur match {
-        case Mov(r1, op) =>
+        case Mov(r1, op1) =>
           remainingHead match {
             case Mov(rd, r2) =>
               if (r1 == r2) {
-                instructionsBuff += Mov(rd, op)
+                instructionsBuff += Mov(rd, op1)
                 instructionsBuff ++= compareMovs(
                   remainingTail.head,
                   remainingTail.tail
                 )
+              } else {
+                instructionsBuff += cur
+                instructionsBuff ++= compareMovs(remainingHead, remainingTail)
+              }
+            case Cmp(rd, op2) =>
+              if (rd == rd) {
+                op1 match {
+                  case ImmInt(0) =>
+                    remainingTail.head match {
+                      case BranchCond(EQ, label) =>
+                        instructionsBuff += Branch(label)
+                      case _ =>
+                        instructionsBuff += cur
+                        instructionsBuff ++= compareMovs(
+                          remainingHead,
+                          remainingTail
+                        )
+                    }
+                  case ImmInt(1) =>
+                    instructionsBuff += cur
+                    instructionsBuff ++= compareMovs(
+                      remainingHead,
+                      remainingTail
+                    )
+                  case _ =>
+                    instructionsBuff += cur
+                    instructionsBuff ++= compareMovs(
+                      remainingHead,
+                      remainingTail
+                    )
+                }
               } else {
                 instructionsBuff += cur
                 instructionsBuff ++= compareMovs(remainingHead, remainingTail)
