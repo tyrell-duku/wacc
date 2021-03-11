@@ -9,6 +9,6 @@
 # Program:
 
 begin
-  int x = 10
+  bool x = true;
   char *str = realloc(x, 10)
 end
