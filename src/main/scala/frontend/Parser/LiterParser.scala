@@ -69,8 +69,9 @@ object LiterParser {
 
   // <bin-liter> "0b" ('0' | '1')+
   val binInt: Parsley[Int] =
-    (option(intSign) <~> ("0b" <|> "0B") *> manyN(1, '0' <|> '1'))
-      .collectMsg(overflowErrorMsg)(binToDen)
+    (option(intSign) <~> ("0b" <|> "0B") *> manyN(1, '0' <|> '1')
+     <* lexer.whiteSpace)
+     .collectMsg(overflowErrorMsg)(binToDen)
 
   //  <int-sign>? <digit>+  Range[-2^31 < x < 2^31 - 1]
   val intLiter: Parsley[IntLiter] = IntLiter(
