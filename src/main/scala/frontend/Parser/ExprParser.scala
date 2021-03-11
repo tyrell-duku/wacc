@@ -20,6 +20,7 @@ object ExprParser {
     // unary operators
     Ops[Expr](Prefix)(
       Not("!") ? "unary operator",
+      BitwiseNot("~") ? "bitwise operator",
       notFollowedBy(intLiter) *> Negation("-") ? "unary operator",
       Len("len") ? "unary operator",
       Ord("ord") ? "unary operator",
@@ -36,6 +37,8 @@ object ExprParser {
       Plus("+") ? "arithmetic operator",
       Sub("-") ? "arithmetic operator"
     ),
+    // logical shifts
+    Ops[Expr](InfixL)(BitWiseOr("<<"), (BitWiseOr(">>") ? "bitwise operator")),
     // comparison binary operators
     Ops[Expr](InfixL)(
       (GTE(">=") ? "comparison operator") <\> (GT(">") ? "comparison operator"),
@@ -46,6 +49,10 @@ object ExprParser {
       Equal("==") ? "comparison operator",
       NotEqual("!=") ? "comparison operator"
     ),
+    // bitwise binary operators
+    Ops[Expr](InfixL)(BitWiseAnd("&") ? "bitwise operator"),
+    Ops[Expr](InfixL)(BitWiseXor("^") ? "bitwise operator"),
+    Ops[Expr](InfixL)(BitWiseOr("|") ? "bitwise operator"),
     // boolean binary operators
     Ops[Expr](InfixL)(And("&&") ? "boolean operator"),
     Ops[Expr](InfixL)(Or("||") ? "boolean operator")
