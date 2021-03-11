@@ -5,7 +5,7 @@ import frontend.Rules._
 import frontend.LiterParser._
 
 
-class ParserIntRepTest extends AnyFunSuite {
+class FrontendParserIntRepTest extends AnyFunSuite {
 
   test("Successfully parses octal integer") {
     assert(intLiter.runParser("0o007").contains(IntLiter(7, (1,1))))
@@ -30,5 +30,4 @@ class ParserIntRepTest extends AnyFunSuite {
   test("Successfully parses hexadecimal integer with negative sign") {
     assert(intLiter.runParser("-0x006").contains(IntLiter(-6, (1,1))))
   }
-
 }
