@@ -9,7 +9,7 @@ import scala.collection._
 object PeepholeMov {
 
   /* Remove redundant Mov(r1,op1), Mov(rd, r1) -> Mov(rd, op1) */
-  def peepholeMov(
+  def peepMov(
       r1: Reg,
       op1: Operand,
       rd: Reg,

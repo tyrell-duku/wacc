@@ -124,7 +124,7 @@ object PeepholeStrong {
   }
 
   /* Function for strength reduction */
-  def peepholeStrong(
+  def peepStrong(
       r1: Reg,
       op1: LoadOperand,
       r2: Reg,

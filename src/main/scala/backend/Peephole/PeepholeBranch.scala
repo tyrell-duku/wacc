@@ -8,7 +8,7 @@ import scala.collection._
 
 object PeepholeBranch {
 
-  def peepholeBranch(
+  def peepBranch(
       op1: Operand,
       op2: Operand,
       remainingHead: Instruction,

@@ -71,33 +71,20 @@ object Peephole {
         case (Mov(r1, op1), Mov(rd, r2)) =>
           // Remove redundance Mov Instructions
           if (r1 == r2) {
-            peepholeMov(r1, op1, rd, r2, remainingTail, optimised)
+            peepMov(r1, op1, rd, r2, remainingTail, optimised)
           } else {
             continueOptimise(cur, remainingHead, remainingTail, optimised)
           }
         case (Mov(r1, op1), Cmp(rd, op2)) =>
           // Check for redundant compare branches
           if (r1 == rd) {
-            peepholeBranch(
-              op1,
-              op2,
-              remainingHead,
-              remainingTail,
-              optimised
-            )
+            peepBranch(op1, op2, remainingHead, remainingTail, optimised)
           } else {
             continueOptimise(cur, remainingHead, remainingTail, optimised)
           }
         case (Ldr(r1, op1), Ldr(r2, op2)) =>
           // Potential strong operation
-          peepholeStrong(
-            r1,
-            op1,
-            r2,
-            op2,
-            remainingTail,
-            optimised
-          )
+          peepStrong(r1, op1, r2, op2, remainingTail, optimised)
         case _ =>
           continueOptimise(cur, remainingHead, remainingTail, optimised)
       }
