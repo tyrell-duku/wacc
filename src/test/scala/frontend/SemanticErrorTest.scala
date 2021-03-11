@@ -1,5 +1,6 @@
 import org.scalatest.funsuite.AnyFunSuite
 import frontend.Parser._
+import Array.concat
 import frontend.Rules._
 import parsley.combinator.eof
 import java.io.File
@@ -11,7 +12,8 @@ import frontend.Semantics.SemanticError
 
 class FrontendSemanticErrorTest extends AnyFunSuite {
   val programWhitespace: Parsley[Program] = lexer.whiteSpace *> program <* eof
-  private val skip = listAllFiles(new File("wacc_examples/valid/fullHeap"))
+  private val skip = concat(listAllFiles(new File("wacc_examples/valid/fullHeap")),
+   listAllFiles(new File("wacc_examples/valid/intRep")))
 
   private def testFile(
       testFunc: ((String, List[org.scalatest.Tag]) => (=> Any) => Unit),
