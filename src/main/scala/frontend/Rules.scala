@@ -9,6 +9,75 @@ import scala.collection.mutable
 
 object Rules {
 
+  /* EXTENSION */
+
+  sealed trait MemoryAlloc extends AssignRHS
+  case class Malloc(size: Expr, pos: (Int, Int)) extends MemoryAlloc {
+    override def getType(sTable: SymbolTable): Type = PtrT(null)
+  }
+  object Malloc {
+    def apply(size: Parsley[Expr]): Parsley[Malloc] =
+      pos <**> size.map((size: Expr) => (p: (Int, Int)) => Malloc(size, p))
+  }
+
+  case class Realloc(ptr: Ident, size: Expr, pos: (Int, Int))
+      extends MemoryAlloc {
+    override def getType(sTable: SymbolTable): Type = PtrT(null)
+  }
+  object Realloc {
+    def apply(ptr: Parsley[Ident], size: Parsley[Expr]): Parsley[Realloc] =
+      pos <**> (ptr, size).map((ptr: Ident, size: Expr) =>
+        (p: (Int, Int)) => Realloc(ptr, size, p)
+      )
+  }
+
+  case class Calloc(num: Expr, size: Expr, pos: (Int, Int))
+      extends MemoryAlloc {
+    override def getType(sTable: SymbolTable): Type = PtrT(null)
+  }
+  object Calloc {
+    def apply(num: Parsley[Expr], size: Parsley[Expr]): Parsley[Calloc] =
+      pos <**> (num, size).map((num: Expr, size: Expr) =>
+        (p: (Int, Int)) => Calloc(num, size, p)
+      )
+  }
+
+  case class PtrT(t: Type) extends Type
+
+  case class DerefPtr(ptr: Expr, pos: (Int, Int)) extends Expr with AssignLHS {
+    override def getType(sTable: SymbolTable): Type = {
+      val PtrT(inner) = ptr.getType(sTable)
+      inner
+    }
+  }
+  object DerefPtr {
+    def apply(ptr: Parsley[Expr]): Parsley[DerefPtr] =
+      pos <**> ptr.map((ptr: Expr) => (p: (Int, Int)) => DerefPtr(ptr, p))
+  }
+
+  case class Addr(ptr: Expr, pos: (Int, Int)) extends Expr {
+    override def getType(sTable: SymbolTable): Type = {
+      val t = ptr.getType(sTable)
+      PtrT(t)
+    }
+  }
+  object Addr {
+    def apply(ptr: Parsley[Expr]): Parsley[Addr] =
+      pos <**> ptr.map((ptr: Expr) => (p: (Int, Int)) => Addr(ptr, p))
+  }
+
+  case class SizeOf(t: Type, pos: (Int, Int)) extends Expr {
+    override def getType(sTable: SymbolTable): Type = {
+      IntT
+    }
+  }
+  object SizeOf {
+    def apply(t: Parsley[Type]): Parsley[SizeOf] =
+      pos <**> t.map((t: Type) => (p: (Int, Int)) => SizeOf(t, p))
+  }
+
+  /* FRONTEND */
+
   sealed case class Program(fs: List[Func], s: Stat)
 
   sealed case class Func(
