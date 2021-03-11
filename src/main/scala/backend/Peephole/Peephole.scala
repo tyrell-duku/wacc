@@ -12,24 +12,6 @@ import scala.collection._
 
 object Peephole {
 
-  val predefinedFuncs = mutable.ListBuffer(
-    // All predefined functions should not be optimised
-    ArrayBounds.funcLabel,
-    DivideByZero.funcLabel,
-    Overflow.funcLabel,
-    FreePair.funcLabel,
-    FreeArray.funcLabel,
-    NullPointer.funcLabel,
-    RuntimeError.funcLabel,
-    PrintInt.funcLabel,
-    PrintBool.funcLabel,
-    PrintString.funcLabel,
-    PrintReference.funcLabel,
-    PrintLn.funcLabel,
-    ReadInt.funcLabel,
-    ReadInt.funcLabel
-  )
-
   /* Blocks of instructions that should be ignored */
   val ignoreBlocks = mutable.ListBuffer.empty[Label]
 
@@ -105,12 +87,11 @@ object Peephole {
   ): List[(Label, List[Instruction])] = {
     val returnBlocks = mutable.ListBuffer.empty[(Label, List[Instruction])]
     for (b <- blocks) {
-      val (label, _) = b
-      if (!ignoreBlocks.contains(label)) {
-        if (predefinedFuncs.contains(label)) {
-          returnBlocks += b
-        } else {
-          returnBlocks += optimiseBlock(b)
+      val (Label(name), _) = b
+      if (!ignoreBlocks.contains(Label(name))) {
+        name.take(2) match {
+          case "p_" => returnBlocks += b
+          case _    => returnBlocks += optimiseBlock(b)
         }
       }
     }
