@@ -25,6 +25,46 @@ object PeepholeStrong {
     }
   }
 
+  def multiplyReduction(
+      r1: Reg,
+      op1: LoadOperand,
+      r2: Reg,
+      op2: LoadOperand,
+      instructionsBuff: mutable.ListBuffer[Instruction],
+      remainingTail: mutable.ListBuffer[Instruction]
+  ): mutable.ListBuffer[Instruction] = {
+    (op1, op2) match {
+      case (ImmMem(n1), ImmMem(n2)) =>
+        val shiftAmount1 = getShiftAmount(n1)
+        val shiftAmount2 = getShiftAmount(n2)
+        if (shiftAmount1 > shiftAmount2 && shiftAmount1 != LOG_ERROR) {
+          instructionsBuff += Ldr(r1, op2)
+          if (shiftAmount1 != 0) {
+            instructionsBuff += Mov(r1, LSL(r1, ImmInt(shiftAmount1)))
+          }
+          instructionsBuff ++= optimise(
+            remainingTail.tail.tail.tail.head,
+            remainingTail.tail.tail.tail.tail
+          )
+          return instructionsBuff
+        } else if (shiftAmount1 <= shiftAmount2 && shiftAmount2 != LOG_ERROR) {
+          instructionsBuff += Ldr(r1, op1)
+          if (shiftAmount2 != 0) {
+            instructionsBuff += Mov(r1, LSL(r1, ImmInt(shiftAmount2)))
+          }
+          instructionsBuff ++= optimise(
+            remainingTail.tail.tail.tail.head,
+            remainingTail.tail.tail.tail.tail
+          )
+          return instructionsBuff
+        }
+      case _ =>
+    }
+    instructionsBuff += Ldr(r1, op1)
+    instructionsBuff ++= optimise(Ldr(r2, op2), remainingTail)
+    instructionsBuff
+  }
+
   def peepholeStrong(
       r1: Reg,
       op1: LoadOperand,
@@ -34,35 +74,14 @@ object PeepholeStrong {
       remainingTail: mutable.ListBuffer[Instruction]
   ): mutable.ListBuffer[Instruction] = {
     if (remainingTail.head == SMul(r1, r2, r1, r2)) {
-      (op1, op2) match {
-        case (ImmMem(n1), ImmMem(n2)) =>
-          val shiftAmount1 = getShiftAmount(n1)
-          val shiftAmount2 = getShiftAmount(n2)
-          if (shiftAmount1 > shiftAmount2 && shiftAmount1 != LOG_ERROR) {
-            instructionsBuff += Ldr(r1, op2)
-            if (shiftAmount1 != 0) {
-              instructionsBuff += Mov(r1, LSL(r1, ImmInt(shiftAmount1)))
-            }
-            instructionsBuff ++= optimise(
-              remainingTail.tail.tail.tail.head,
-              remainingTail.tail.tail.tail.tail
-            )
-            return instructionsBuff
-          } else if (
-            shiftAmount1 <= shiftAmount2 && shiftAmount2 != LOG_ERROR
-          ) {
-            instructionsBuff += Ldr(r1, op1)
-            if (shiftAmount2 != 0) {
-              instructionsBuff += Mov(r1, LSL(r1, ImmInt(shiftAmount2)))
-            }
-            instructionsBuff ++= optimise(
-              remainingTail.tail.tail.tail.head,
-              remainingTail.tail.tail.tail.tail
-            )
-            return instructionsBuff
-          }
-        case _ =>
-      }
+      return multiplyReduction(
+        r1,
+        op1,
+        r2,
+        op2,
+        instructionsBuff,
+        remainingTail
+      )
     } else if (remainingTail.size > 4)
       if (
         remainingTail.tail.tail.tail.head == BranchLink(Label("__aeabi_idiv"))
