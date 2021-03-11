@@ -16,21 +16,24 @@ object Peephole {
   /* Blocks of instructions that should be ignored */
   val ignoreBlocks = mutable.ListBuffer.empty[Label]
 
+  /* Optimises a block of instructions */
   def optimiseBlock(
       block: (Label, List[Instruction])
   ): (Label, List[Instruction]) = {
     val (label, instructions) = block
-    var optimised = mutable.ListBuffer.empty[Instruction]
+    val optimised = mutable.ListBuffer.empty[Instruction]
     val instrs = mutable.ListBuffer.empty[Instruction]
     instrs.addAll(instructions)
 
     if (!instructions.isEmpty) {
+      // Store optimised instructions into optimised
       optimise(instrs.head, instrs.tail, optimised)
     }
 
     (label, optimised.toList)
   }
 
+  /* Continues optimise recursively */
   def continueOptimise(
       cur: Instruction,
       remainingHead: Instruction,
@@ -41,6 +44,8 @@ object Peephole {
     optimise(remainingHead, remainingTail, optimised)
   }
 
+  /* Overloaded optimise function that is recursively called to store
+     optimised instructions in optimised*/
   def optimise(
       instructions: mutable.ListBuffer[Instruction],
       optimised: mutable.ListBuffer[Instruction]
@@ -50,6 +55,8 @@ object Peephole {
     }
   }
 
+  /* Overloaded optimise function that is recursively called to store
+     optimised instructions in optimised*/
   def optimise(
       cur: Instruction,
       instructions: mutable.ListBuffer[Instruction],
@@ -62,13 +69,14 @@ object Peephole {
       val remainingTail = instructions.tail
       (cur, remainingHead) match {
         case (Mov(r1, op1), Mov(rd, r2)) =>
+          // Remove redundance Mov Instructions
           if (r1 == r2) {
             peepholeMov(r1, op1, rd, r2, remainingTail, optimised)
-            return
           } else {
             continueOptimise(cur, remainingHead, remainingTail, optimised)
           }
         case (Mov(r1, op1), Cmp(rd, op2)) =>
+          // Check for redundant compare branches
           if (r1 == rd) {
             peepholeBranch(
               op1,
@@ -81,6 +89,7 @@ object Peephole {
             continueOptimise(cur, remainingHead, remainingTail, optimised)
           }
         case (Ldr(r1, op1), Ldr(r2, op2)) =>
+          // Potential strong operation
           peepholeStrong(
             r1,
             op1,
@@ -89,21 +98,23 @@ object Peephole {
             remainingTail,
             optimised
           )
-          return
         case _ =>
           continueOptimise(cur, remainingHead, remainingTail, optimised)
       }
     }
   }
 
+  /* Call optimise on all blocks necessary */
   def optimiseBlocks(
       blocks: List[(Label, List[Instruction])]
   ): List[(Label, List[Instruction])] = {
     val returnBlocks = mutable.ListBuffer.empty[(Label, List[Instruction])]
     for (b <- blocks) {
       val (Label(name), _) = b
+      // Ignore blocks that are not required
       if (!ignoreBlocks.contains(Label(name))) {
         name.take(2) match {
+          // Not necassary to optimise predefined blocks
           case "p_" => returnBlocks += b
           case _    => returnBlocks += optimiseBlock(b)
         }

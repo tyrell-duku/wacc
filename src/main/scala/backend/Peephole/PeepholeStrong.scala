@@ -12,6 +12,7 @@ object PeepholeStrong {
 
   val LOG_ERROR = -1
 
+  /* Get log2 of i, returns LOG_ERROR if I == 0 or value is not an Integer */
   def getShiftAmount(i: Int): Int = {
     if (i == 0) {
       LOG_ERROR
@@ -25,7 +26,8 @@ object PeepholeStrong {
     }
   }
 
-  def divisionReduction(
+  /* Reduces strength of a division if possible */
+  def divisionReduc(
       r1: Reg,
       op1: LoadOperand,
       r2: Reg,
@@ -33,55 +35,44 @@ object PeepholeStrong {
       instructions: mutable.ListBuffer[Instruction],
       optimised: mutable.ListBuffer[Instruction]
   ): Unit = {
+    val load1 = Ldr(r1, op1)
+    val load2 = Ldr(r2, op2)
     op2 match {
+      // If dividing by 0, call DIVIDE_BY_ZERO runtime error
       case ImmMem(0) =>
-        instructions.tail.head match {
-          case Mov(rd, r3) =>
-            if (r3 == r2) {
-              optimised += Ldr(
-                R0,
-                DataLabel(Label("msg_divide_by_zero"))
-              )
-              optimised += BranchLink(RuntimeError.funcLabel)
-              return
-            } else {
-              continueOptimise(
-                Ldr(r1, op1),
-                Ldr(r2, op2),
-                instructions,
-                optimised
-              )
-            }
-          case _ =>
-            continueOptimise(
-              Ldr(r1, op1),
-              Ldr(r2, op2),
-              instructions,
-              optimised
-            )
-        }
+        // Call DIVIDE_BY_ZERO runtime error
+        optimised += Ldr(
+          R0,
+          DataLabel(Label("msg_divide_by_zero"))
+        )
+        optimised += BranchLink(RuntimeError.funcLabel)
       case ImmMem(n) =>
         val shiftAmount = getShiftAmount(n)
         if (!(shiftAmount == LOG_ERROR)) {
           instructions.head match {
+            // Get the destination reg for the division
             case Mov(rd, _) =>
+              // Instructinos in order to shift rather than using __aeabi_idiv
               val newInstructions = instructions.drop(4)
+              // Cons Instructions to the head of the list
               Mov(rd, r1) +=: newInstructions
               if (shiftAmount != 0) {
                 Mov(r1, LSR(r1, ImmInt(shiftAmount))) +=: newInstructions
               }
-              Ldr(r1, op1) +=: newInstructions
+              load1 +=: newInstructions
+              // Optimise instructinos from NEWINSTRUCTIONS
               optimise(newInstructions, optimised)
           }
         } else {
-          continueOptimise(Ldr(r1, op1), Ldr(r2, op2), instructions, optimised)
+          continueOptimise(load1, load2, instructions, optimised)
         }
       case _ =>
-        continueOptimise(Ldr(r1, op1), Ldr(r2, op2), instructions, optimised)
+        continueOptimise(load1, load2, instructions, optimised)
     }
   }
 
-  def multiplyReduction(
+  /* Reduces strength of a multiplication if possible */
+  def multiplyReduc(
       r1: Reg,
       op1: LoadOperand,
       r2: Reg,
@@ -89,45 +80,49 @@ object PeepholeStrong {
       instructions: mutable.ListBuffer[Instruction],
       optimised: mutable.ListBuffer[Instruction]
   ): Unit = {
+    val load1 = Ldr(r1, op1)
+    val load2 = Ldr(r2, op2)
+    // Ensure SMULL instruction
     if (instructions.size >= 4) {
+      val newInstructions = instructions.drop(3)
       (op1, op2) match {
+        // If multiplying by 0, load 0 into the destination register
         case (ImmMem(0), _) | (_, ImmMem(0)) =>
-          optimise(Ldr(r1, ImmMem(0)), instructions.tail.tail.tail, optimised)
+          optimise(Ldr(r1, ImmMem(0)), newInstructions, optimised)
         case (ImmMem(n1), ImmMem(n2)) =>
           val shiftAmount1 = getShiftAmount(n1)
           val shiftAmount2 = getShiftAmount(n2)
+          // Get largest shift to optimise division
           if (shiftAmount1 > shiftAmount2 && shiftAmount1 != LOG_ERROR) {
-            val newInstructions = instructions.drop(3)
+            // Shift destReg by the rigth amount
             if (shiftAmount1 != 0) {
               Mov(r1, LSL(r1, ImmInt(shiftAmount1))) +=: newInstructions
             }
             Ldr(r1, op2) +=: newInstructions
+            // Optimise instructinos from NEWINSTRUCTIONS
             optimise(newInstructions, optimised)
           } else if (
             shiftAmount1 <= shiftAmount2 && shiftAmount2 != LOG_ERROR
           ) {
-            val newInstructions = instructions.drop(3)
+            // Shift destReg by the rigth amount
             if (shiftAmount2 != 0) {
               Mov(r1, LSL(r1, ImmInt(shiftAmount2))) +=: newInstructions
             }
             Ldr(r1, op1) +=: newInstructions
+            // Optimise instructinos from NEWINSTRUCTIONS
             optimise(newInstructions, optimised)
           } else {
-            continueOptimise(
-              Ldr(r1, op1),
-              Ldr(r2, op2),
-              instructions,
-              optimised
-            )
+            continueOptimise(load1, load2, instructions, optimised)
           }
         case _ =>
-          continueOptimise(Ldr(r1, op1), Ldr(r2, op2), instructions, optimised)
+          continueOptimise(load1, load2, instructions, optimised)
       }
     } else {
-      continueOptimise(Ldr(r1, op1), Ldr(r2, op2), instructions, optimised)
+      continueOptimise(load1, load2, instructions, optimised)
     }
   }
 
+  /* Function for strength reduction */
   def peepholeStrong(
       r1: Reg,
       op1: LoadOperand,
@@ -136,31 +131,20 @@ object PeepholeStrong {
       instructions: mutable.ListBuffer[Instruction],
       optimised: mutable.ListBuffer[Instruction]
   ): Unit = {
+    val load1 = Ldr(r1, op1)
+    val load2 = Ldr(r2, op2)
+    // Multiplication instruction
     if (instructions.head == SMul(r1, r2, r1, r2)) {
-      multiplyReduction(
-        r1,
-        op1,
-        r2,
-        op2,
-        instructions,
-        optimised
-      )
-      return
+      multiplyReduc(r1, op1, r2, op2, instructions, optimised)
     } else if (instructions.size >= 4) {
-      if (
-        instructions.tail.tail.tail.head == BranchLink(Label("__aeabi_idiv"))
-      ) {
-        divisionReduction(
-          r1,
-          op1,
-          r2,
-          op2,
-          instructions,
-          optimised
-        )
-        return
+      // Division instruction
+      if (instructions.drop(3).head == BranchLink(Label("__aeabi_idiv"))) {
+        divisionReduc(r1, op1, r2, op2, instructions, optimised)
+      } else {
+        continueOptimise(load1, load2, instructions, optimised)
       }
+    } else {
+      continueOptimise(load1, load2, instructions, optimised)
     }
-    continueOptimise(Ldr(r1, op1), Ldr(r2, op2), instructions, optimised)
   }
 }
