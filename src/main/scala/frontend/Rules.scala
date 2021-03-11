@@ -13,7 +13,14 @@ object Rules {
 
   sealed trait MemoryAlloc extends AssignRHS
   case class Malloc(size: Expr, pos: (Int, Int)) extends MemoryAlloc {
-    override def getType(sTable: SymbolTable): Type = PtrT(null)
+    override def getType(sTable: SymbolTable): Type = {
+      val t = size.getType(sTable)
+      semErrs = size.semErrs
+      if (t != IntT) {
+        semErrs += TypeMismatch(size, t, List(IntT))
+      }
+      PtrT(null)
+    }
   }
   object Malloc {
     def apply(size: Parsley[Expr]): Parsley[Malloc] =
@@ -42,11 +49,18 @@ object Rules {
       )
   }
 
-  case class PtrT(t: Type) extends Type
+  case class PtrT(t: Type) extends Type {
+    override def equals(x: Any): Boolean = x match {
+      case PtrT(null) | IntT => true
+      case PtrT(inner)       => inner == t
+      case _                 => false
+    }
+  }
 
   case class DerefPtr(ptr: Expr, pos: (Int, Int)) extends Expr with AssignLHS {
     override def getType(sTable: SymbolTable): Type = {
       val PtrT(inner) = ptr.getType(sTable)
+      semErrs = ptr.semErrs
       inner
     }
   }
@@ -58,6 +72,7 @@ object Rules {
   case class Addr(ptr: Expr, pos: (Int, Int)) extends Expr {
     override def getType(sTable: SymbolTable): Type = {
       val t = ptr.getType(sTable)
+      semErrs = ptr.semErrs
       PtrT(t)
     }
   }
