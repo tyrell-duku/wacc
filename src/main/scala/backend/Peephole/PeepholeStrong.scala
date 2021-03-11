@@ -62,6 +62,7 @@ object PeepholeStrong {
               load1 +=: newInstructions
               // Optimise instructinos from NEWINSTRUCTIONS
               optimise(newInstructions, optimised)
+            case _ => continueOptimise(load1, load2, instructions, optimised)
           }
         } else {
           continueOptimise(load1, load2, instructions, optimised)
