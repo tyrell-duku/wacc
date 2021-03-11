@@ -46,8 +46,11 @@ Git commit convention
 〈binary-oper〉::=  ‘*’|‘/’|‘%’|‘+’|‘-’|‘>’|‘>=’|‘<’|‘<=’|‘==’|‘!=’|‘&&’|‘||’
 〈ident〉::=  ( ‘’|‘a’-‘z’|‘A’-‘Z’ ) ( ‘’|‘a’-‘z’|‘A’-‘Z’|‘0’-‘9’ )*
 〈array-elem〉::=〈ident〉(‘[’〈expr〉‘]’)+
-〈int-liter〉::=〈int-sign〉?〈digit〉+
+〈int-liter〉::=〈int-sign〉? (〈digit〉+ |〈hex〉|〈octal〉|〈binary〉)
 〈digit〉::=  (‘0’-‘9’)
+〈hex〉::= ‘0x’ ((‘0’-‘9’) | (‘a’-‘f’)) +
+〈octal〉::= ‘0o’ (‘0’-‘7’) +
+〈binary〉::= ‘0b’ (‘0’-‘1’) +
 〈int-sign〉::=  ‘+’|‘-’
 〈bool-liter〉::=  ‘true’|‘false’
 〈char-liter〉::=  ‘'’〈character〉‘'’
