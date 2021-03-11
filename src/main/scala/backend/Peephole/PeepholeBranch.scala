@@ -15,43 +15,22 @@ object PeepholeBranch {
       remainingTail: mutable.ListBuffer[Instruction],
       optimised: mutable.ListBuffer[Instruction]
   ): Unit = {
-    op1 match {
-      case ImmInt(0) =>
-        if (op2 == ImmInt(0)) {
-          remainingTail.head match {
-            case BranchCond(EQ, label) =>
-              optimised += Branch(label)
-              return
-            case _ =>
-          }
-        } else if (op2 == ImmInt(1)) {
-          remainingTail.head match {
-            case BranchCond(EQ, label) =>
-              ignoreBlocks += label
-              optimise(remainingTail.tail, optimised)
-              return
-            case _ =>
-          }
+    (op1, op2) match {
+      case (ImmInt(0), ImmInt(0)) | (ImmInt(1), ImmInt(1)) =>
+        remainingTail.head match {
+          case BranchCond(EQ, label) =>
+            optimised += Branch(label)
+          case _ => optimise(remainingHead, remainingTail, optimised)
         }
-      case ImmInt(1) =>
-        if (op2 == ImmInt(1)) {
-          remainingTail.head match {
-            case BranchCond(EQ, label) =>
-              optimised += Branch(label)
-              return
-            case _ =>
-          }
-        } else if (op2 == ImmInt(0)) {
-          remainingTail.head match {
-            case BranchCond(EQ, label) =>
-              ignoreBlocks += label
-              optimise(remainingTail.tail, optimised)
-              return
-            case _ =>
-          }
+      case (ImmInt(0), ImmInt(1)) | (ImmInt(1), ImmInt(0)) =>
+        remainingTail.head match {
+          case BranchCond(EQ, label) =>
+            ignoreBlocks += label
+            optimise(remainingTail.tail, optimised)
+          case _ => optimise(remainingHead, remainingTail, optimised)
         }
-      case _ =>
+      case _ => optimise(remainingHead, remainingTail, optimised)
     }
-    optimise(remainingHead, remainingTail, optimised)
+
   }
 }
