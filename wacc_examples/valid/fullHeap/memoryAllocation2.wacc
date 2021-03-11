@@ -1,0 +1,15 @@
+# Output:
+# (pointer-address)
+
+# Program:
+
+begin
+  char* str = calloc(5, sizeof(char));
+  *(str) = 'h';
+  *(str + 1) = 'e';
+  *(str + 2) = 'l';
+  *(str + 3) = 'l';
+  *(str + 4) = 'o';
+  println str;
+  free str
+end

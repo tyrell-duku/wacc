@@ -1,0 +1,15 @@
+# evaluating greater-than
+
+# Output:
+# false
+# true
+
+# Program:
+
+begin
+  int x = 0b10;
+  int y = 0b110 ;
+  int z = 0b10 ;
+  println x > y ;
+  println y > z
+end

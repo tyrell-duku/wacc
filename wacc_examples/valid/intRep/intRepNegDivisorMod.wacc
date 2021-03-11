@@ -1,0 +1,12 @@
+# modulus by a negative number
+
+# Output:
+# 2
+
+# Program:
+
+begin
+  int x = 0b101 ;
+  int y = -0o3 ;
+  println x % y
+end

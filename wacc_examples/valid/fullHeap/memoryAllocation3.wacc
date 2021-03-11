@@ -1,0 +1,9 @@
+# Uses C-style pointers.
+
+# Program:
+
+begin
+  string *x = malloc(4);
+  x = realloc(x, 10);
+  free x
+end

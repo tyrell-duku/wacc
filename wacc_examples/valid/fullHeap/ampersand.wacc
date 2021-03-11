@@ -1,0 +1,8 @@
+# Uses C-style pointers.
+
+# Program:
+
+begin
+  int x = 10;
+  free &x
+end

@@ -31,7 +31,7 @@ object Print {
       case ArrayT(CharT) => PrintString
       case ArrayT(_)     => PrintReference
       // CharT does not have a pre defined function
-      case _ => null
+      case _ => ???
     }
   }
   /* Translates print statements to the internal representation. ISNEWLINE is

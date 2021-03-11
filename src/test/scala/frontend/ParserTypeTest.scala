@@ -6,7 +6,7 @@ import frontend.ExprParser._
 import frontend.StatParser._
 import frontend.Lexer._
 
-class ParserBaseTypeTest extends AnyFunSuite {
+class FrontendParserBaseTypeTest extends AnyFunSuite {
   test("Successfully parses int type") {
     assert(baseType.runParser("int").contains(IntT))
   }
@@ -28,7 +28,7 @@ class ParserBaseTypeTest extends AnyFunSuite {
   }
 }
 
-class ParserArrayTypeTest extends AnyFunSuite {
+class FrontendParserArrayTypeTest extends AnyFunSuite {
   test("Successfully parses base type arrays") {
     assert(types.runParser("int[]").contains(ArrayT(IntT)))
     assert(types.runParser("string[]").contains(ArrayT(StringT)))
@@ -46,7 +46,7 @@ class ParserArrayTypeTest extends AnyFunSuite {
   }
 }
 
-class ParserPairTypeTest extends AnyFunSuite {
+class FrontendParserPairTypeTest extends AnyFunSuite {
   test("Successfully parses pair of base types") {
     assert(
       types

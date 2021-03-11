@@ -8,24 +8,25 @@ import frontend.Rules._
 import frontend.Lexer._
 import frontend.LiterParser._
 import frontend.ExprParser._
+import frontend.HeapParser.{derefPtr, memoryAlloc}
 
 object StatParser {
 
   // <ident> | <array-elem> | <pair-elem>
-  val assignLHS: Parsley[AssignLHS] = pairElem <|> arrayElem <\> identifier
+  val assignLHS: Parsley[AssignLHS] =
+    derefPtr <|> pairElem <|> arrayElem <\> identifier
 
   // <expr> | <array-liter> | newpair(<expr>, <expr>) | <pair-elem> | call <ident> (<arg-list>?)
   val assignRHS: Parsley[AssignRHS] =
+    memoryAlloc <|>
     ("newpair" *> lexer
       .parens(
         Newpair(expr, "," *> expr)
       )) <|>
-      (
-        Call(
-          "call" *>
-            identifier,
-          lexer.parens(option(argList))
-        )
+      Call(
+        "call" *>
+          identifier,
+        lexer.parens(option(argList))
       ) <|> pairElem <|> expr <|> arrayLiter
 
   // "skip"

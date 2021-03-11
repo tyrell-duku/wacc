@@ -3,13 +3,20 @@ import frontend.Rules._
 import frontend.ExprParser._
 import frontend.Lexer._
 
-class ParserExprTest extends AnyFunSuite {
+class FrontendParserExprTest extends AnyFunSuite {
   test("Successfully parses expr within parentheses") {
     assert(
       expr
         .runParser("((10))+(5)")
         .contains(
           Plus(IntLiter(10, (1, 3)), IntLiter(5, (1, 9)), (1, 7))
+        )
+    )
+    assert(
+      expr
+        .runParser("((26))+(sizeof(int[]))")
+        .contains(
+          Plus(IntLiter(26, (1, 3)), SizeOf(ArrayT(IntT), (1, 9)), (1, 7))
         )
     )
   }
@@ -95,9 +102,20 @@ class ParserExprTest extends AnyFunSuite {
           )
         )
     )
+    assert(
+      expr
+        .runParser("2*8+sizeof(int)")
+        .contains(
+          Plus(
+            Mul(IntLiter(2, (1, 1)), IntLiter(8, (1, 3)), (1, 2)),
+            SizeOf(IntT, (1, 5)),
+            (1, 4)
+          )
+        )
+    )
   }
 
-  test("Successfully fails parsing empty parenthesis ") {
+  test("Successfully fails parsing empty parenthesis") {
     assert(expr.runParser("()").isFailure)
   }
 
