@@ -89,19 +89,16 @@ object PeepholeStrong {
       (op1, op2) match {
         case (ImmMem(0), _) | (_, ImmMem(0)) =>
           optimise(Ldr(r1, ImmMem(0)), instructions.tail.tail.tail, optimised)
-          return
         case (ImmMem(n1), ImmMem(n2)) =>
           val shiftAmount1 = getShiftAmount(n1)
           val shiftAmount2 = getShiftAmount(n2)
           if (shiftAmount1 > shiftAmount2 && shiftAmount1 != LOG_ERROR) {
-
             val newInstructions = instructions.drop(3)
             if (shiftAmount1 != 0) {
               Mov(r1, LSL(r1, ImmInt(shiftAmount1))) +=: newInstructions
             }
             Ldr(r1, op2) +=: newInstructions
             optimise(newInstructions, optimised)
-            return
           } else if (
             shiftAmount1 <= shiftAmount2 && shiftAmount2 != LOG_ERROR
           ) {
@@ -111,12 +108,20 @@ object PeepholeStrong {
             }
             Ldr(r1, op1) +=: newInstructions
             optimise(newInstructions, optimised)
-            return
+          } else {
+            continueOptimise(
+              Ldr(r1, op1),
+              Ldr(r2, op2),
+              instructions,
+              optimised
+            )
           }
         case _ =>
+          continueOptimise(Ldr(r1, op1), Ldr(r2, op2), instructions, optimised)
       }
+    } else {
+      continueOptimise(Ldr(r1, op1), Ldr(r2, op2), instructions, optimised)
     }
-    continueOptimise(Ldr(r1, op1), Ldr(r2, op2), instructions, optimised)
   }
 
   def peepholeStrong(
