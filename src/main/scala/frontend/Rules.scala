@@ -29,7 +29,19 @@ object Rules {
 
   case class Realloc(ptr: Ident, size: Expr, pos: (Int, Int))
       extends MemoryAlloc {
-    override def getType(sTable: SymbolTable): Type = PtrT(null)
+    override def getType(sTable: SymbolTable): Type = {
+      val t = size.getType(sTable)
+      semErrs = size.semErrs
+      if (t != IntT) {
+        semErrs += TypeMismatch(size, t, List(IntT))
+      }
+      val ptrT = ptr.getType(sTable)
+      semErrs ++= ptr.semErrs
+      if (ptrT != PtrT(null)) {
+        semErrs += TypeMismatch(ptr, ptrT, List(PtrT(null)))
+      }
+      ptrT
+    }
   }
   object Realloc {
     def apply(ptr: Parsley[Ident], size: Parsley[Expr]): Parsley[Realloc] =
