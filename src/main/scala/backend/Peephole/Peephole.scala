@@ -7,21 +7,40 @@ import backend.IR.Condition._
 import backend.PeepholeMov._
 import backend.PeepholeBranch._
 import backend.PeepholeStrong._
-
-import scala.collection.mutable.ListBuffer
+import backend.DefinedFuncs.PreDefinedFuncs._
+import scala.collection._
 
 object Peephole {
 
-  val ignoreBlocks = ListBuffer.empty[Label]
+  val predefinedFuncs = mutable.ListBuffer(
+    // All predefined functions should not be optimised
+    ArrayBounds.funcLabel,
+    DivideByZero.funcLabel,
+    Overflow.funcLabel,
+    FreePair.funcLabel,
+    FreeArray.funcLabel,
+    NullPointer.funcLabel,
+    RuntimeError.funcLabel,
+    PrintInt.funcLabel,
+    PrintBool.funcLabel,
+    PrintString.funcLabel,
+    PrintReference.funcLabel,
+    PrintLn.funcLabel,
+    ReadInt.funcLabel,
+    ReadInt.funcLabel
+  )
+
+  /* Blocks of instructions that should be ignored */
+  val ignoreBlocks = mutable.ListBuffer.empty[Label]
 
   def optimiseBlock(
       block: (Label, List[Instruction])
   ): (Label, List[Instruction]) = {
     val (label, instructions) = block
 
-    val remaining = ListBuffer.empty[Instruction]
+    val remaining = mutable.ListBuffer.empty[Instruction]
     remaining.addAll(instructions)
-    var instructionsBuff = ListBuffer.empty[Instruction]
+    var instructionsBuff = mutable.ListBuffer.empty[Instruction]
 
     if (!instructions.isEmpty) {
       instructionsBuff = optimise(instructions(0), remaining.tail)
@@ -32,9 +51,9 @@ object Peephole {
 
   def optimise(
       cur: Instruction,
-      remaining: ListBuffer[Instruction]
-  ): ListBuffer[Instruction] = {
-    val instructionsBuff = ListBuffer.empty[Instruction]
+      remaining: mutable.ListBuffer[Instruction]
+  ): mutable.ListBuffer[Instruction] = {
+    val instructionsBuff = mutable.ListBuffer.empty[Instruction]
     if (remaining.isEmpty) {
       instructionsBuff += cur
     } else {
@@ -84,11 +103,15 @@ object Peephole {
   def optimiseBlocks(
       blocks: List[(Label, List[Instruction])]
   ): List[(Label, List[Instruction])] = {
-    val returnBlocks = ListBuffer.empty[(Label, List[Instruction])]
+    val returnBlocks = mutable.ListBuffer.empty[(Label, List[Instruction])]
     for (b <- blocks) {
       val (label, _) = b
       if (!ignoreBlocks.contains(label)) {
-        returnBlocks += optimiseBlock(b)
+        if (predefinedFuncs.contains(label)) {
+          returnBlocks += b
+        } else {
+          returnBlocks += optimiseBlock(b)
+        }
       }
     }
     returnBlocks.toList
