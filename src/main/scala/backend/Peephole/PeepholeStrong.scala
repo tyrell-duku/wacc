@@ -3,7 +3,7 @@ package backend
 import backend.IR.InstructionSet._
 import backend.IR.Operand._
 import backend.IR.Condition._
-import backend.DefinedFuncs.PreDefinedFuncs.Overflow
+import backend.DefinedFuncs.PreDefinedFuncs._
 import backend.Peephole._
 import scala.collection._
 import scala.math._
@@ -81,6 +81,20 @@ object PeepholeStrong {
       ) {
         op2 match {
           case ImmMem(n) =>
+            if (n == 0) {
+              remainingTail.tail.head match {
+                case Mov(rd, r3) =>
+                  if (r3 == r2) {
+                    instructionsBuff += Ldr(
+                      R0,
+                      DataLabel(Label("msg_divide_by_zero"))
+                    )
+                    instructionsBuff += BranchLink(RuntimeError.funcLabel)
+                    return instructionsBuff
+                  }
+                case _ =>
+              }
+            }
             val shiftAmount = log2(n)
             if (
               shiftAmount == floor(shiftAmount) &&
