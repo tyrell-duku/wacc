@@ -1,5 +1,6 @@
 import org.scalatest.funsuite.AnyFunSuite
 import frontend.Parser._
+import Array.concat
 import frontend.Rules._
 import parsley.combinator.eof
 import java.io.File

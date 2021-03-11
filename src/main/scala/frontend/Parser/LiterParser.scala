@@ -2,15 +2,22 @@ package frontend
 
 import parsley.Parsley
 import parsley.Parsley._
-import parsley.combinator.{option, many}
+import parsley.combinator.{many, manyN, option}
 import parsley.implicits.charLift
-import parsley.expr.{Ops, Prefix, Postfix, precedence}
+import parsley.expr.{Ops, Postfix, Prefix, precedence}
 import parsley.character.{noneOf, oneOf}
 import parsley.lift.lift2
 import frontend.Rules._
 import frontend.Lexer._
+import java.lang.Integer.parseInt
+import java.lang.NumberFormatException
+import scala.math.pow
 
 object LiterParser {
+  private val overflowErrorMsg = "Integer is not between -2^31 and 2^31 - 1"
+  val BinaryBase = 2
+  private val MaxBinLength = 31
+
   // "int" | "bool"  | "char" | "string"
   lazy val baseType: Parsley[BaseType] =
     ("int" #> IntT) <|>
@@ -43,13 +50,38 @@ object LiterParser {
   // '+' | '-'
   val intSign: Parsley[IntSign] = ("+" #> Pos) <|> ("-" #> Neg)
 
+  // <oct-liter> "0o" ('0'-'7')+
+  val octalInt: Parsley[Int] = lexer.octal
+
+  // <hex-liter> "0x" ('0' - '9' | 'a' - 'f')+
+  val hexadecimalInt: Parsley[Int] = lexer.hexadecimal
+
+  /* Converts a binary number to denary value if it does not overflow. */
+  val binToDen: PartialFunction[(Option[IntSign], List[Char]), Int] = {
+    case xs if (xs._2.length <= MaxBinLength) =>
+      val (sign, bs) = xs
+      var num = Integer.parseInt(bs.mkString, BinaryBase)
+      sign match {
+        case Some(Neg) => -num
+        case _         => num
+      }
+  }
+
+  // <bin-liter> "0b" ('0' | '1')+
+  val binInt: Parsley[Int] =
+    (option(intSign) <~> ("0b" <|> "0B") *> manyN(1, '0' <|> '1')
+     <* lexer.whiteSpace)
+     .collectMsg(overflowErrorMsg)(binToDen)
+
   //  <int-sign>? <digit>+  Range[-2^31 < x < 2^31 - 1]
-  val intLiter: Parsley[IntLiter] =
-    IntLiter(
-      (option(lookAhead(intSign)) <~> lexer.integer)
-        .guard(notOverflow, "Integer is not between -2^31 and 2^31 - 1")
-        .map((x: (Option[IntSign], Int)) => x._2)
-    ) ? "number"
+  val intLiter: Parsley[IntLiter] = IntLiter(
+    (option(lookAhead(intSign))
+      <~> (binInt <\> (lexer.integer <* notFollowedBy('b')) <|> (octalInt ?
+        "octal (base-8) integer") <|>
+        (hexadecimalInt ? "hexadecimal (base-16) integer")))
+      .guard(notOverflow, overflowErrorMsg)
+      .map((x: (Option[IntSign], Int)) => x._2) ? "number"
+  )
 
   // Determines whether the integer X is within the acceptable range for integers
   def notOverflow(x: (Option[IntSign], Int)): Boolean = {

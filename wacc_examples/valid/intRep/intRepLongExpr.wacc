@@ -1,0 +1,14 @@
+# tests whether the compiler can handle long expressions
+
+# Output:
+# #empty#
+
+# Exit:
+# 153
+
+begin
+
+  int x = 0x1 + (0o2 + (0x3 + (0b100 + (0x5 + (0x6 + (0x7 + (0x8 + (0x9 + (0xa + (0xB + (12 + (13 + (14 + (15 + (16 + 17)))))))))))))));
+  exit x
+
+end

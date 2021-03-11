@@ -1,0 +1,18 @@
+# evaluating equality
+
+# Output:
+# false
+# false
+# true
+
+# Program:
+
+begin
+  int x = 0b01;
+  int y = 0b10;
+  int z = 0b10;
+  bool b = x == y ;
+  println b ;
+  println x == y ;
+  println y == z
+end

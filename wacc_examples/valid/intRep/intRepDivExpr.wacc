@@ -1,0 +1,12 @@
+# evaluating integer division
+
+# Output:
+# 1
+
+# Program:
+
+begin
+  int x = 0b101;
+  int y = 0b11;
+  println x / y
+end

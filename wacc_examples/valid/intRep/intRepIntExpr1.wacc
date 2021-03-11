@@ -1,0 +1,15 @@
+# evaluating a moderately complex integer expression
+
+# Output:
+# Correct
+
+# Program:
+
+begin
+  int a = ( 0o12 * 0x1 + 0x2 * 0o17 );
+  if a == 40 then
+    println "Correct"
+  else
+    println "Wrong"
+  fi
+end
