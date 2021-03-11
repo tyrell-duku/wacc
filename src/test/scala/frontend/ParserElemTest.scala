@@ -4,7 +4,7 @@ import parsley.combinator.eof
 import frontend.ExprParser._
 import frontend.Lexer._
 
-class ParserArrayElemTest extends AnyFunSuite {
+class FrontendParserArrayElemTest extends AnyFunSuite {
   test("Successfully parses double array-elem") {
     assert(
       arrayElem
@@ -56,7 +56,7 @@ class ParserArrayElemTest extends AnyFunSuite {
   }
 }
 
-class ParserPairElemTest extends AnyFunSuite {
+class FrontendParserPairElemTest extends AnyFunSuite {
   val pairElemWhitespace = lexer.whiteSpace *> pairElem <* eof
 
   test("Successfully parses fst") {

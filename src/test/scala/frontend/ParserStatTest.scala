@@ -4,7 +4,7 @@ import frontend.StatParser._
 import frontend.Lexer._
 import parsley.combinator.eof
 
-class ParserStatTest extends AnyFunSuite {
+class FrontendParserStatTest extends AnyFunSuite {
   val statWhitespace = lexer.whiteSpace *> stat <* eof
 
   test("Successfully parses skip statement") {

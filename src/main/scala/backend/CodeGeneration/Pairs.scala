@@ -112,14 +112,14 @@ object Pairs {
         case Pair(PairElemT(fstType), _) => fstType
         case Pair(PairElemPair, _)       => Pair(null, null)
         // Semantically incorrect
-        case _ => null
+        case _ => ???
       }
     } else {
       t match {
         case Pair(_, PairElemT(sndType)) => sndType
         case Pair(_, PairElemPair)       => Pair(null, null)
         // Semantically incorrect
-        case _ => null
+        case _ => ???
       }
     }
     val (isByte, instrs) = assignRHS(pairElemType, rhs, rd)

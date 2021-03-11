@@ -22,7 +22,7 @@ object CodeGenerator {
 
   /* Values required for code generation. */
   var currentSP = 0
-  var sTable: SymbolTable = null
+  var sTable: SymbolTable = _
   var scopeSP = 0
   var currentLabel = Label("main")
 
@@ -42,6 +42,7 @@ object CodeGenerator {
   val MAX_INT_IMM = 1024
 
   val NO_OFFSET = 0
+  val RESET_INT = 0
   val IS_FST_ELEM = true
   val IS_SND_ELEM = false
 
@@ -76,7 +77,7 @@ object CodeGenerator {
       Push(ListBuffer(LR)) +=: subSP(curScopeMaxSPDepth)
     )
     var toAdd = addSP(currentSP) ++ ListBuffer(
-      Ldr(resultReg, ImmMem(0)),
+      Ldr(resultReg, ImmMem(RESET_INT)),
       Pop(ListBuffer(PC)),
       Ltorg
     )
@@ -114,10 +115,9 @@ object CodeGenerator {
   }
 
   /* Gets the inner type of the array. */
-  def getArrayInnerType(t: Type): Type = t match {
-    case ArrayT(inner) => inner
-    // invalid case, will never enter
-    case _ => null
+  def getArrayInnerType(t: Type): Type = {
+    val ArrayT(inner) = t
+    inner
   }
 
   /* Gets the type of the given expression E. */
@@ -133,9 +133,7 @@ object CodeGenerator {
         t
       case ArrayElem(id, es, _) =>
         var (_, t) = sTable(id)
-        for (_ <- es) {
-          t = getArrayInnerType(t)
-        }
+        t = es.foldLeft(t)((x, _) => getArrayInnerType(x))
         t
       case _: Not        => BoolT
       case _: Negation   => IntT
