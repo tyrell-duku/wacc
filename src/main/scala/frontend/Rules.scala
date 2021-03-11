@@ -269,6 +269,10 @@ object Rules {
       case Pair(_, _) => true
       case _          => false
     }
+    def isPtr: Boolean = this match {
+      case PtrT(_) => true
+      case _       => false
+    }
   }
 
   case object Any extends Type {
