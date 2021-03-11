@@ -11,6 +11,8 @@ import frontend.Rules._
 import frontend.Lexer._
 
 object LiterParser {
+  private val overflowErrorMsg = "Integer is not between -2^31 and 2^31 - 1"
+
   // "int" | "bool"  | "char" | "string"
   lazy val baseType: Parsley[BaseType] =
     ("int" #> IntT) <|>
@@ -50,13 +52,13 @@ object LiterParser {
   val hexadecimalInt: Parsley[Int] = lexer.hexadecimal
 
   //  <int-sign>? <digit>+  Range[-2^31 < x < 2^31 - 1]
-  val intLiter: Parsley[IntLiter] =
-    IntLiter(
-      (option(lookAhead(intSign)) <~> lexer.integer)
-        .guard(notOverflow, "Integer is not between -2^31 and 2^31 - 1")
-        .map((x: (Option[IntSign], Int)) => x._2)
-    ) ? "number" <|> (IntLiter(octalInt) ? "octal (base-8) integer") <|>
-    (IntLiter(hexadecimalInt) ? "hexadecimal (base-16) integer")
+  val intLiter: Parsley[IntLiter] = IntLiter(
+    (option(lookAhead(intSign))
+      <~> (lexer.integer <|> (octalInt ? "octal (base-8) integer") <|>
+        (hexadecimalInt ? "hexadecimal (base-16) integer")))
+      .guard(notOverflow, "Integer is not between -2^31 and 2^31 - 1")
+      .map((x: (Option[IntSign], Int)) => x._2) ? "number"
+  )
 
   // Determines whether the integer X is within the acceptable range for integers
   def notOverflow(x: (Option[IntSign], Int)): Boolean = {

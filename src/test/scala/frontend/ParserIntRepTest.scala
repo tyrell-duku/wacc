@@ -46,14 +46,24 @@ class FrontendParserIntRepTest extends AnyFunSuite {
     assert(intLiter.runParser("0b10000000000000000000000000000000").isFailure)
   }
 
-  test("Successfully fails to parse overflow negative binary number")(pending)
+  ignore("Successfully fails to parse negative overflow binary number") {
+    assert(intLiter.runParser("0b10000000000000000000000000000000").isFailure)
+  }
 
-  ignore("Successfully fails to parse overflow octal number") {
+  test("Successfully fails to parse overflow octal number") {
     assert(intLiter.runParser("0o20000000000").isFailure)
   }
 
-  ignore("Successfully fails to parse overflow negative octal number") {
-    assert(intLiter.runParser("-0o20000000000").isFailure)
+  test("Successfully fails to parse overflow negative octal number") {
+    assert(intLiter.runParser("-0o20000000001").isFailure)
+  }
+
+  test("Successfully fails to parse overflow hexadecimal number") {
+    assert(intLiter.runParser("0x80000000").isFailure)
+  }
+
+  test("Successfully fails to parse overflow negative hexadecimal number") {
+    assert(intLiter.runParser("-0x80000001").isFailure)
   }
 
 }
