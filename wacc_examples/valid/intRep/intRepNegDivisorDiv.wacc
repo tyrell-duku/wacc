@@ -1,0 +1,12 @@
+# division by a negative number
+
+# Output:
+# -2
+
+# Program:
+
+begin
+  int x = 0b100 ;
+  int y = -0o2 ;
+  println x / y
+end
