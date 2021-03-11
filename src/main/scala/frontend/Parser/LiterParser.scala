@@ -55,26 +55,28 @@ object LiterParser {
 
   // <hex-liter> "0x" ('0' - '9' | 'a' - 'f')+
   val hexadecimalInt: Parsley[Int] = lexer.hexadecimal
-  
-  /* Converts a binary number to denary value. */
+
+  /* Converts a binary number to denary value if it does not overflow. */
   val binToDen: PartialFunction[(Option[IntSign], List[Char]), Int] = {
     case xs if (xs._2.length <= MaxBinLength) =>
       val (sign, bs) = xs
       var num = Integer.parseInt(bs.mkString, BinaryBase)
       sign match {
         case Some(Neg) => -num
-        case _ => num
+        case _         => num
       }
   }
 
+  // <bin-liter> "0b" ('0' | '1')+
   val binInt: Parsley[Int] =
-    (option(intSign) <~> ("0b" <|> "0B") *> manyN(1, '0' <|> '1')).collectMsg(overflowErrorMsg)(binToDen)
+    (option(intSign) <~> ("0b" <|> "0B") *> manyN(1, '0' <|> '1'))
+      .collectMsg(overflowErrorMsg)(binToDen)
 
   //  <int-sign>? <digit>+  Range[-2^31 < x < 2^31 - 1]
-  val intLiter: Parsley[IntLiter] =  IntLiter(
+  val intLiter: Parsley[IntLiter] = IntLiter(
     (option(lookAhead(intSign))
-      <~> (binInt <\> (lexer.integer <* notFollowedBy('b'))  <|> (octalInt ?
-      "octal (base-8) integer") <|>
+      <~> (binInt <\> (lexer.integer <* notFollowedBy('b')) <|> (octalInt ?
+        "octal (base-8) integer") <|>
         (hexadecimalInt ? "hexadecimal (base-16) integer")))
       .guard(notOverflow, overflowErrorMsg)
       .map((x: (Option[IntSign], Int)) => x._2) ? "number"
