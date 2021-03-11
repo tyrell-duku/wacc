@@ -42,8 +42,9 @@ Git commit convention
           〈pair-liter〉| 〈ident〉| 〈array-elem〉| 〈unary-oper〉 〈expr〉|
           〈expr〉 〈binary-oper〉 〈expr〉|‘(’〈expr〉‘)’ | 〈deref-pointer〉| 
           〈addr〉
-〈unary-oper〉::=  ‘!’|‘-’|‘len’|‘ord’|‘chr’
-〈binary-oper〉::=  ‘*’|‘/’|‘%’|‘+’|‘-’|‘>’|‘>=’|‘<’|‘<=’|‘==’|‘!=’|‘&&’|‘||’
+〈unary-oper〉::=  ‘!’|‘-’|‘len’|‘ord’|‘chr’|‘~’
+〈binary-oper〉::=  ‘*’|‘/’|‘%’|‘+’|‘-’|‘>’|‘>=’|‘<’|‘<=’|‘==’|‘!=’|‘&&’|‘||’|
+                   ‘&’|‘|’|‘^’|‘<<’ |‘>>’
 〈ident〉::=  ( ‘’|‘a’-‘z’|‘A’-‘Z’ ) ( ‘’|‘a’-‘z’|‘A’-‘Z’|‘0’-‘9’ )*
 〈array-elem〉::=〈ident〉(‘[’〈expr〉‘]’)+
 〈int-liter〉::=〈int-sign〉? (〈digit〉+ |〈hex〉|〈octal〉|〈binary〉)
