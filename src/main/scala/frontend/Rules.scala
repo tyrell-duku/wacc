@@ -52,7 +52,19 @@ object Rules {
 
   case class Calloc(num: Expr, size: Expr, pos: (Int, Int))
       extends MemoryAlloc {
-    override def getType(sTable: SymbolTable): Type = PtrT(null)
+    override def getType(sTable: SymbolTable): Type = {
+      val t = size.getType(sTable)
+      semErrs = size.semErrs
+      if (t != IntT) {
+        semErrs += TypeMismatch(size, t, List(IntT))
+      }
+      val numT = num.getType(sTable)
+      semErrs ++= num.semErrs
+      if (numT != IntT) {
+        semErrs += TypeMismatch(num, numT, List(IntT))
+      }
+      PtrT(null)
+    }
   }
   object Calloc {
     def apply(num: Parsley[Expr], size: Parsley[Expr]): Parsley[Calloc] =
