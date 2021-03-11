@@ -44,28 +44,37 @@ object PeepholeStrong {
               )
               optimised += BranchLink(RuntimeError.funcLabel)
               return
+            } else {
+              continueOptimise(
+                Ldr(r1, op1),
+                Ldr(r2, op2),
+                instructions,
+                optimised
+              )
             }
           case _ =>
+            continueOptimise(
+              Ldr(r1, op1),
+              Ldr(r2, op2),
+              instructions,
+              optimised
+            )
         }
       case ImmMem(n) =>
         val shiftAmount = getShiftAmount(n)
         if (!(shiftAmount == LOG_ERROR)) {
-          instructions.head match {
-            case Mov(rd, _) =>
-              val newInstructions = instructions.drop(4)
-
-              if (shiftAmount != 0) {
-                Mov(r1, LSR(r1, ImmInt(shiftAmount))) +=: newInstructions
-              }
-              Ldr(r1, op1) +=: newInstructions
-              optimise(newInstructions, optimised)
-              return
-            case _ =>
+          val newInstructions = instructions.drop(4)
+          if (shiftAmount != 0) {
+            Mov(r1, LSR(r1, ImmInt(shiftAmount))) +=: newInstructions
           }
+          Ldr(r1, op1) +=: newInstructions
+          optimise(newInstructions, optimised)
+        } else {
+          continueOptimise(Ldr(r1, op1), Ldr(r2, op2), instructions, optimised)
         }
       case _ =>
+        continueOptimise(Ldr(r1, op1), Ldr(r2, op2), instructions, optimised)
     }
-    continueOptimise(Ldr(r1, op1), Ldr(r2, op2), instructions, optimised)
   }
 
   def multiplyReduction(
