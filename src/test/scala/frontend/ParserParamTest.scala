@@ -52,7 +52,7 @@ class FrontendParserParamTest extends AnyFunSuite {
 
   test("Successfully fails to parse param with invalid ident") {
     assert(paramWhitespace.runParser("int 1var").isFailure)
-    assert(paramWhitespace.runParser("bool[] *var").isFailure)
+    assert(paramWhitespace.runParser("bool[] ?var").isFailure)
   }
 }
 

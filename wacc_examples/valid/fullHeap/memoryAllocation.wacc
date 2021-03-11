@@ -1,0 +1,9 @@
+# Uses C-style pointers.
+
+# Program:
+
+begin
+  int malloc90 = 10;
+  int *x = malloc90;
+  free x
+end
