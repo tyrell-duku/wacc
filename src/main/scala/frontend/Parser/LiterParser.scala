@@ -2,16 +2,21 @@ package frontend
 
 import parsley.Parsley
 import parsley.Parsley._
-import parsley.combinator.{option, many}
+import parsley.combinator.{many, manyN, option}
 import parsley.implicits.charLift
-import parsley.expr.{Ops, Prefix, Postfix, precedence}
+import parsley.expr.{Ops, Postfix, Prefix, precedence}
 import parsley.character.{noneOf, oneOf}
 import parsley.lift.lift2
 import frontend.Rules._
 import frontend.Lexer._
+import java.lang.Integer.parseInt
+import java.lang.NumberFormatException
+import scala.math.pow
 
 object LiterParser {
   private val overflowErrorMsg = "Integer is not between -2^31 and 2^31 - 1"
+  val BinaryBase = 2
+  private val MaxBinLength = 31
 
   // "int" | "bool"  | "char" | "string"
   lazy val baseType: Parsley[BaseType] =
@@ -50,13 +55,28 @@ object LiterParser {
 
   // <hex-liter> "0x" ('0' - '9' | 'a' - 'f')+
   val hexadecimalInt: Parsley[Int] = lexer.hexadecimal
+  
+  /* Converts a binary number to denary value. */
+  val binToDen: PartialFunction[(Option[IntSign], List[Char]), Int] = {
+    case xs if (xs._2.length <= MaxBinLength) =>
+      val (sign, bs) = xs
+      var num = Integer.parseInt(bs.mkString, BinaryBase)
+      sign match {
+        case Some(Neg) => -num
+        case _ => num
+      }
+  }
+
+  val binInt: Parsley[Int] =
+    (option(intSign) <~> ("0b" <|> "0B") *> manyN(1, '0' <|> '1')).collectMsg(overflowErrorMsg)(binToDen)
 
   //  <int-sign>? <digit>+  Range[-2^31 < x < 2^31 - 1]
-  val intLiter: Parsley[IntLiter] = IntLiter(
+  val intLiter: Parsley[IntLiter] =  IntLiter(
     (option(lookAhead(intSign))
-      <~> (lexer.integer <|> (octalInt ? "octal (base-8) integer") <|>
+      <~> (binInt <\> (lexer.integer <* notFollowedBy('b'))  <|> (octalInt ?
+      "octal (base-8) integer") <|>
         (hexadecimalInt ? "hexadecimal (base-16) integer")))
-      .guard(notOverflow, "Integer is not between -2^31 and 2^31 - 1")
+      .guard(notOverflow, overflowErrorMsg)
       .map((x: (Option[IntSign], Int)) => x._2) ? "number"
   )
 
