@@ -4,18 +4,17 @@ import backend.IR.InstructionSet._
 import backend.IR.Operand._
 import backend.IR.Condition._
 import backend.Peephole._
-
-import scala.collection.mutable.ListBuffer
+import scala.collection._
 
 object PeepholeBranch {
 
   def peepholeBranch(
       op1: Operand,
       op2: Operand,
-      instructionsBuff: ListBuffer[Instruction],
+      instructionsBuff: mutable.ListBuffer[Instruction],
       remainingHead: Instruction,
-      remainingTail: ListBuffer[Instruction]
-  ): ListBuffer[Instruction] = {
+      remainingTail: mutable.ListBuffer[Instruction]
+  ): mutable.ListBuffer[Instruction] = {
     op1 match {
       case ImmInt(0) =>
         if (op2 == ImmInt(0)) {
