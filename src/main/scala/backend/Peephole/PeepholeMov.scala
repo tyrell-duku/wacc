@@ -21,7 +21,5 @@ object PeepholeMov {
     } else {
       optimise(instructions.head, instructions.tail, optimised)
     }
-
   }
-
 }

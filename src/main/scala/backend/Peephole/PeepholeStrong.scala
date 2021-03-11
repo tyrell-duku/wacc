@@ -65,8 +65,7 @@ object PeepholeStrong {
         }
       case _ =>
     }
-    optimised += Ldr(r1, op1)
-    optimise(Ldr(r2, op2), instructions, optimised)
+    continueOptimise(Ldr(r1, op1), Ldr(r2, op2), instructions, optimised)
   }
 
   def multiplyReduction(
@@ -108,8 +107,7 @@ object PeepholeStrong {
         case _ =>
       }
     }
-    optimised += Ldr(r1, op1)
-    optimise(Ldr(r2, op2), instructions, optimised)
+    continueOptimise(Ldr(r1, op1), Ldr(r2, op2), instructions, optimised)
   }
 
   def peepholeStrong(
@@ -145,8 +143,6 @@ object PeepholeStrong {
         return
       }
     }
-
-    optimised += Ldr(r1, op1)
-    optimise(Ldr(r2, op2), instructions, optimised)
+    continueOptimise(Ldr(r1, op1), Ldr(r2, op2), instructions, optimised)
   }
 }

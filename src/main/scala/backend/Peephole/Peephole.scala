@@ -31,6 +31,16 @@ object Peephole {
     (label, optimised.toList)
   }
 
+  def continueOptimise(
+      cur: Instruction,
+      remainingHead: Instruction,
+      remainingTail: mutable.ListBuffer[Instruction],
+      optimised: mutable.ListBuffer[Instruction]
+  ): Unit = {
+    optimised += cur
+    optimise(remainingHead, remainingTail, optimised)
+  }
+
   def optimise(
       instructions: mutable.ListBuffer[Instruction],
       optimised: mutable.ListBuffer[Instruction]
@@ -50,45 +60,39 @@ object Peephole {
     } else {
       val remainingHead = instructions.head
       val remainingTail = instructions.tail
-      cur match {
-        case Mov(r1, op1) =>
-          remainingHead match {
-            case Mov(rd, r2) =>
-              if (r1 == r2) {
-                peepholeMov(r1, op1, rd, r2, remainingTail, optimised)
-                return
-              }
-            case Cmp(rd, op2) =>
-              if (r1 == rd) {
-                peepholeBranch(
-                  op1,
-                  op2,
-                  remainingHead,
-                  remainingTail,
-                  optimised
-                )
-                return
-              }
-            case _ =>
+      (cur, remainingHead) match {
+        case (Mov(r1, op1), Mov(rd, r2)) =>
+          if (r1 == r2) {
+            peepholeMov(r1, op1, rd, r2, remainingTail, optimised)
+            return
+          } else {
+            continueOptimise(cur, remainingHead, remainingTail, optimised)
           }
-        case Ldr(r1, op1) =>
-          remainingHead match {
-            case Ldr(r2, op2) =>
-              peepholeStrong(
-                r1,
-                op1,
-                r2,
-                op2,
-                remainingTail,
-                optimised
-              )
-              return
-            case _ =>
+        case (Mov(r1, op1), Cmp(rd, op2)) =>
+          if (r1 == rd) {
+            peepholeBranch(
+              op1,
+              op2,
+              remainingHead,
+              remainingTail,
+              optimised
+            )
+          } else {
+            continueOptimise(cur, remainingHead, remainingTail, optimised)
           }
+        case (Ldr(r1, op1), Ldr(r2, op2)) =>
+          peepholeStrong(
+            r1,
+            op1,
+            r2,
+            op2,
+            remainingTail,
+            optimised
+          )
+          return
         case _ =>
+          continueOptimise(cur, remainingHead, remainingTail, optimised)
       }
-      optimised += cur
-      optimise(remainingHead, remainingTail, optimised)
     }
   }
 
