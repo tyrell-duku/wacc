@@ -9,19 +9,19 @@ import scala.collection._
 object PeepholeMov {
 
   def peepholeMov(
+      r1: Reg,
       op1: Operand,
       rd: Reg,
-      instructionsBuff: mutable.ListBuffer[Instruction],
-      remainingTail: mutable.ListBuffer[Instruction]
-  ): mutable.ListBuffer[Instruction] = {
+      r2: Operand,
+      instructions: mutable.ListBuffer[Instruction],
+      optimised: mutable.ListBuffer[Instruction]
+  ): Unit = {
     if (rd != op1) {
-      instructionsBuff += Mov(rd, op1)
+      optimise(Mov(rd, op1), instructions, optimised)
+    } else {
+      optimise(instructions.head, instructions.tail, optimised)
     }
-    instructionsBuff ++= optimise(
-      remainingTail.head,
-      remainingTail.tail
-    )
-    instructionsBuff
+
   }
 
 }

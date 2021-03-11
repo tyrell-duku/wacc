@@ -11,28 +11,25 @@ object PeepholeBranch {
   def peepholeBranch(
       op1: Operand,
       op2: Operand,
-      instructionsBuff: mutable.ListBuffer[Instruction],
       remainingHead: Instruction,
-      remainingTail: mutable.ListBuffer[Instruction]
-  ): mutable.ListBuffer[Instruction] = {
+      remainingTail: mutable.ListBuffer[Instruction],
+      optimised: mutable.ListBuffer[Instruction]
+  ): Unit = {
     op1 match {
       case ImmInt(0) =>
         if (op2 == ImmInt(0)) {
           remainingTail.head match {
             case BranchCond(EQ, label) =>
-              instructionsBuff += Branch(label)
-              return instructionsBuff
+              optimised += Branch(label)
+              return
             case _ =>
           }
         } else if (op2 == ImmInt(1)) {
           remainingTail.head match {
             case BranchCond(EQ, label) =>
               ignoreBlocks += label
-              instructionsBuff ++= optimise(
-                remainingTail.tail.head,
-                remainingTail.tail.tail
-              )
-              return instructionsBuff
+              optimise(remainingTail.tail, optimised)
+              return
             case _ =>
           }
         }
@@ -40,25 +37,21 @@ object PeepholeBranch {
         if (op2 == ImmInt(1)) {
           remainingTail.head match {
             case BranchCond(EQ, label) =>
-              instructionsBuff += Branch(label)
-              return instructionsBuff
+              optimised += Branch(label)
+              return
             case _ =>
           }
         } else if (op2 == ImmInt(0)) {
           remainingTail.head match {
             case BranchCond(EQ, label) =>
               ignoreBlocks += label
-              instructionsBuff ++= optimise(
-                remainingTail.tail.head,
-                remainingTail.tail.tail
-              )
-              return instructionsBuff
+              optimise(remainingTail.tail, optimised)
+              return
             case _ =>
           }
-
         }
       case _ =>
     }
-    instructionsBuff ++= optimise(remainingHead, remainingTail)
+    optimise(remainingHead, remainingTail, optimised)
   }
 }

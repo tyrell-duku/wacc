@@ -9,6 +9,7 @@ import backend.PeepholeBranch._
 import backend.PeepholeStrong._
 import backend.DefinedFuncs.PreDefinedFuncs._
 import scala.collection._
+import scala.collection.mutable.ListBuffer
 
 object Peephole {
 
@@ -19,67 +20,76 @@ object Peephole {
       block: (Label, List[Instruction])
   ): (Label, List[Instruction]) = {
     val (label, instructions) = block
-
-    val remaining = mutable.ListBuffer.empty[Instruction]
-    remaining.addAll(instructions)
-    var instructionsBuff = mutable.ListBuffer.empty[Instruction]
+    var optimised = mutable.ListBuffer.empty[Instruction]
+    val instrs = mutable.ListBuffer.empty[Instruction]
+    instrs.addAll(instructions)
 
     if (!instructions.isEmpty) {
-      instructionsBuff = optimise(instructions(0), remaining.tail)
+      optimise(instrs.head, instrs.tail, optimised)
     }
 
-    (label, instructionsBuff.toList)
+    (label, optimised.toList)
+  }
+
+  def optimise(
+      instructions: mutable.ListBuffer[Instruction],
+      optimised: mutable.ListBuffer[Instruction]
+  ): Unit = {
+    if (!instructions.isEmpty) {
+      optimise(instructions.head, instructions.tail, optimised)
+    }
   }
 
   def optimise(
       cur: Instruction,
-      remaining: mutable.ListBuffer[Instruction]
-  ): mutable.ListBuffer[Instruction] = {
-    val instructionsBuff = mutable.ListBuffer.empty[Instruction]
-    if (remaining.isEmpty) {
-      instructionsBuff += cur
+      instructions: mutable.ListBuffer[Instruction],
+      optimised: mutable.ListBuffer[Instruction]
+  ): Unit = {
+    if (instructions.isEmpty) {
+      optimised += cur
     } else {
-      val remainingHead = remaining.head
-      val remainingTail = remaining.tail
+      val remainingHead = instructions.head
+      val remainingTail = instructions.tail
       cur match {
         case Mov(r1, op1) =>
           remainingHead match {
             case Mov(rd, r2) =>
               if (r1 == r2) {
-                return peepholeMov(op1, rd, instructionsBuff, remainingTail)
+                peepholeMov(r1, op1, rd, r2, remainingTail, optimised)
+                return
               }
             case Cmp(rd, op2) =>
               if (r1 == rd) {
-                return peepholeBranch(
+                peepholeBranch(
                   op1,
                   op2,
-                  instructionsBuff,
                   remainingHead,
-                  remainingTail
+                  remainingTail,
+                  optimised
                 )
+                return
               }
             case _ =>
           }
         case Ldr(r1, op1) =>
           remainingHead match {
             case Ldr(r2, op2) =>
-              return peepholeStrong(
+              peepholeStrong(
                 r1,
                 op1,
                 r2,
                 op2,
-                instructionsBuff,
-                remainingTail
+                remainingTail,
+                optimised
               )
+              return
             case _ =>
           }
         case _ =>
       }
-      instructionsBuff += cur
-      instructionsBuff ++= optimise(remainingHead, remainingTail)
-      return instructionsBuff
+      optimised += cur
+      optimise(remainingHead, remainingTail, optimised)
     }
-    instructionsBuff
   }
 
   def optimiseBlocks(
