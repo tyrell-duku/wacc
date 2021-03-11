@@ -30,4 +30,17 @@ class FrontendParserIntRepTest extends AnyFunSuite {
   test("Successfully parses hexadecimal integer with negative sign") {
     assert(intLiter.runParser("-0x006").contains(IntLiter(-6, (1,1))))
   }
+
+  ignore("Successfully parses binary integer") {
+    assert(intLiter.runParser("0b001").contains(IntLiter(1, (1,1))))
+  }
+
+  ignore("Successfully parses binary integer with positive sign") {
+    assert(intLiter.runParser("+0b11").contains(IntLiter(3, (1,1))))
+  }
+
+  ignore("Successfully parses binary integer with negative sign") {
+    assert(intLiter.runParser("-0b11").contains(IntLiter(-3, (1,1))))
+  }
+
 }
