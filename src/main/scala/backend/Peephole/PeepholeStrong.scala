@@ -94,6 +94,13 @@ object PeepholeStrong {
                   }
                 case _ =>
               }
+            } else if (n == 1) {
+              instructionsBuff += Ldr(r1, op1)
+              instructionsBuff ++= optimise(
+                Mov(R0, r1),
+                remainingTail.tail.tail.tail.tail
+              )
+              return instructionsBuff
             }
             val shiftAmount = log2(n)
             if (
