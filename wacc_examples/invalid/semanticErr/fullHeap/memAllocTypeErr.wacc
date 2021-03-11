@@ -1,0 +1,13 @@
+# memory alloc assignment type mismatch bool->PtrT/int
+
+# Output:
+# #semantic_error#
+
+# Exit:
+# 200
+
+# Program:
+
+begin
+  bool b = malloc(5)
+end

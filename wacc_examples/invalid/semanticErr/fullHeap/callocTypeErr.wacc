@@ -1,0 +1,13 @@
+# expression type mismatch bool->int in calloc
+
+# Output:
+# #semantic_error#
+
+# Exit:
+# 200
+
+# Program:
+
+begin
+  char *c = calloc(true, sizeof(char))
+end
