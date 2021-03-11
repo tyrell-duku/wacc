@@ -30,23 +30,23 @@ class FrontendParserIntRepTest extends AnyFunSuite {
     assert(intLiter.runParser("-0x006").contains(IntLiter(-6, (1, 1))))
   }
 
-  ignore("Successfully parses binary integer") {
+  test("Successfully parses binary integer") {
     assert(intLiter.runParser("0b001").contains(IntLiter(1, (1, 1))))
   }
 
-  ignore("Successfully parses binary integer with positive sign") {
+  test("Successfully parses binary integer with positive sign") {
     assert(intLiter.runParser("+0b11").contains(IntLiter(3, (1, 1))))
   }
 
-  ignore("Successfully parses binary integer with negative sign") {
+  test("Successfully parses binary integer with negative sign") {
     assert(intLiter.runParser("-0b11").contains(IntLiter(-3, (1, 1))))
   }
 
-  ignore("Successfully fails to parse overflow binary number") {
+  test("Successfully fails to parse overflow binary number") {
     assert(intLiter.runParser("0b10000000000000000000000000000000").isFailure)
   }
 
-  ignore("Successfully fails to parse negative overflow binary number") {
+  test("Successfully fails to parse negative overflow binary number") {
     assert(intLiter.runParser("0b10000000000000000000000000000000").isFailure)
   }
 
