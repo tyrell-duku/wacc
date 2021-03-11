@@ -85,6 +85,14 @@ object PeepholeStrong {
   ): mutable.ListBuffer[Instruction] = {
     if (remainingTail.size >= 4) {
       (op1, op2) match {
+        case (ImmMem(0), _) | (_, ImmMem(0)) =>
+          instructionsBuff += Ldr(r1, ImmMem(0))
+          instructionsBuff ++= optimise(
+            remainingTail.tail.tail.tail.head,
+            remainingTail.tail.tail.tail.tail
+          )
+          return instructionsBuff
+
         case (ImmMem(n1), ImmMem(n2)) =>
           val shiftAmount1 = getShiftAmount(n1)
           val shiftAmount2 = getShiftAmount(n2)
