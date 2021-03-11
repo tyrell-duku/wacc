@@ -95,6 +95,8 @@ class SemanticChecker {
       eqAssignIdent(ident, rhs, sTable)
     case arrayElem: ArrayElem =>
       checkAssignmentType(checkType(arrayElem, sTable), rhs, sTable)
+    case ptr: DerefPtr =>
+      checkAssignmentType(checkType(ptr, sTable), rhs, sTable)
   }
 
   // Analyses the statement ID = RHS
@@ -139,6 +141,7 @@ class SemanticChecker {
       case elem: Ident     => readAnalysis(elem, sTable)
       case elem: ArrayElem => readAnalysis(elem, sTable)
       case elem: PairElem  => readAnalysis(elem, sTable)
+      case elem: DerefPtr  => readAnalysis(elem, sTable)
     }
   }
 
