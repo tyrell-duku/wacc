@@ -75,17 +75,20 @@ object Rules {
 
   case class PtrT(t: Type) extends Type {
     override def equals(x: Any): Boolean = x match {
-      case PtrT(null) | IntT => true
-      case PtrT(inner)       => inner == t
-      case _                 => false
+      case PtrT(null)  => true
+      case PtrT(inner) => if (t == null) true else inner == t
+      case _           => false
     }
   }
 
   case class DerefPtr(ptr: Expr, pos: (Int, Int)) extends Expr with AssignLHS {
     override def getType(sTable: SymbolTable): Type = {
-      val PtrT(inner) = ptr.getType(sTable)
+      val t = ptr.getType(sTable)
       semErrs = ptr.semErrs
-      inner
+      t match {
+        case PtrT(inner) => inner
+        case _           => null
+      }
     }
   }
   object DerefPtr {
@@ -431,13 +434,16 @@ object Rules {
         semErrs += TypeMismatch(lExpr, actualL, expected._1)
         semErrs += TypeMismatch(rExpr, actualR, expected._1)
       }
+      if (actualL == PtrT(null) && semErrs.isEmpty) {
+        return actualL
+      }
       expected._2
     }
   }
 
   // Traits for all possible types of an binary operation
   sealed trait ArithOps extends BinOp {
-    override val expected: (List[Type], Type) = (List(IntT), IntT)
+    override val expected: (List[Type], Type) = (List(IntT, PtrT(null)), IntT)
   }
   case class Mul(lExpr: Expr, rExpr: Expr, pos: (Int, Int)) extends ArithOps {
     val operatorStr = "*"
