@@ -305,7 +305,7 @@ object Rules {
     }
     override def equals(x: Any): Boolean = x match {
       case ArrayT(null)  => true
-      case ArrayT(inner) => inner == t
+      case ArrayT(inner) => if (t == null) true else inner == t
       case _             => false
     }
   }
