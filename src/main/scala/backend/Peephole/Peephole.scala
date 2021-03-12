@@ -69,11 +69,7 @@ object Peephole {
           peepMov(r1, op1, rd, r2, remainingTail, optimised)
         case (Mov(r1, op1), Cmp(rd, op2)) =>
           // Check for redundant compare branches
-          if (r1 == rd) {
-            peepBranch(op1, op2, remainingHead, remainingTail, optimised)
-          } else {
-            continueOptimise(cur, remainingHead, remainingTail, optimised)
-          }
+          peepBranch(r1, op1, rd, op2, remainingTail, optimised)
         case (Ldr(r1, op1), Ldr(r2, op2)) =>
           // Potential strong operation
           peepStrong(r1, op1, r2, op2, remainingTail, optimised)
