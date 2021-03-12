@@ -1,0 +1,10 @@
+# derefrencing invalid address
+
+# Output:
+# #runtimeErr#
+
+# Program:
+
+begin
+  int b = * 6
+end
