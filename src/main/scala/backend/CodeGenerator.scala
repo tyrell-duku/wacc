@@ -135,6 +135,7 @@ object CodeGenerator {
         var (_, t) = sTable(id)
         t = es.foldLeft(t)((x, _) => getArrayInnerType(x))
         t
+      case _: BitwiseNot => IntT
       case _: Not        => BoolT
       case _: Negation   => IntT
       case _: Len        => IntT
@@ -144,6 +145,7 @@ object CodeGenerator {
       case _: ComparOps  => BoolT
       case _: EqOps      => BoolT
       case _: LogicalOps => BoolT
+      case _: BitWiseOps => IntT
     }
   }
 
