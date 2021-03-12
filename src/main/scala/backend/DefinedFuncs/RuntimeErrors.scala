@@ -140,4 +140,17 @@ object RuntimeErrors {
       )
     )
   }
+
+  def negativeShift: (Label, List[Instruction]) = {
+    (
+      NegativeShift.funcLabel,
+      List[Instruction](
+        Push(ListBuffer(LR)),
+        Cmp(resultReg, ImmInt(FALSE_INT)),
+        LdrCond(LT, resultReg, DataLabel(Label(ArrayBounds.msgName(0)))),
+        BranchLinkCond(LT, RuntimeError.funcLabel)
+      )
+    )
+  }
+
 }
