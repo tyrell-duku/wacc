@@ -1,0 +1,14 @@
+# realloc with expression as first argument
+
+# Output:
+# #syntax_error#
+
+# Exit:
+# 100
+
+# Program:
+
+begin
+  int x =  5 ; 
+  int *y = realloc(x + 5, x)
+end
