@@ -24,12 +24,8 @@ object Peephole {
     val optimised = mutable.ListBuffer.empty[Instruction]
     val instrs = mutable.ListBuffer.empty[Instruction]
     instrs.addAll(instructions)
-
-    if (!instructions.isEmpty) {
-      // Store optimised instructions into optimised
-      optimise(instrs.head, instrs.tail, optimised)
-    }
-
+    // Store optimised instructions into optimised
+    optimise(instrs, optimised)
     (label, optimised.toList)
   }
 
@@ -70,18 +66,10 @@ object Peephole {
       (cur, remainingHead) match {
         case (Mov(r1, op1), Mov(rd, r2)) =>
           // Remove redundance Mov Instructions
-          if (r1 == r2) {
-            peepMov(r1, op1, rd, r2, remainingTail, optimised)
-          } else {
-            continueOptimise(cur, remainingHead, remainingTail, optimised)
-          }
+          peepMov(r1, op1, rd, r2, remainingTail, optimised)
         case (Mov(r1, op1), Cmp(rd, op2)) =>
           // Check for redundant compare branches
-          if (r1 == rd) {
-            peepBranch(op1, op2, remainingHead, remainingTail, optimised)
-          } else {
-            continueOptimise(cur, remainingHead, remainingTail, optimised)
-          }
+          peepBranch(r1, op1, rd, op2, remainingTail, optimised)
         case (Ldr(r1, op1), Ldr(r2, op2)) =>
           // Potential strong operation
           peepStrong(r1, op1, r2, op2, remainingTail, optimised)

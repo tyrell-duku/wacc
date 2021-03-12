@@ -3,7 +3,7 @@ package backend
 import backend.IR.InstructionSet._
 import backend.IR.Operand._
 import backend.IR.Condition._
-import backend.Peephole.optimise
+import backend.Peephole._
 import scala.collection._
 
 object PeepholeMov {
@@ -17,11 +17,16 @@ object PeepholeMov {
       instructions: mutable.ListBuffer[Instruction],
       optimised: mutable.ListBuffer[Instruction]
   ): Unit = {
-    // Check destReg != op1
-    if (rd != op1) {
-      optimise(Mov(rd, op1), instructions, optimised)
+    if (r1 == r2) {
+      // Check destReg != op1
+      if (rd != op1) {
+        optimise(Mov(rd, op1), instructions, optimised)
+      } else {
+        // If rd == op1, no need to add intructions
+        optimise(instructions.head, instructions.tail, optimised)
+      }
     } else {
-      optimise(instructions.head, instructions.tail, optimised)
+      continueOptimise(Mov(r1, op1), Mov(rd, r2), instructions, optimised)
     }
   }
 }
