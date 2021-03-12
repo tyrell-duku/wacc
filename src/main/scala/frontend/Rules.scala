@@ -364,8 +364,8 @@ object Rules {
       pos.map((p: (Int, Int)) => (e: Expr) => Chr(e, p)) <* op
   }
   case class BitwiseNot(e: Expr, pos: (Int, Int)) extends UnOp {
-    override val expected: (Type, Type) = ???
-    val unOperatorStr = "~ "
+    override val expected: (Type, Type) = (IntT, IntT)
+    val unOperatorStr = "~"
   }
   object BitwiseNot {
     def apply(op: Parsley[_]): Parsley[Expr => Expr] =
@@ -513,7 +513,7 @@ object Rules {
   }
   // Traits for bitwise operators
   sealed trait BitWiseOps extends BinOp {
-    override val expected: (List[Type], Type) = ???
+    override val expected: (List[Type], Type) = (List(IntT), IntT)
   }
   case class BitWiseAnd(lExpr: Expr, rExpr: Expr, pos: (Int, Int))
       extends BitWiseOps {
