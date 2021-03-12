@@ -8,10 +8,14 @@ import frontend.Lexer._
 import frontend.Semantics.SemanticChecker
 import scala.collection.mutable.ListBuffer
 import frontend.Semantics.SemanticError
+import Array.concat
 
 class FrontendSemanticErrorTest extends AnyFunSuite {
   val programWhitespace: Parsley[Program] = lexer.whiteSpace *> program <* eof
-  private val skip = listAllFiles(new File("wacc_examples/valid/fullHeap"))
+  private val skip = concat(
+    listAllFiles(new File("wacc_examples/valid/fullHeap")),
+    listAllFiles(new File("wacc_examples/valid/bitwise"))
+  )
 
   private def testFile(
       testFunc: ((String, List[org.scalatest.Tag]) => (=> Any) => Unit),

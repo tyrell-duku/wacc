@@ -8,7 +8,7 @@ import frontend.Lexer._
 
 class FrontendParserProgramTest extends AnyFunSuite {
   val programWhitespace: Parsley[Program] = lexer.whiteSpace *> program <* eof
-  private val skip = Array.empty[File]
+  private val skip = listAllFiles(new File("wacc_examples/valid/bitwise"))
 
   private def testFile(
       testFunc: ((String, List[org.scalatest.Tag]) => (=> Any) => Unit),
