@@ -147,7 +147,7 @@ object RuntimeErrors {
       List[Instruction](
         Push(ListBuffer(LR)),
         Cmp(resultReg, ImmInt(FALSE_INT)),
-        LdrCond(LT, resultReg, DataLabel(Label(ArrayBounds.msgName(0)))),
+        LdrCond(LT, resultReg, DataLabel(Label(NegativeShift.msgName(0)))),
         BranchLinkCond(LT, RuntimeError.funcLabel)
       )
     )
