@@ -13,6 +13,10 @@ object Operand {
     override def toString: String = s"${r.toString}, LSL $n"
   }
 
+  case class LSR(r: Reg, n: ImmInt) extends Operand {
+    override def toString: String = r.toString + ", LSR " + n
+  }
+
   case class ASR(r: Reg, n: ImmInt) extends Operand {
     override def toString: String = s"${r.toString}, ASR $n"
   }
