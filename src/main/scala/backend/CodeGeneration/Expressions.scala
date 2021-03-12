@@ -65,65 +65,71 @@ object Expressions {
   }
 
   /* Translates a binary operator to the internal representation. */
-  private def transBinOp(op: BinOp, rd: Reg): ListBuffer[Instruction] = {
-    val instructions = ListBuffer.empty[Instruction]
-    instructions ++= transExp(op.lExpr, rd)
+  private def transBinOp(op: BinOp, rn: Reg): ListBuffer[Instruction] = {
+    val instructions = transExp(op.lExpr, rn)
     val rm = getFreeReg()
     instructions ++= transExp(op.rExpr, rm)
-    // Register over allocation check, if true pops variable from stack into popReg
-    var newReg = rd
+    // Register over allocation check, if true pops variable from stack
+    // into popReg
+    var rd = rn
     if (popReg == rm) {
       instructions += Pop(ListBuffer(popReg))
-      newReg = R10
+      rd = R10
     }
 
     op match {
       case _: frontend.Rules.Mul =>
         // Runtime error check
-        instructions += SMul(newReg, rm, newReg, rm)
-        instructions += Cmp(rm, ASR(newReg, ImmInt(31)))
+        instructions += SMul(rd, rm, rd, rm)
+        instructions += Cmp(rm, ASR(rd, ImmInt(31)))
         instructions += BranchLinkCond(
           IR.Condition.NE,
           addRuntimeError(Overflow)
         )
       case _: Div =>
         // Values need to be in R0 and R1 for "__aeabi_idiv"
-        instructions += Mov(resultReg, newReg)
+        instructions += Mov(resultReg, rd)
         instructions += Mov(R1, rm)
         // Runtime error check
         instructions += BranchLink(addRuntimeError(DivideByZero))
         // Divide function
         instructions += BranchLink(Label("__aeabi_idiv"))
-        instructions += Mov(newReg, resultReg)
+        instructions += Mov(rd, resultReg)
       case _: Mod =>
         // Needs to be in R0 and R1 for "__aeabi_idivmod"
-        instructions += Mov(resultReg, newReg)
+        instructions += Mov(resultReg, rd)
         instructions += Mov(R1, rm)
         // Runtime error check
         instructions += BranchLink(addRuntimeError(DivideByZero))
         // Mod function
         instructions += BranchLink(Label("__aeabi_idivmod"))
-        instructions += Mov(newReg, R1)
+        instructions += Mov(rd, R1)
       case _: Plus =>
-        instructions += AddS(newReg, newReg, rm)
+        instructions += AddS(rd, rd, rm)
         // Runtime error check
         instructions += BranchLinkCond(
           IR.Condition.VS,
           addRuntimeError(Overflow)
         )
       case _: frontend.Rules.Sub =>
-        instructions += SubS(newReg, newReg, rm)
+        instructions += SubS(rd, rd, rm)
         // Runtime error check
         instructions += BranchLinkCond(
           IR.Condition.VS,
           addRuntimeError(Overflow)
         )
       case _: frontend.Rules.And =>
-        instructions += IR.InstructionSet.And(newReg, newReg, rm)
+        instructions += IR.InstructionSet.And(rd, rd, rm)
       case _: frontend.Rules.Or =>
-        instructions += IR.InstructionSet.Or(newReg, newReg, rm)
+        instructions += IR.InstructionSet.Or(rd, rd, rm)
+      case _: BitWiseAnd =>
+        instructions += IR.InstructionSet.And(rd, rd, rm)
+      case _: BitWiseOr =>
+        instructions += IR.InstructionSet.Or(rd, rd, rm)
+      case _: BitWiseXor =>
+        instructions += Eor(rd, rd, rm)
       // Comparison binary operators
-      case cmpOp => instructions ++= transCond(cmpOp, newReg, rm)
+      case cmpOp => instructions ++= transCond(cmpOp, rd, rm)
     }
     addUnusedReg(rm)
     instructions
