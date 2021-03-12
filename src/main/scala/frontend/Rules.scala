@@ -587,9 +587,12 @@ object Rules {
 
     override def getType(sTable: SymbolTable): Type = {
       val actual = id.getType(sTable)
-      if (actual.isArray) {
-        val ArrayT(innerT) = actual
-        return innerT
+      if (actual.isArray || actual.isPtr) {
+        actual match {
+          case PtrT(t)   => return t
+          case ArrayT(t) => return t
+          case _         => ???
+        }
       }
       id.semErrs += TypeMismatch(id, actual, List(ArrayT(actual)))
       id.semErrs += ElementAccessDenied(id)
