@@ -27,6 +27,15 @@ object PreDefinedFuncs {
     )
     override val func = checkArrayBounds
   }
+  // Checks for using a negative number for logical shifts
+  case object NegativeShift extends PreDefFunc {
+    override val funcLabel: Label = Label("p_check_negative_shift")
+    override val msgName = List("msg_neg_shift")
+    override val msgs = List(
+      "NegativeShiftError: cannot shift by negative int\\n\\0"
+    )
+    override val func = negativeShift
+  }
   // Check for division by 0
   case object DivideByZero extends PreDefFunc {
     override val funcLabel = Label("p_check_divide_by_zero")

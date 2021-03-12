@@ -78,6 +78,10 @@ object InstructionSet {
       extends Instruction {
     override def toString: String = s"MOV$cond $rd, $op2"
   }
+  // Move Not
+  case class MvN(rd: Reg, op2: Operand) extends Instruction {
+    override def toString: String = s"MVN $rd, $op2"
+  }
 
   /* Loading */
   case class Ldr(rd: Reg, op2: LoadOperand) extends Instruction {
