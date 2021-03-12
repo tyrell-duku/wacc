@@ -166,12 +166,131 @@ class FrontendParserExprTest extends AnyFunSuite {
     )
   }
 
+  // TODO: positions
   ignore("Successfully parses bitwise operators in correct order") {
-    assert(expr.runParser("5|10 & 100").contains(???))
-    assert(expr.runParser("5 |  10 ^ 2").contains(???))
-    assert(expr.runParser("4 ^ 5 & 10").contains(???))
-    assert(expr.runParser("5 << 2 & 3").contains(???))
-    assert(expr.runParser("20 >> 2 | 10").contains(???))
+    assert(
+      expr
+        .runParser("5|10 & 100")
+        .contains(
+          BitWiseOr(
+            IntLiter(5, (1, 1)),
+            BitWiseAnd(IntLiter(10, (1, 1)), IntLiter(100, (1, 1)), (1, 1)),
+            (1, 1)
+          )
+        )
+    )
+    assert(
+      expr
+        .runParser("5 |  10 ^ 2")
+        .contains(
+          BitWiseOr(
+            IntLiter(5, (1, 1)),
+            BitWiseXor(IntLiter(10, (1, 1)), IntLiter(2, (1, 1)), (1, 1)),
+            (1, 1)
+          )
+        )
+    )
+    assert(
+      expr
+        .runParser("4 ^ 5 & 10")
+        .contains(
+          BitWiseXor(
+            IntLiter(4, (1, 1)),
+            BitWiseAnd(IntLiter(5, (1, 1)), IntLiter(10, (1, 1)), (1, 1)),
+            (1, 1)
+          )
+        )
+    )
+    assert(
+      expr
+        .runParser("5 << 2 & 3")
+        .contains(
+          BitWiseAnd(
+            IntLiter(5, (1, 1)),
+            LogicalLeftShift(IntLiter(2, (1, 1)), IntLiter(3, (1, 1)), (1, 1)),
+            (1, 1)
+          )
+        )
+    )
+    assert(
+      expr
+        .runParser("20 >> 2 | 10")
+        .contains(
+          BitWiseOr(
+            IntLiter(20, (1, 1)),
+            LogicalRightShift(
+              IntLiter(2, (1, 1)),
+              IntLiter(10, (1, 1)),
+              (1, 1)
+            ),
+            (1, 1)
+          )
+        )
+    )
+  }
+
+  // TODO: positions
+  ignore("Successfully parses bitwise operators with other operators") {
+    assert(
+      expr
+        .runParser("20 >> 2 > 8")
+        .contains(
+          GT(
+            LogicalRightShift(
+              IntLiter(20, (1, 1)),
+              IntLiter(2, (1, 1)),
+              (1, 1)
+            ),
+            IntLiter(8, (1, 1)),
+            (1, 1)
+          )
+        )
+    )
+    assert(
+      expr
+        .runParser("20 << 2 < 8")
+        .contains(
+          LT(
+            LogicalLeftShift(
+              IntLiter(20, (1, 1)),
+              IntLiter(2, (1, 1)),
+              (1, 1)
+            ),
+            IntLiter(8, (1, 1)),
+            (1, 1)
+          )
+        )
+    )
+    assert(
+      expr
+        .runParser("20 > 8 >> 2")
+        .contains(
+          GT(
+            IntLiter(20, (1, 1)),
+            LogicalRightShift(
+              IntLiter(8, (1, 1)),
+              IntLiter(2, (1, 1)),
+              (1, 1)
+            ),
+            (1, 1)
+          )
+        )
+    )
+    assert(
+      expr
+        .runParser("20 < 2 << 3")
+        .contains(
+          LT(
+            IntLiter(20, (1, 1)),
+            LogicalLeftShift(
+              IntLiter(2, (1, 1)),
+              IntLiter(3, (1, 1)),
+              (1, 1)
+            ),
+            (1, 1)
+          )
+        )
+    )
   }
 
 }
