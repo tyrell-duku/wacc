@@ -50,9 +50,13 @@ object ExprParser {
       NotEqual("!=") ? "comparison operator"
     ),
     // bitwise binary operators
-    Ops[Expr](InfixL)(BitWiseAnd("&") ? "bitwise operator"),
+    Ops[Expr](InfixL)(
+      BitWiseAnd(attempt("&" <* notFollowedBy("&"))) ? "bitwise operator"
+    ),
     Ops[Expr](InfixL)(BitWiseXor("^") ? "bitwise operator"),
-    Ops[Expr](InfixL)(BitWiseOr("|") ? "bitwise operator"),
+    Ops[Expr](InfixL)(
+      BitWiseOr(attempt("|" <* notFollowedBy("|"))) ? "bitwise operator"
+    ),
     // boolean binary operators
     Ops[Expr](InfixL)(And("&&") ? "boolean operator"),
     Ops[Expr](InfixL)(Or("||") ? "boolean operator")
