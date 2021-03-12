@@ -141,6 +141,7 @@ object RuntimeErrors {
     )
   }
 
+  /* Checks if attempting to use logical shift with negative numbers.*/
   def negativeShift: (Label, List[Instruction]) = {
     (
       NegativeShift.funcLabel,
