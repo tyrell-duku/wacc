@@ -29,9 +29,10 @@ object Expressions {
           RsbS(rd, rd, ImmInt(0)),
           BranchLinkCond(IR.Condition.VS, addRuntimeError(Overflow))
         )
-      case Not(e, _) => transExp(e, rd) += Eor(rd, rd, ImmInt(TRUE_INT))
-      case Ord(e, _) => transExp(e, rd)
-      case _         => ListBuffer.empty[Instruction]
+      case Not(e, _)        => transExp(e, rd) += Eor(rd, rd, ImmInt(TRUE_INT))
+      case Ord(e, _)        => transExp(e, rd)
+      case BitwiseNot(e, _) => transExp(e, rd) += MvN(rd, rd)
+      case _                => ListBuffer.empty[Instruction]
     }
   }
 
