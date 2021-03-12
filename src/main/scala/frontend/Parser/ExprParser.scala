@@ -38,7 +38,10 @@ object ExprParser {
       Sub("-") ? "arithmetic operator"
     ),
     // logical shifts
-    Ops[Expr](InfixL)(BitWiseOr("<<"), (BitWiseOr(">>") ? "bitwise operator")),
+    Ops[Expr](InfixL)(
+      LogicalLeftShift("<<"),
+      (LogicalRightShift(">>") ? "bitwise operator")
+    ),
     // comparison binary operators
     Ops[Expr](InfixL)(
       (GTE(">=") ? "comparison operator") <\> (GT(">") ? "comparison operator"),
