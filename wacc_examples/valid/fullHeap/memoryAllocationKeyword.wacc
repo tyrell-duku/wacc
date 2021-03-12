@@ -1,6 +1,5 @@
 # Uses C-style pointers.
-# To validate if malloc90 is parsed as an ident and no syntax error expected 
-# a bracket.
+# To validate if malloc90 is parsed as an ident.
 
 # Program:
 
