@@ -5,7 +5,7 @@ import backend.CodeGenerator
 import backend.CodeGenerator._
 import backend.DefinedFuncs.PreDefinedFuncs.{Overflow, DivideByZero}
 import backend.DefinedFuncs.RuntimeErrors.addRuntimeError
-import backend.IR.Condition.Condition
+import backend.IR.Condition.{Condition, VS}
 import backend.IR.InstructionSet._
 import backend.IR.Operand._
 import frontend.Rules._
@@ -27,7 +27,7 @@ object Expressions {
       case Negation(e, _) =>
         transExp(e, rd) ++= ListBuffer(
           RsbS(rd, rd, ImmInt(0)),
-          BranchLinkCond(IR.Condition.VS, addRuntimeError(Overflow))
+          BranchLinkCond(VS, addRuntimeError(Overflow))
         )
       case Not(e, _)        => transExp(e, rd) += Eor(rd, rd, ImmInt(TRUE_INT))
       case Ord(e, _)        => transExp(e, rd)
@@ -107,17 +107,11 @@ object Expressions {
       case _: Plus =>
         instructions += AddS(rd, rd, rm)
         // Runtime error check
-        instructions += BranchLinkCond(
-          IR.Condition.VS,
-          addRuntimeError(Overflow)
-        )
+        instructions += BranchLinkCond(VS, addRuntimeError(Overflow))
       case _: frontend.Rules.Sub =>
         instructions += SubS(rd, rd, rm)
         // Runtime error check
-        instructions += BranchLinkCond(
-          IR.Condition.VS,
-          addRuntimeError(Overflow)
-        )
+        instructions += BranchLinkCond(VS, addRuntimeError(Overflow))
       case _: frontend.Rules.And =>
         instructions += IR.InstructionSet.And(rd, rd, rm)
       case _: frontend.Rules.Or =>
