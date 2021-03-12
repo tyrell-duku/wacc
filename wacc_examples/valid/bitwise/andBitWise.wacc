@@ -1,0 +1,12 @@
+# evaluating and
+
+# Output:
+# 1
+
+# Program:
+
+begin
+  int a = 3 ;
+  int b = 1 ;
+  println a & b
+end
