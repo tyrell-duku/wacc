@@ -3,7 +3,11 @@ package backend.CodeGeneration
 import backend.CodeGeneration.Arrays.loadArrayElem
 import backend.CodeGenerator
 import backend.CodeGenerator._
-import backend.DefinedFuncs.PreDefinedFuncs.{Overflow, DivideByZero}
+import backend.DefinedFuncs.PreDefinedFuncs.{
+  Overflow,
+  DivideByZero,
+  NegativeShift
+}
 import backend.DefinedFuncs.RuntimeErrors.addRuntimeError
 import backend.IR.Condition.{Condition, VS}
 import backend.IR.InstructionSet._
@@ -90,7 +94,6 @@ object Expressions {
         // Values need to be in R0 and R1 for "__aeabi_idiv"
         instructions += Mov(resultReg, rd)
         instructions += Mov(R1, rm)
-        // Runtime error check
         instructions += BranchLink(addRuntimeError(DivideByZero))
         // Divide function
         instructions += BranchLink(Label("__aeabi_idiv"))
@@ -99,28 +102,49 @@ object Expressions {
         // Needs to be in R0 and R1 for "__aeabi_idivmod"
         instructions += Mov(resultReg, rd)
         instructions += Mov(R1, rm)
-        // Runtime error check
         instructions += BranchLink(addRuntimeError(DivideByZero))
         // Mod function
         instructions += BranchLink(Label("__aeabi_idivmod"))
         instructions += Mov(rd, R1)
       case _: Plus =>
         instructions += AddS(rd, rd, rm)
-        // Runtime error check
         instructions += BranchLinkCond(VS, addRuntimeError(Overflow))
       case _: frontend.Rules.Sub =>
         instructions += SubS(rd, rd, rm)
-        // Runtime error check
         instructions += BranchLinkCond(VS, addRuntimeError(Overflow))
       case _: frontend.Rules.And =>
         instructions += IR.InstructionSet.And(rd, rd, rm)
       case _: frontend.Rules.Or =>
         instructions += IR.InstructionSet.Or(rd, rd, rm)
-      case _: BitWiseAnd        => instructions += IR.InstructionSet.And(rd, rd, rm)
-      case _: BitWiseOr         => instructions += IR.InstructionSet.Or(rd, rd, rm)
-      case _: BitWiseXor        => instructions += Eor(rd, rd, rm)
-      case _: LogicalShiftLeft  => instructions += Mov(rd, LSL(rd, rm))
-      case _: LogicalShiftRight => instructions += Mov(rd, LSR(rd, rm))
+      case _: BitWiseAnd => instructions += IR.InstructionSet.And(rd, rd, rm)
+      case _: BitWiseOr =>
+        instructions += IR.InstructionSet.Or(rd, rd, rm)
+        instructions += BranchLinkCond(VS, addRuntimeError(Overflow))
+      case _: BitWiseXor =>
+        instructions += Eor(rd, rd, rm)
+        instructions += BranchLinkCond(VS, addRuntimeError(Overflow))
+      case _: LogicalShiftLeft =>
+        instructions += Mov(resultReg, rd)
+        instructions += BranchLink(
+          addRuntimeError(NegativeShift)
+        )
+        instructions += Mov(resultReg, rm)
+        instructions += BranchLink(
+          addRuntimeError(NegativeShift)
+        )
+        instructions += Mov(rd, LSL(rd, rm))
+        instructions += BranchLinkCond(VS, addRuntimeError(Overflow))
+      case _: LogicalShiftRight =>
+        instructions += Mov(resultReg, rd)
+        instructions += BranchLink(
+          addRuntimeError(NegativeShift)
+        )
+        instructions += Mov(resultReg, rm)
+        instructions += BranchLink(
+          addRuntimeError(NegativeShift)
+        )
+        instructions += Mov(rd, LSR(rd, rm))
+        instructions += BranchLinkCond(VS, addRuntimeError(Overflow))
       // Comparison binary operators
       case cmpOp => instructions ++= transCond(cmpOp, rd, rm)
     }
