@@ -543,24 +543,24 @@ object Rules {
         (l: Expr, r: Expr) => BitWiseXor(l, r, p)
       ) <* op
   }
-  case class LogicalLeftShift(lExpr: Expr, rExpr: Expr, pos: (Int, Int))
+  case class LogicalShiftLeft(lExpr: Expr, rExpr: Expr, pos: (Int, Int))
       extends BitWiseOps {
     val operatorStr = "<<"
   }
-  object LogicalLeftShift {
+  object LogicalShiftLeft {
     def apply(op: Parsley[_]): Parsley[(Expr, Expr) => Expr] =
       pos.map((p: (Int, Int)) =>
-        (l: Expr, r: Expr) => LogicalLeftShift(l, r, p)
+        (l: Expr, r: Expr) => LogicalShiftLeft(l, r, p)
       ) <* op
   }
-  case class LogicalRightShift(lExpr: Expr, rExpr: Expr, pos: (Int, Int))
+  case class LogicalShiftRight(lExpr: Expr, rExpr: Expr, pos: (Int, Int))
       extends BitWiseOps {
     val operatorStr = ">>"
   }
-  object LogicalRightShift {
+  object LogicalShiftRight {
     def apply(op: Parsley[_]): Parsley[(Expr, Expr) => Expr] =
       pos.map((p: (Int, Int)) =>
-        (l: Expr, r: Expr) => LogicalRightShift(l, r, p)
+        (l: Expr, r: Expr) => LogicalShiftRight(l, r, p)
       ) <* op
   }
 

@@ -176,14 +176,14 @@ class FrontendParserExprTest extends AnyFunSuite {
       expr
         .runParser("5 << 2")
         .contains(
-          LogicalLeftShift(IntLiter(5, (1, 1)), IntLiter(2, (1, 6)), (1, 3))
+          LogicalShiftLeft(IntLiter(5, (1, 1)), IntLiter(2, (1, 6)), (1, 3))
         )
     )
     assert(
       expr
         .runParser("20 >> 2")
         .contains(
-          LogicalRightShift(IntLiter(20, (1, 1)), IntLiter(2, (1, 7)), (1, 4))
+          LogicalShiftRight(IntLiter(20, (1, 1)), IntLiter(2, (1, 7)), (1, 4))
         )
     )
   }
@@ -227,7 +227,7 @@ class FrontendParserExprTest extends AnyFunSuite {
         .runParser("5 << 2 & 3")
         .contains(
           BitWiseAnd(
-            LogicalLeftShift(IntLiter(5, (1, 1)), IntLiter(2, (1, 6)), (1, 3)),
+            LogicalShiftLeft(IntLiter(5, (1, 1)), IntLiter(2, (1, 6)), (1, 3)),
             IntLiter(3, (1, 10)),
             (1, 8)
           )
@@ -238,7 +238,7 @@ class FrontendParserExprTest extends AnyFunSuite {
         .runParser("20 >> 2 | 10")
         .contains(
           BitWiseOr(
-            LogicalRightShift(
+            LogicalShiftRight(
               IntLiter(20, (1, 1)),
               IntLiter(2, (1, 7)),
               (1, 4)
@@ -256,7 +256,7 @@ class FrontendParserExprTest extends AnyFunSuite {
         .runParser("20 >> 2 > 8")
         .contains(
           GT(
-            LogicalRightShift(
+            LogicalShiftRight(
               IntLiter(20, (1, 1)),
               IntLiter(2, (1, 7)),
               (1, 4)
@@ -271,7 +271,7 @@ class FrontendParserExprTest extends AnyFunSuite {
         .runParser("20 << 2 < 8")
         .contains(
           LT(
-            LogicalLeftShift(
+            LogicalShiftLeft(
               IntLiter(20, (1, 1)),
               IntLiter(2, (1, 7)),
               (1, 4)
@@ -287,7 +287,7 @@ class FrontendParserExprTest extends AnyFunSuite {
         .contains(
           GT(
             IntLiter(20, (1, 1)),
-            LogicalRightShift(
+            LogicalShiftRight(
               IntLiter(8, (1, 6)),
               IntLiter(2, (1, 11)),
               (1, 8)
@@ -302,7 +302,7 @@ class FrontendParserExprTest extends AnyFunSuite {
         .contains(
           LT(
             IntLiter(20, (1, 1)),
-            LogicalLeftShift(
+            LogicalShiftLeft(
               IntLiter(2, (1, 6)),
               IntLiter(3, (1, 11)),
               (1, 8)
