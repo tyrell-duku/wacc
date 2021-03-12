@@ -1,0 +1,15 @@
+# negative shift for LSL
+
+# Output:
+# #runtime_error#
+
+# Exit:
+# 255
+
+# Program:
+
+begin
+  int x = 5 ;
+  x = x << -5
+  # ^ err here? 
+end

@@ -1,0 +1,11 @@
+# evaluating not
+
+# Output:
+# 170
+
+# Program:
+
+begin
+  int a = 100 ;
+  println ~a
+end

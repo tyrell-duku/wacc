@@ -1,5 +1,6 @@
 import org.scalatest.funsuite.AnyFunSuite
 import frontend.Parser._
+import Array.concat
 import frontend.Rules._
 import parsley.combinator.eof
 import java.io.File
@@ -8,6 +9,7 @@ import frontend.Lexer._
 import frontend.Semantics.SemanticChecker
 import scala.collection.mutable.ListBuffer
 import frontend.Semantics.SemanticError
+import Array.concat
 
 class FrontendSemanticErrorTest extends AnyFunSuite {
   val programWhitespace: Parsley[Program] = lexer.whiteSpace *> program <* eof

@@ -1,0 +1,12 @@
+# evaluating or
+
+# Output:
+# 3
+
+# Program:
+
+begin
+  int a = 2 ;
+  int b = 1 ;
+  println a | b
+end

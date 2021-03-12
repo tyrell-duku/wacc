@@ -1,0 +1,12 @@
+# evaluating right shift
+
+# Output:
+# 5
+
+# Program:
+
+begin
+  int a = 10 ;
+  int b = 1 ;
+  println a >> b
+end

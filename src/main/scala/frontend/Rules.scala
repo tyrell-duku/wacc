@@ -411,6 +411,14 @@ object Rules {
     def apply(op: Parsley[_]): Parsley[Expr => Expr] =
       pos.map((p: (Int, Int)) => (e: Expr) => Chr(e, p)) <* op
   }
+  case class BitwiseNot(e: Expr, pos: (Int, Int)) extends UnOp {
+    override val expected: (Type, Type) = (IntT, IntT)
+    val unOperatorStr = "~"
+  }
+  object BitwiseNot {
+    def apply(op: Parsley[_]): Parsley[Expr => Expr] =
+      pos.map((p: (Int, Int)) => (e: Expr) => BitwiseNot(e, p)) <* op
+  }
 
   // Trait for all possible variations of an binary operation
   sealed trait BinOp extends Expr {
@@ -518,7 +526,7 @@ object Rules {
     def apply(op: Parsley[_]): Parsley[(Expr, Expr) => Expr] =
       pos.map((p: (Int, Int)) => (l: Expr, r: Expr) => LTE(l, r, p)) <* op
   }
-
+  // Traits for equality operators
   sealed trait EqOps extends BinOp {
     override val expected: (List[Type], Type) = (List.empty, BoolT)
   }
@@ -536,7 +544,7 @@ object Rules {
     def apply(op: Parsley[_]): Parsley[(Expr, Expr) => Expr] =
       pos.map((p: (Int, Int)) => (l: Expr, r: Expr) => NotEqual(l, r, p)) <* op
   }
-
+  // Traits for logical operator
   sealed trait LogicalOps extends BinOp {
     override val expected: (List[Type], Type) = (List(BoolT), BoolT)
   }
@@ -553,6 +561,58 @@ object Rules {
   object Or {
     def apply(op: Parsley[_]): Parsley[(Expr, Expr) => Expr] =
       pos.map((p: (Int, Int)) => (l: Expr, r: Expr) => Or(l, r, p)) <* op
+  }
+  // Traits for bitwise operators
+  sealed trait BitWiseOps extends BinOp {
+    override val expected: (List[Type], Type) = (List(IntT), IntT)
+  }
+  case class BitWiseAnd(lExpr: Expr, rExpr: Expr, pos: (Int, Int))
+      extends BitWiseOps {
+    val operatorStr = "&"
+  }
+  object BitWiseAnd {
+    def apply(op: Parsley[_]): Parsley[(Expr, Expr) => Expr] =
+      pos.map((p: (Int, Int)) =>
+        (l: Expr, r: Expr) => BitWiseAnd(l, r, p)
+      ) <* op
+  }
+  case class BitWiseOr(lExpr: Expr, rExpr: Expr, pos: (Int, Int))
+      extends BitWiseOps {
+    val operatorStr = "|"
+  }
+  object BitWiseOr {
+    def apply(op: Parsley[_]): Parsley[(Expr, Expr) => Expr] =
+      pos.map((p: (Int, Int)) => (l: Expr, r: Expr) => BitWiseOr(l, r, p)) <* op
+  }
+  case class BitWiseXor(lExpr: Expr, rExpr: Expr, pos: (Int, Int))
+      extends BitWiseOps {
+    val operatorStr = "^"
+  }
+  object BitWiseXor {
+    def apply(op: Parsley[_]): Parsley[(Expr, Expr) => Expr] =
+      pos.map((p: (Int, Int)) =>
+        (l: Expr, r: Expr) => BitWiseXor(l, r, p)
+      ) <* op
+  }
+  case class LogicalShiftLeft(lExpr: Expr, rExpr: Expr, pos: (Int, Int))
+      extends BitWiseOps {
+    val operatorStr = "<<"
+  }
+  object LogicalShiftLeft {
+    def apply(op: Parsley[_]): Parsley[(Expr, Expr) => Expr] =
+      pos.map((p: (Int, Int)) =>
+        (l: Expr, r: Expr) => LogicalShiftLeft(l, r, p)
+      ) <* op
+  }
+  case class LogicalShiftRight(lExpr: Expr, rExpr: Expr, pos: (Int, Int))
+      extends BitWiseOps {
+    val operatorStr = ">>"
+  }
+  object LogicalShiftRight {
+    def apply(op: Parsley[_]): Parsley[(Expr, Expr) => Expr] =
+      pos.map((p: (Int, Int)) =>
+        (l: Expr, r: Expr) => LogicalShiftRight(l, r, p)
+      ) <* op
   }
 
   sealed case class Ident(s: String, pos: (Int, Int))

@@ -1,0 +1,14 @@
+# expresission type mismatch char->int
+
+# Output:
+# #semantic_error#
+
+# Exit:
+# 200
+
+# Program:
+
+begin
+  char[] x = ['a','b','c'] ;  
+  int y = x[0] & 6
+end

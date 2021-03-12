@@ -1,0 +1,12 @@
+# evaluating addition
+
+# Output:
+# 35
+
+# Program:
+
+begin
+  int x = 0o17 ;
+  int y = 0o24 ;
+  println x + y
+end
