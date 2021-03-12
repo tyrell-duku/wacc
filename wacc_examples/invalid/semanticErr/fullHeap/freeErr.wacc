@@ -1,0 +1,14 @@
+# free an unallocated memory address
+
+# Output:
+# #semantic_error#
+
+# Exit:
+# 200
+
+# Program:
+
+begin
+  bool *ptr = malloc(5) ;
+  free (6)
+end

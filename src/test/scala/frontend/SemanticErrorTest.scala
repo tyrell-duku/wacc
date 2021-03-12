@@ -13,7 +13,8 @@ import Array.concat
 
 class FrontendSemanticErrorTest extends AnyFunSuite {
   val programWhitespace: Parsley[Program] = lexer.whiteSpace *> program <* eof
-  private val skip = listAllFiles(new File("wacc_examples/valid/fullHeap"))
+  private val invalidSkip = Array.empty[File]
+  private val validSkip = Array.empty[File]
 
   private def testFile(
       testFunc: ((String, List[org.scalatest.Tag]) => (=> Any) => Unit),
@@ -39,7 +40,7 @@ class FrontendSemanticErrorTest extends AnyFunSuite {
   }
 
   for (file <- listAllFiles(new File("wacc_examples/invalid/semanticErr"))) {
-    if (skip.contains(file)) {
+    if (invalidSkip.contains(file)) {
       testFile(
         ignore,
         "Semantically checks invalid file ",
@@ -57,7 +58,7 @@ class FrontendSemanticErrorTest extends AnyFunSuite {
   }
 
   for (file <- listAllFiles(new File("wacc_examples/valid"))) {
-    if (skip.contains(file)) {
+    if (validSkip.contains(file)) {
       testFile(
         ignore,
         "Semantically checks valid file ",

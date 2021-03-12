@@ -1,0 +1,14 @@
+# expression type mismatch char->int in malloc 
+
+# Output:
+# #semantic_error#
+
+# Exit:
+# 200
+
+# Program:
+
+begin
+  char c = 'h';
+  int *ptr = malloc(c)
+end

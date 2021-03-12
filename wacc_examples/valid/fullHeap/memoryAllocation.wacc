@@ -3,7 +3,7 @@
 # Program:
 
 begin
-  int malloc90 = 10;
-  int *x = malloc90;
-  free x
+  int *x = malloc(8);
+  int *y = x;
+  free y
 end

@@ -1,0 +1,14 @@
+# ident type mismatch bool->int/PtrT for '&' operator
+
+# Output:
+# #semantic_error#
+
+# Exit:
+# 200
+
+# Program:
+
+begin
+  bool b = true;
+  int* addr = &b
+end

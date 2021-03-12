@@ -1,0 +1,16 @@
+# deref pointer type mismatch char->string
+
+# Output:
+# #semantic_error#
+
+# Exit:
+# 200
+
+# Program:
+
+begin
+  string* ptr = malloc(12);
+  *(ptr + 1) = 'c';
+  println ptr;
+  free ptr
+end

@@ -1,0 +1,11 @@
+# derefrencing invalid address
+# originally semanticErr/expressions/missingOperand1.wacc
+
+# Output:
+# #runtimeErr#
+
+# Program:
+
+begin
+  int b = * 6
+end

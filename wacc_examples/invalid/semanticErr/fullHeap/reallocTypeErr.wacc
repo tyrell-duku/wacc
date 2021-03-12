@@ -1,0 +1,14 @@
+# ident type mismatch bool->PtrT
+
+# Output:
+# #semantic_error#
+
+# Exit:
+# 200
+
+# Program:
+
+begin
+  bool x = true;
+  char *str = realloc(x, 10)
+end

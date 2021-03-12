@@ -1,4 +1,4 @@
-# operator missing first operand
+# operator missing second expression
 
 # Output:
 # #syntax_error#
@@ -9,5 +9,5 @@
 # Program:
 
 begin
-  int b = * 6
+  int *x = calloc(5, )
 end

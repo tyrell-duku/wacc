@@ -1,6 +1,7 @@
 import org.scalatest.funsuite.AnyFunSuite
 import frontend.HeapParser._
-import frontend.LiterParser.{types}
+import frontend.ExprParser.expr
+import frontend.LiterParser.types
 import frontend.Rules._
 
 class FrontendParserHeapTest extends AnyFunSuite {
@@ -67,25 +68,20 @@ class FrontendParserHeapTest extends AnyFunSuite {
 
   test("Successfully parses simple derefrenced pointer") {
     assert(
-      derefPtr
+      expr
         .runParser("*(ptr)")
         .contains(DerefPtr(Ident("ptr", (1, 3)), (1, 1)))
     )
     assert(
-      derefPtr
+      expr
         .runParser("*(var)")
         .contains(DerefPtr(Ident("var", (1, 3)), (1, 1)))
     )
   }
 
-  test("Successfully fails to parse deref pointer with no parentheses") {
-    assert(derefPtr.runParser("*10").isFailure)
-    assert(derefPtr.runParser("*'c'").isFailure)
-  }
-
   test("Successfully parses derefrenced pointer with arithmetic") {
     assert(
-      derefPtr
+      expr
         .runParser("*(ptr + 1)")
         .contains(
           DerefPtr(
@@ -132,20 +128,14 @@ class FrontendParserHeapTest extends AnyFunSuite {
   }
 
   test("Successfully parsers ampersand expression") {
-    assert(addr.runParser("&var").contains(Addr(Ident("var", (1, 2)), (1, 1))))
+    assert(expr.runParser("&var").contains(Addr(Ident("var", (1, 2)), (1, 1))))
     assert(
-      addr
+      expr
         .runParser("&(*var)")
         .contains(Addr(DerefPtr(Ident("var", (1, 3)), (1, 3)), (1, 1)))
     )
     assert(
-      addr.runParser("&(var)").contains(Addr(Ident("var", (1, 3)), (1, 1)))
+      expr.runParser("&(var)").contains(Addr(Ident("var", (1, 3)), (1, 1)))
     )
-  }
-
-  test("Successfully fails to parse ampersand expression") {
-    assert(addr.runParser("&*var").isFailure)
-    assert(addr.runParser("&5").isFailure)
-    assert(addr.runParser("&'f'").isFailure)
   }
 }

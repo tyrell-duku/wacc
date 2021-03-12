@@ -13,7 +13,14 @@ object Rules {
 
   sealed trait MemoryAlloc extends AssignRHS
   case class Malloc(size: Expr, pos: (Int, Int)) extends MemoryAlloc {
-    override def getType(sTable: SymbolTable): Type = PtrT(null)
+    override def getType(sTable: SymbolTable): Type = {
+      val t = size.getType(sTable)
+      semErrs = size.semErrs
+      if (t != IntT) {
+        semErrs += TypeMismatch(size, t, List(IntT))
+      }
+      PtrT(null)
+    }
   }
   object Malloc {
     def apply(size: Parsley[Expr]): Parsley[Malloc] =
@@ -22,7 +29,19 @@ object Rules {
 
   case class Realloc(ptr: Ident, size: Expr, pos: (Int, Int))
       extends MemoryAlloc {
-    override def getType(sTable: SymbolTable): Type = PtrT(null)
+    override def getType(sTable: SymbolTable): Type = {
+      val t = size.getType(sTable)
+      semErrs = size.semErrs
+      if (t != IntT) {
+        semErrs += TypeMismatch(size, t, List(IntT))
+      }
+      val ptrT = ptr.getType(sTable)
+      semErrs ++= ptr.semErrs
+      if (ptrT != PtrT(null)) {
+        semErrs += TypeMismatch(ptr, ptrT, List(PtrT(null)))
+      }
+      ptrT
+    }
   }
   object Realloc {
     def apply(ptr: Parsley[Ident], size: Parsley[Expr]): Parsley[Realloc] =
@@ -33,7 +52,19 @@ object Rules {
 
   case class Calloc(num: Expr, size: Expr, pos: (Int, Int))
       extends MemoryAlloc {
-    override def getType(sTable: SymbolTable): Type = PtrT(null)
+    override def getType(sTable: SymbolTable): Type = {
+      val t = size.getType(sTable)
+      semErrs = size.semErrs
+      if (t != IntT) {
+        semErrs += TypeMismatch(size, t, List(IntT))
+      }
+      val numT = num.getType(sTable)
+      semErrs ++= num.semErrs
+      if (numT != IntT) {
+        semErrs += TypeMismatch(num, numT, List(IntT))
+      }
+      PtrT(null)
+    }
   }
   object Calloc {
     def apply(num: Parsley[Expr], size: Parsley[Expr]): Parsley[Calloc] =
@@ -42,28 +73,41 @@ object Rules {
       )
   }
 
-  case class PtrT(t: Type) extends Type
+  case class PtrT(t: Type) extends Type {
+    override def equals(x: Any): Boolean = x match {
+      case PtrT(null)  => true
+      case PtrT(inner) => if (t == null) true else inner == t
+      case _           => false
+    }
+  }
 
   case class DerefPtr(ptr: Expr, pos: (Int, Int)) extends Expr with AssignLHS {
     override def getType(sTable: SymbolTable): Type = {
-      val PtrT(inner) = ptr.getType(sTable)
-      inner
+      val t = ptr.getType(sTable)
+      semErrs = ptr.semErrs
+      t match {
+        case PtrT(inner) => inner
+        case _ =>
+          semErrs += TypeMismatch(ptr, t, List(PtrT(null)))
+          null
+      }
     }
   }
   object DerefPtr {
-    def apply(ptr: Parsley[Expr]): Parsley[DerefPtr] =
-      pos <**> ptr.map((ptr: Expr) => (p: (Int, Int)) => DerefPtr(ptr, p))
+    def apply(op: Parsley[_]): Parsley[Expr => Expr] =
+      pos.map((p: (Int, Int)) => (e: Expr) => DerefPtr(e, p)) <* op
   }
 
   case class Addr(ptr: Expr, pos: (Int, Int)) extends Expr {
     override def getType(sTable: SymbolTable): Type = {
       val t = ptr.getType(sTable)
+      semErrs = ptr.semErrs
       PtrT(t)
     }
   }
   object Addr {
-    def apply(ptr: Parsley[Expr]): Parsley[Addr] =
-      pos <**> ptr.map((ptr: Expr) => (p: (Int, Int)) => Addr(ptr, p))
+    def apply(op: Parsley[_]): Parsley[Expr => Expr] =
+      pos.map((p: (Int, Int)) => (e: Expr) => Addr(e, p)) <* op
   }
 
   case class SizeOf(t: Type, pos: (Int, Int)) extends Expr {
@@ -227,6 +271,10 @@ object Rules {
       case Pair(_, _) => true
       case _          => false
     }
+    def isPtr: Boolean = this match {
+      case PtrT(_) => true
+      case _       => false
+    }
   }
 
   case object Any extends Type {
@@ -259,7 +307,7 @@ object Rules {
     }
     override def equals(x: Any): Boolean = x match {
       case ArrayT(null)  => true
-      case ArrayT(inner) => inner == t
+      case ArrayT(inner) => if (t == null) true else inner == t
       case _             => false
     }
   }
@@ -386,8 +434,14 @@ object Rules {
       val actualL = lExpr.getType(sTable)
       val actualR = rExpr.getType(sTable)
       semErrs = lExpr.semErrs ++ rExpr.semErrs
+      /* If type is Any, variable used in expression is undefined so early
+         return with semantic errors. */
       if (actualL == Any || actualR == Any) {
         return expected._2
+      }
+      /* If isPtrArithmetic is true, early return with pointer type. */
+      if (isPtrArithmetic(actualL, actualR)) {
+        return actualL
       }
       if (actualL != actualR) {
         if (!expected._1.contains(actualL)) {
@@ -401,6 +455,13 @@ object Rules {
         semErrs += TypeMismatch(rExpr, actualR, expected._1)
       }
       expected._2
+    }
+
+    /* Returns true if pointer arithmetic is occuring, use left type as pointer
+       since '+'/'-' is left-associative. */
+    def isPtrArithmetic(leftT: Type, rightT: Type): Boolean = this match {
+      case Plus(_, _, _) | Sub(_, _, _) => leftT.isPtr && (rightT == IntT)
+      case _                            => false
     }
   }
 
@@ -598,9 +659,12 @@ object Rules {
 
     override def getType(sTable: SymbolTable): Type = {
       val actual = id.getType(sTable)
-      if (actual.isArray) {
-        val ArrayT(innerT) = actual
-        return innerT
+      if (actual.isArray || actual.isPtr) {
+        actual match {
+          case PtrT(t)   => return t
+          case ArrayT(t) => return t
+          case _         => ???
+        }
       }
       id.semErrs += TypeMismatch(id, actual, List(ArrayT(actual)))
       id.semErrs += ElementAccessDenied(id)
