@@ -7,6 +7,7 @@ import frontend.Rules.{
   Addr,
   Calloc,
   DerefPtr,
+  Expr,
   Malloc,
   MemoryAlloc,
   Realloc,
@@ -17,9 +18,10 @@ import parsley.Parsley._
 
 object HeapParser {
   // '*' '('<expr>')'
-  val derefPtr: Parsley[DerefPtr] = DerefPtr(
-    "*" *> (lexer.parens(expr) <|> identifier)
-  ) ? "derefrenced pointer"
+  val derefPtr: Parsley[DerefPtr] =
+    "*" *> pos <**> expr.map((ptr: Expr) =>
+      (p: (Int, Int)) => DerefPtr(ptr, p)
+    ) ? "derefrenced pointer"
 
   // "malloc" '('<expr>')' | "realloc" '('<ident>, <expr>')' | "calloc" '('<expr>, <type>')'
   val memoryAlloc: Parsley[MemoryAlloc] =
@@ -28,10 +30,6 @@ object HeapParser {
     )) <|> ("calloc" *> lexer.parens(
       Calloc(expr, "," *> expr)
     ))) ? "memory allocation function"
-
-  // '&'<expr>
-  val addr: Parsley[Addr] =
-    Addr("&" *> (lexer.parens(expr) <|> identifier)) ? "address operator"
 
   // "sizeof" '('<type>')'
   val sizeOf: Parsley[SizeOf] =
