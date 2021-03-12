@@ -10,15 +10,15 @@ object Operand {
   }
 
   case class LSL(r: Reg, n: ImmInt) extends Operand {
-    override def toString: String = s"${r.toString}, LSL $n"
+    override def toString: String = s"$r, LSL $n"
   }
 
   case class LSR(r: Reg, n: ImmInt) extends Operand {
-    override def toString: String = r.toString + ", LSR " + n
+    override def toString: String = s"$r, LSR $n"
   }
 
   case class ASR(r: Reg, n: ImmInt) extends Operand {
-    override def toString: String = s"${r.toString}, ASR $n"
+    override def toString: String = s"$r, ASR $n"
   }
 
   sealed case class ImmChar(c: Character) extends Operand with LoadOperand {
