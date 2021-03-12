@@ -87,7 +87,9 @@ object Rules {
       semErrs = ptr.semErrs
       t match {
         case PtrT(inner) => inner
-        case _           => null
+        case _ =>
+          semErrs += TypeMismatch(ptr, t, List(PtrT(null)))
+          null
       }
     }
   }
