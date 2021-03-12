@@ -63,7 +63,7 @@ Git commit convention
 
 〈memory-alloc〉::= ‘malloc’ ‘(’〈expr〉‘)’
                  | ‘realloc’ ‘(’〈ident〉 ','〈expr〉‘)’
-                 | ‘calloc’ ‘(’〈expr〉‘)’
+                 | ‘calloc’ ‘(’〈expr〉, 〈expr〉‘)’
 〈pointer-type〉::= 〈type〉‘*’
 〈deref-pointer〉::= ‘*’〈expr〉
 〈addr〉::= ‘&’〈expr〉
