@@ -448,10 +448,18 @@ object Rules {
         semErrs += TypeMismatch(lExpr, actualL, expected._1)
         semErrs += TypeMismatch(rExpr, actualR, expected._1)
       }
-      if (actualL == PtrT(null) && semErrs.isEmpty) {
-        return actualL
+      if (isPtrArithmetic(actualL, actualR)) {
+        actualL
+      } else {
+        expected._2
       }
-      expected._2
+    }
+
+    /* Returns true if pointer arithmetic is occuring, use left type as pointer
+       since '+'/'-' is left-associative. */
+    def isPtrArithmetic(leftT: Type, rightT: Type): Boolean = this match {
+      case Plus(_, _, _) | Sub(_, _, _) => leftT.isPtr && !rightT.isPtr
+      case _                            => false
     }
   }
 
