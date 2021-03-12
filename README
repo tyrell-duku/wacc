@@ -28,7 +28,7 @@ Git commit convention
            ‘read’〈assign-lhs〉|‘free’〈expr〉|‘return’〈expr〉|‘exit’〈expr〉|
            ‘print’〈expr〉|‘println’〈expr〉|‘if’〈expr〉‘then’〈stat〉‘else’〈stat〉‘fi’|
            ‘while’〈expr〉‘do’〈stat〉‘done’|‘begin’〈stat〉‘end’| 〈stat〉‘;’〈stat〉
-〈assign-lhs〉::=〈ident〉| 〈array-elem〉| 〈pair-elem〉
+〈assign-lhs〉::=〈ident〉| 〈array-elem〉| 〈pair-elem〉| 〈deref-pointer〉
 〈assign-rhs〉::=〈expr〉| 〈array-liter〉|‘newpair’ ‘(’〈expr〉‘,’〈expr〉‘)’| 
                 〈pair-elem〉|‘call’〈ident〉‘(’〈arg-list〉?  ‘)’ | 〈memory-alloc〉
 〈arg-list〉::=〈expr〉(‘,’〈expr〉)*
@@ -42,7 +42,7 @@ Git commit convention
           〈pair-liter〉| 〈ident〉| 〈array-elem〉| 〈unary-oper〉 〈expr〉|
           〈expr〉 〈binary-oper〉 〈expr〉|‘(’〈expr〉‘)’ | 〈deref-pointer〉| 
           〈addr〉
-〈unary-oper〉::=  ‘!’|‘-’|‘len’|‘ord’|‘chr’|‘~’
+〈unary-oper〉::=  ‘!’|‘-’|‘len’|‘ord’|‘chr’|‘~’|'*'|'&'
 〈binary-oper〉::=  ‘*’|‘/’|‘%’|‘+’|‘-’|‘>’|‘>=’|‘<’|‘<=’|‘==’|‘!=’|‘&&’|‘||’|
                    ‘&’|‘|’|‘^’|‘<<’ |‘>>’
 〈ident〉::=  ( ‘’|‘a’-‘z’|‘A’-‘Z’ ) ( ‘’|‘a’-‘z’|‘A’-‘Z’|‘0’-‘9’ )*
@@ -61,10 +61,11 @@ Git commit convention
 〈array-liter〉::=  ‘[’ (〈expr〉(‘,’〈expr〉)* )?  ‘]’
 〈pair-liter〉::=  ‘null’〈comment〉::=  ‘#’ (any-character-except-EOL)*〈EOL〉
 
-〈memory-alloc〉::= ‘malloc’ ‘(’〈expr〉‘)’ | ‘realloc’ ‘(’〈expr〉‘)’ |
-                   ‘calloc’ ‘(’〈expr〉‘)’
+〈memory-alloc〉::= ‘malloc’ ‘(’〈expr〉‘)’
+                 | ‘realloc’ ‘(’〈ident〉 ','〈expr〉‘)’
+                 | ‘calloc’ ‘(’〈expr〉‘)’
 〈pointer-type〉::= 〈type〉‘*’
-〈deref-pointer〉::= ‘*(’ 〈expr〉 ‘malloc’
+〈deref-pointer〉::= ‘*’〈expr〉
 〈addr〉::= ‘&’〈expr〉
 
 
