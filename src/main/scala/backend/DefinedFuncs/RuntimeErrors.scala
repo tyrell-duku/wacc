@@ -149,7 +149,8 @@ object RuntimeErrors {
         Push(ListBuffer(LR)),
         Cmp(resultReg, ImmInt(FALSE_INT)),
         LdrCond(LT, resultReg, DataLabel(Label(NegativeShift.msgName(0)))),
-        BranchLinkCond(LT, RuntimeError.funcLabel)
+        BranchLinkCond(LT, RuntimeError.funcLabel),
+        Pop(ListBuffer(PC))
       )
     )
   }
