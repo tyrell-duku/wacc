@@ -75,9 +75,9 @@ object Rules {
 
   case class PtrT(t: Type) extends Type {
     override def equals(x: Any): Boolean = x match {
-      case PtrT(null)  => true
-      case PtrT(inner) => if (t == null) true else inner == t
-      case _           => false
+      case PtrT(null) | IntT => true
+      case PtrT(inner)       => if (t == null) true else inner == t
+      case _                 => false
     }
   }
 
