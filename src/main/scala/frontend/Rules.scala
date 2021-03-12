@@ -434,8 +434,14 @@ object Rules {
       val actualL = lExpr.getType(sTable)
       val actualR = rExpr.getType(sTable)
       semErrs = lExpr.semErrs ++ rExpr.semErrs
+      /* If type is Any, variable used in expression is undefined so early
+         return with semantic errors. */
       if (actualL == Any || actualR == Any) {
         return expected._2
+      }
+      /* If isPtrArithmetic is true, early return with pointer type. */
+      if (isPtrArithmetic(actualL, actualR)) {
+        return actualL
       }
       if (actualL != actualR) {
         if (!expected._1.contains(actualL)) {
@@ -448,24 +454,20 @@ object Rules {
         semErrs += TypeMismatch(lExpr, actualL, expected._1)
         semErrs += TypeMismatch(rExpr, actualR, expected._1)
       }
-      if (isPtrArithmetic(actualL, actualR)) {
-        actualL
-      } else {
-        expected._2
-      }
+      expected._2
     }
 
     /* Returns true if pointer arithmetic is occuring, use left type as pointer
        since '+'/'-' is left-associative. */
     def isPtrArithmetic(leftT: Type, rightT: Type): Boolean = this match {
-      case Plus(_, _, _) | Sub(_, _, _) => leftT.isPtr && !rightT.isPtr
+      case Plus(_, _, _) | Sub(_, _, _) => leftT.isPtr && (rightT == IntT)
       case _                            => false
     }
   }
 
   // Traits for all possible types of an binary operation
   sealed trait ArithOps extends BinOp {
-    override val expected: (List[Type], Type) = (List(IntT, PtrT(null)), IntT)
+    override val expected: (List[Type], Type) = (List(IntT), IntT)
   }
   case class Mul(lExpr: Expr, rExpr: Expr, pos: (Int, Int)) extends ArithOps {
     val operatorStr = "*"
