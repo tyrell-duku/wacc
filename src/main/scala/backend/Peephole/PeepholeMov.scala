@@ -22,6 +22,7 @@ object PeepholeMov {
       if (rd != op1) {
         optimise(Mov(rd, op1), instructions, optimised)
       } else {
+        // If rd == op1, no need to add intructions
         optimise(instructions.head, instructions.tail, optimised)
       }
     } else {
