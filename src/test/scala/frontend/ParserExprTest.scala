@@ -133,6 +133,29 @@ class FrontendParserExprTest extends AnyFunSuite {
     )
   }
 
+  test("Successfully parses comapator operators") {
+    assert(
+      expr
+        .runParser("5 < 2")
+        .contains(LT(IntLiter(5, (1, 1)), IntLiter(2, (1, 5)), (1, 3)))
+    )
+    assert(
+      expr
+        .runParser("5 <= 2")
+        .contains(LTE(IntLiter(5, (1, 1)), IntLiter(2, (1, 6)), (1, 3)))
+    )
+    assert(
+      expr
+        .runParser("5 > 2")
+        .contains(GT(IntLiter(5, (1, 1)), IntLiter(2, (1, 5)), (1, 3)))
+    )
+    assert(
+      expr
+        .runParser("5 >= 2")
+        .contains(GTE(IntLiter(5, (1, 1)), IntLiter(2, (1, 6)), (1, 3)))
+    )
+  }
+
   // TODO: positions
   ignore("Successfully parses bitwise operators with numbers") {
     assert(
