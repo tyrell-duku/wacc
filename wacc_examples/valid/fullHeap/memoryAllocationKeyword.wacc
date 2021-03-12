@@ -1,0 +1,11 @@
+# Uses C-style pointers.
+# To validate if malloc90 is parsed as an ident and no syntax error expected 
+# a bracket.
+
+# Program:
+
+begin
+  int *malloc90 = calloc(10, 5);
+  int *x = malloc90;
+  free x
+end
