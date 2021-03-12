@@ -10,5 +10,5 @@
 
 begin
   bool *ptr = malloc(5) ;
-  free (ptr + 6)
+  free (6)
 end
