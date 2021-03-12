@@ -11,10 +11,8 @@ import frontend.Semantics.SemanticError
 
 class FrontendSemanticErrorTest extends AnyFunSuite {
   val programWhitespace: Parsley[Program] = lexer.whiteSpace *> program <* eof
-  private val invalidSkip = listAllFiles(
-    new File("wacc_examples/invalid/semanticErr/fullHeap")
-  )
-  private val validSkip = listAllFiles(new File("wacc_examples/valid/fullHeap"))
+  private val invalidSkip = Array.empty[File]
+  private val validSkip = Array.empty[File]
 
   private def testFile(
       testFunc: ((String, List[org.scalatest.Tag]) => (=> Any) => Unit),
