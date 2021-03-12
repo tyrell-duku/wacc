@@ -1,0 +1,13 @@
+# expresission type mismatch int->bool
+
+# Output:
+# #semantic_error#
+
+# Exit:
+# 200
+
+# Program:
+
+begin
+  bool b = 15 & 6 | 19
+end
