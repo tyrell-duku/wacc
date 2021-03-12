@@ -122,12 +122,11 @@ object Expressions {
         instructions += IR.InstructionSet.And(rd, rd, rm)
       case _: frontend.Rules.Or =>
         instructions += IR.InstructionSet.Or(rd, rd, rm)
-      case _: BitWiseAnd =>
-        instructions += IR.InstructionSet.And(rd, rd, rm)
-      case _: BitWiseOr =>
-        instructions += IR.InstructionSet.Or(rd, rd, rm)
-      case _: BitWiseXor =>
-        instructions += Eor(rd, rd, rm)
+      case _: BitWiseAnd        => instructions += IR.InstructionSet.And(rd, rd, rm)
+      case _: BitWiseOr         => instructions += IR.InstructionSet.Or(rd, rd, rm)
+      case _: BitWiseXor        => instructions += Eor(rd, rd, rm)
+      case _: LogicalShiftLeft  => instructions += Mov(rd, LSL(rd, rm))
+      case _: LogicalShiftRight => instructions += Mov(rd, LSR(rd, rm))
       // Comparison binary operators
       case cmpOp => instructions ++= transCond(cmpOp, rd, rm)
     }
