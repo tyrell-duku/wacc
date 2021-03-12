@@ -156,7 +156,7 @@ class FrontendParserExprTest extends AnyFunSuite {
     )
   }
 
-  ignore("Successfully parses bitwise operators with numbers") {
+  test("Successfully parses bitwise operators with numbers") {
     assert(
       expr
         .runParser("5&10")
@@ -188,7 +188,7 @@ class FrontendParserExprTest extends AnyFunSuite {
     )
   }
 
-  ignore("Successfully parses bitwise operators in correct order") {
+  test("Successfully parses bitwise operators in correct order") {
     assert(
       expr
         .runParser("5|10 & 100")
@@ -217,7 +217,7 @@ class FrontendParserExprTest extends AnyFunSuite {
         .contains(
           BitWiseXor(
             IntLiter(4, (1, 1)),
-            BitWiseAnd(IntLiter(5, (1, 5)), IntLiter(10, (1, 10)), (1, 7)),
+            BitWiseAnd(IntLiter(5, (1, 5)), IntLiter(10, (1, 9)), (1, 7)),
             (1, 3)
           )
         )
@@ -227,8 +227,8 @@ class FrontendParserExprTest extends AnyFunSuite {
         .runParser("5 << 2 & 3")
         .contains(
           BitWiseAnd(
-            IntLiter(5, (1, 1)),
-            LogicalLeftShift(IntLiter(2, (1, 6)), IntLiter(3, (1, 10)), (1, 3)),
+            LogicalLeftShift(IntLiter(5, (1, 1)), IntLiter(2, (1, 6)), (1, 3)),
+            IntLiter(3, (1, 10)),
             (1, 8)
           )
         )
@@ -238,19 +238,19 @@ class FrontendParserExprTest extends AnyFunSuite {
         .runParser("20 >> 2 | 10")
         .contains(
           BitWiseOr(
-            IntLiter(20, (1, 1)),
             LogicalRightShift(
+              IntLiter(20, (1, 1)),
               IntLiter(2, (1, 7)),
-              IntLiter(10, (1, 11)),
               (1, 4)
             ),
+            IntLiter(10, (1, 11)),
             (1, 9)
           )
         )
     )
   }
 
-  ignore("Successfully parses bitwise operators with other operators") {
+  test("Successfully parses bitwise operators with other operators") {
     assert(
       expr
         .runParser("20 >> 2 > 8")
@@ -306,6 +306,36 @@ class FrontendParserExprTest extends AnyFunSuite {
               IntLiter(2, (1, 6)),
               IntLiter(3, (1, 11)),
               (1, 8)
+            ),
+            (1, 4)
+          )
+        )
+    )
+    assert(
+      expr
+        .runParser("20 && 2 & 3")
+        .contains(
+          And(
+            IntLiter(20, (1, 1)),
+            BitWiseAnd(
+              IntLiter(2, (1, 7)),
+              IntLiter(3, (1, 11)),
+              (1, 9)
+            ),
+            (1, 4)
+          )
+        )
+    )
+    assert(
+      expr
+        .runParser("20 || 2 | 3")
+        .contains(
+          Or(
+            IntLiter(20, (1, 1)),
+            BitWiseOr(
+              IntLiter(2, (1, 7)),
+              IntLiter(3, (1, 11)),
+              (1, 9)
             ),
             (1, 4)
           )
