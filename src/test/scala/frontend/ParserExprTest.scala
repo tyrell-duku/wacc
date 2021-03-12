@@ -156,40 +156,38 @@ class FrontendParserExprTest extends AnyFunSuite {
     )
   }
 
-  // TODO: positions
   ignore("Successfully parses bitwise operators with numbers") {
     assert(
       expr
         .runParser("5&10")
-        .contains(BitWiseAnd(IntLiter(5, (1, 1)), IntLiter(10, (1, 1)), (1, 1)))
+        .contains(BitWiseAnd(IntLiter(5, (1, 1)), IntLiter(10, (1, 3)), (1, 2)))
     )
     assert(
       expr
         .runParser("5 |  10")
-        .contains(BitWiseOr(IntLiter(5, (1, 1)), IntLiter(10, (1, 1)), (1, 1)))
+        .contains(BitWiseOr(IntLiter(5, (1, 1)), IntLiter(10, (1, 6)), (1, 3)))
     )
     assert(
       expr
         .runParser("5 ^ 10")
-        .contains(BitWiseXor(IntLiter(5, (1, 1)), IntLiter(10, (1, 1)), (1, 1)))
+        .contains(BitWiseXor(IntLiter(5, (1, 1)), IntLiter(10, (1, 5)), (1, 3)))
     )
     assert(
       expr
         .runParser("5 << 2")
         .contains(
-          LogicalLeftShift(IntLiter(5, (1, 1)), IntLiter(2, (1, 1)), (1, 1))
+          LogicalLeftShift(IntLiter(5, (1, 1)), IntLiter(2, (1, 6)), (1, 3))
         )
     )
     assert(
       expr
         .runParser("20 >> 2")
         .contains(
-          LogicalRightShift(IntLiter(20, (1, 1)), IntLiter(2, (1, 1)), (1, 1))
+          LogicalRightShift(IntLiter(20, (1, 1)), IntLiter(2, (1, 7)), (1, 4))
         )
     )
   }
 
-  // TODO: positions
   ignore("Successfully parses bitwise operators in correct order") {
     assert(
       expr
@@ -197,8 +195,8 @@ class FrontendParserExprTest extends AnyFunSuite {
         .contains(
           BitWiseOr(
             IntLiter(5, (1, 1)),
-            BitWiseAnd(IntLiter(10, (1, 1)), IntLiter(100, (1, 1)), (1, 1)),
-            (1, 1)
+            BitWiseAnd(IntLiter(10, (1, 3)), IntLiter(100, (1, 8)), (1, 6)),
+            (1, 2)
           )
         )
     )
@@ -208,8 +206,8 @@ class FrontendParserExprTest extends AnyFunSuite {
         .contains(
           BitWiseOr(
             IntLiter(5, (1, 1)),
-            BitWiseXor(IntLiter(10, (1, 1)), IntLiter(2, (1, 1)), (1, 1)),
-            (1, 1)
+            BitWiseXor(IntLiter(10, (1, 6)), IntLiter(2, (1, 11)), (1, 9)),
+            (1, 3)
           )
         )
     )
@@ -219,8 +217,8 @@ class FrontendParserExprTest extends AnyFunSuite {
         .contains(
           BitWiseXor(
             IntLiter(4, (1, 1)),
-            BitWiseAnd(IntLiter(5, (1, 1)), IntLiter(10, (1, 1)), (1, 1)),
-            (1, 1)
+            BitWiseAnd(IntLiter(5, (1, 5)), IntLiter(10, (1, 10)), (1, 7)),
+            (1, 3)
           )
         )
     )
@@ -230,8 +228,8 @@ class FrontendParserExprTest extends AnyFunSuite {
         .contains(
           BitWiseAnd(
             IntLiter(5, (1, 1)),
-            LogicalLeftShift(IntLiter(2, (1, 1)), IntLiter(3, (1, 1)), (1, 1)),
-            (1, 1)
+            LogicalLeftShift(IntLiter(2, (1, 6)), IntLiter(3, (1, 10)), (1, 3)),
+            (1, 8)
           )
         )
     )
@@ -242,17 +240,16 @@ class FrontendParserExprTest extends AnyFunSuite {
           BitWiseOr(
             IntLiter(20, (1, 1)),
             LogicalRightShift(
-              IntLiter(2, (1, 1)),
-              IntLiter(10, (1, 1)),
-              (1, 1)
+              IntLiter(2, (1, 7)),
+              IntLiter(10, (1, 11)),
+              (1, 4)
             ),
-            (1, 1)
+            (1, 9)
           )
         )
     )
   }
 
-  // TODO: positions
   ignore("Successfully parses bitwise operators with other operators") {
     assert(
       expr
@@ -261,11 +258,11 @@ class FrontendParserExprTest extends AnyFunSuite {
           GT(
             LogicalRightShift(
               IntLiter(20, (1, 1)),
-              IntLiter(2, (1, 1)),
-              (1, 1)
+              IntLiter(2, (1, 7)),
+              (1, 4)
             ),
-            IntLiter(8, (1, 1)),
-            (1, 1)
+            IntLiter(8, (1, 11)),
+            (1, 9)
           )
         )
     )
@@ -276,11 +273,11 @@ class FrontendParserExprTest extends AnyFunSuite {
           LT(
             LogicalLeftShift(
               IntLiter(20, (1, 1)),
-              IntLiter(2, (1, 1)),
-              (1, 1)
+              IntLiter(2, (1, 7)),
+              (1, 4)
             ),
-            IntLiter(8, (1, 1)),
-            (1, 1)
+            IntLiter(8, (1, 11)),
+            (1, 9)
           )
         )
     )
@@ -291,11 +288,11 @@ class FrontendParserExprTest extends AnyFunSuite {
           GT(
             IntLiter(20, (1, 1)),
             LogicalRightShift(
-              IntLiter(8, (1, 1)),
-              IntLiter(2, (1, 1)),
-              (1, 1)
+              IntLiter(8, (1, 6)),
+              IntLiter(2, (1, 11)),
+              (1, 8)
             ),
-            (1, 1)
+            (1, 4)
           )
         )
     )
@@ -306,11 +303,11 @@ class FrontendParserExprTest extends AnyFunSuite {
           LT(
             IntLiter(20, (1, 1)),
             LogicalLeftShift(
-              IntLiter(2, (1, 1)),
-              IntLiter(3, (1, 1)),
-              (1, 1)
+              IntLiter(2, (1, 6)),
+              IntLiter(3, (1, 11)),
+              (1, 8)
             ),
-            (1, 1)
+            (1, 4)
           )
         )
     )
