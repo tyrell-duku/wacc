@@ -133,12 +133,37 @@ class FrontendParserExprTest extends AnyFunSuite {
     )
   }
 
+  // TODO: positions
   ignore("Successfully parses bitwise operators with numbers") {
-    assert(expr.runParser("5&10").contains(???))
-    assert(expr.runParser("5 |  10").contains(???))
-    assert(expr.runParser("5 ^ 10").contains(???))
-    assert(expr.runParser("5 << 2").contains(???))
-    assert(expr.runParser("20 >> 2").contains(???))
+    assert(
+      expr
+        .runParser("5&10")
+        .contains(BitWiseAnd(IntLiter(5, (1, 1)), IntLiter(10, (1, 1)), (1, 1)))
+    )
+    assert(
+      expr
+        .runParser("5 |  10")
+        .contains(BitWiseOr(IntLiter(5, (1, 1)), IntLiter(10, (1, 1)), (1, 1)))
+    )
+    assert(
+      expr
+        .runParser("5 ^ 10")
+        .contains(BitWiseXor(IntLiter(5, (1, 1)), IntLiter(10, (1, 1)), (1, 1)))
+    )
+    assert(
+      expr
+        .runParser("5 << 2")
+        .contains(
+          LogicalLeftShift(IntLiter(5, (1, 1)), IntLiter(2, (1, 1)), (1, 1))
+        )
+    )
+    assert(
+      expr
+        .runParser("20 >> 2")
+        .contains(
+          LogicalRightShift(IntLiter(20, (1, 1)), IntLiter(2, (1, 1)), (1, 1))
+        )
+    )
   }
 
   ignore("Successfully parses bitwise operators in correct order") {
