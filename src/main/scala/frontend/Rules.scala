@@ -92,8 +92,8 @@ object Rules {
     }
   }
   object DerefPtr {
-    def apply(ptr: Parsley[Expr]): Parsley[DerefPtr] =
-      pos <**> ptr.map((ptr: Expr) => (p: (Int, Int)) => DerefPtr(ptr, p))
+    def apply(op: Parsley[_]): Parsley[Expr => Expr] =
+      pos.map((p: (Int, Int)) => (e: Expr) => DerefPtr(e, p)) <* op
   }
 
   case class Addr(ptr: Expr, pos: (Int, Int)) extends Expr {
@@ -104,8 +104,8 @@ object Rules {
     }
   }
   object Addr {
-    def apply(ptr: Parsley[Expr]): Parsley[Addr] =
-      pos <**> ptr.map((ptr: Expr) => (p: (Int, Int)) => Addr(ptr, p))
+    def apply(op: Parsley[_]): Parsley[Expr => Expr] =
+      pos.map((p: (Int, Int)) => (e: Expr) => Addr(e, p)) <* op
   }
 
   case class SizeOf(t: Type, pos: (Int, Int)) extends Expr {
