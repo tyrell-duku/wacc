@@ -20,7 +20,7 @@ object ExprParser {
     // unary operators
     Ops[Expr](Prefix)(
       Not("!") ? "unary operator",
-      BitwiseNot("~") ? "bitwise operator",
+      BitwiseNot("~") ? "unary operator",
       notFollowedBy(intLiter) *> Negation("-") ? "unary operator",
       Len("len") ? "unary operator",
       Ord("ord") ? "unary operator",
