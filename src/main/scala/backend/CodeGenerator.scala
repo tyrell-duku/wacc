@@ -148,7 +148,7 @@ object CodeGenerator {
       case _: BitWiseOps => IntT
       case Addr(e, _)    => PtrT(getExprType(e))
       case DerefPtr(ptr, _) =>
-        val PtrT(inner) = getExprType(ptr)
+        val PtrT(inner) = ptr.getType(sTable)
         inner
       case _: SizeOf => IntT
       case _         => ???
