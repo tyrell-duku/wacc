@@ -110,6 +110,20 @@ object PeepholeStrong {
           } else {
             continueOptimise(load1, load2, instructions, optimised)
           }
+        case (ImmMem(n), _) =>
+          val shiftAmount = getShiftAmount(n)
+          if (shiftAmount != LOG_ERROR) {
+            shiftOptimise(shiftAmount, instructions, r1, r2, op2, optimised)
+          } else {
+            continueOptimise(load1, load2, instructions, optimised)
+          }
+        case (_, ImmMem(n)) =>
+          val shiftAmount = getShiftAmount(n)
+          if (shiftAmount != LOG_ERROR) {
+            shiftOptimise(shiftAmount, instructions, r1, r2, op2, optimised)
+          } else {
+            continueOptimise(load1, load2, instructions, optimised)
+          }
         case _ =>
           continueOptimise(load1, load2, instructions, optimised)
       }
