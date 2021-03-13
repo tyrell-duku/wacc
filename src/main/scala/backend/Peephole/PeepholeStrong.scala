@@ -50,9 +50,7 @@ object PeepholeStrong {
         val shiftAmount = getShiftAmount(n)
         op1 match {
           case ImmMem(n1) =>
-            if (
-              (shiftAmount != LOG_ERROR && getShiftAmount(n1) != LOG_ERROR)
-            ) {
+            if ((shiftAmount != LOG_ERROR && getShiftAmount(n1) != LOG_ERROR)) {
               instructions.head match {
                 // Get the destination reg for the division
                 case Mov(rd, _) =>
@@ -120,6 +118,7 @@ object PeepholeStrong {
     }
   }
 
+  // Adds shift instuctions and continues to optimise
   def shiftOptimise(
       shiftAmount: Int,
       instructions: mutable.ListBuffer[Instruction],

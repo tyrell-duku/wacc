@@ -41,7 +41,7 @@ object Peephole {
   }
 
   /* Overloaded optimise function that is recursively called to store
-     optimised instructions in optimised*/
+     optimised instructions in optimised */
   def optimise(
       instructions: mutable.ListBuffer[Instruction],
       optimised: mutable.ListBuffer[Instruction]
@@ -52,7 +52,7 @@ object Peephole {
   }
 
   /* Overloaded optimise function that is recursively called to store
-     optimised instructions in optimised*/
+     optimised instructions in OPTIMISED */
   def optimise(
       cur: Instruction,
       instructions: mutable.ListBuffer[Instruction],

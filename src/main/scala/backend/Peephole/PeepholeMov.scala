@@ -30,7 +30,7 @@ object PeepholeMov {
     }
   }
 
-
+  /* Removes redundant Load instructions */
   def peepStrLdr(
       r1: Reg,
       op1: Address,
@@ -48,7 +48,7 @@ object PeepholeMov {
         optimise(Str(r1, op1), instructions, optimised)
       }
     } else {
-      if(isByte) {
+      if (isByte) {
         continueOptimise(StrB(r1, op1), LdrSB(r2, op2), instructions, optimised)
       } else {
         continueOptimise(Str(r1, op1), Ldr(r2, op2), instructions, optimised)
