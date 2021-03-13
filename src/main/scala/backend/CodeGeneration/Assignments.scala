@@ -3,9 +3,12 @@ package backend.CodeGeneration
 import backend.CodeGeneration.Arrays._
 import backend.CodeGeneration.Expressions.transExp
 import backend.CodeGeneration.Functions.transCall
-import backend.CodeGeneration.MemoryAllocs.transMemoryAlloc
+import backend.CodeGeneration.MemoryAllocs._
 import backend.CodeGeneration.Pairs._
 import backend.CodeGenerator._
+import backend.DefinedFuncs.PreDefinedFuncs.Overflow
+import backend.DefinedFuncs.RuntimeErrors.addRuntimeError
+import backend.IR.Condition.VS
 import backend.IR.InstructionSet._
 import backend.IR.Operand._
 import frontend.Rules._
@@ -57,8 +60,10 @@ object Assignments {
         instructions ++= storeArrayElem(id, es, freeReg)
       case DerefPtr(ptr, _) =>
         val (isByte, instrs) = assignRHS(getExprType(ptr), aRHS, freeReg)
+        instructions ++= instrs
         val nextFreeReg = getFreeReg()
         instructions ++= transExp(ptr, nextFreeReg)
+        instructions ++= derefPointerSizeOffset(nextFreeReg)
         instructions += Str(freeReg, RegAdd(nextFreeReg))
         addUnusedReg(nextFreeReg)
       // Semantically incorrect
