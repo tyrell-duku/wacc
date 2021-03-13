@@ -28,7 +28,7 @@ object Print {
       case IntT                             => PrintInt
       case BoolT                            => PrintBool
       case StringT                          => PrintString
-      case ArrayT(CharT)                    => PrintString
+      case ArrayT(CharT) | PtrT(CharT)      => PrintString
       case ArrayT(_) | Pair(_, _) | PtrT(_) => PrintReference
       // CharT does not have a pre defined function
       case _ => ???
