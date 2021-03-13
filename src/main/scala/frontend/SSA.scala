@@ -4,6 +4,7 @@ import Rules._
 import scala.collection.immutable.HashMap
 import scala.collection.mutable.ListBuffer
 import backend.CodeGenerator.getExprType
+import ConstantFolding.foldExpr
 
 object SSA {
   // <Identifier's name, (LHS unique identifier, RHS unique identifier)>
@@ -126,12 +127,15 @@ object SSA {
         val v = addToHashMap(id, null)
         buf += EqIdent(getExprType(e), v, e)
         buf += Read(v)
-      case Read(lhs)     => buf += Read(updateLhs(lhs))
-      case Free(e)       => buf += Free(transformExpr(e))
-      case Return(e)     => buf += Return(transformExpr(e))
-      case Exit(e)       => buf += Exit(transformExpr(e))
-      case Print(e)      => buf += Print(transformExpr(e))
-      case PrintLn(e)    => buf += PrintLn(transformExpr(e))
+      case Read(lhs)  => buf += Read(updateLhs(lhs))
+      case Free(e)    => buf += Free(transformExpr(e))
+      case Return(e)  => buf += Return(transformExpr(e))
+      case Exit(e)    => buf += Exit(transformExpr(e))
+      case Print(e)   => buf += Print(transformExpr(e))
+      case PrintLn(e) => buf += PrintLn(transformExpr(e))
+      case If(cond, s1, s2) =>
+        val BoolLiter(b, _) = foldExpr(cond)
+        if (b) buf ++= transformStat(s1) else buf ++= transformStat(s2)
       case Seq(statList) => statList.flatMap(transformStat).to(ListBuffer)
       case Skip          => buf += Skip
       case _             => ???
