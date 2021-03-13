@@ -17,6 +17,10 @@ object Operand {
     override def toString: String = s"$r, LSR $op"
   }
 
+  case class ASL(r: Reg, n: ImmInt) extends Operand {
+    override def toString: String = s"$r, ASL $n"
+  }
+
   case class ASR(r: Reg, n: ImmInt) extends Operand {
     override def toString: String = s"$r, ASR $n"
   }
