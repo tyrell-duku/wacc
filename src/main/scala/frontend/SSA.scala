@@ -3,6 +3,7 @@ package frontend
 import Rules._
 import scala.collection.immutable.HashMap
 import scala.collection.mutable.ListBuffer
+import backend.CodeGenerator.getExprType
 
 object SSA {
   // <Identifier's name, (LHS unique identifier, RHS unique identifier)>
@@ -82,10 +83,14 @@ object SSA {
     case p: PairLiter => p
   }
 
-  private def deadCodeElimination(rhs: AssignRHS, stat: Stat): Stat =
+  private def deadCodeElimination(
+      rhs: AssignRHS,
+      stat: Stat,
+      buf: ListBuffer[Stat]
+  ): ListBuffer[Stat] =
     rhs match {
-      case _: Expr => null
-      case _       => stat
+      case _: Expr => buf
+      case _       => buf += stat
     }
 
   private def updateRhs(rhs: AssignRHS): AssignRHS = rhs match {
@@ -97,8 +102,6 @@ object SSA {
     case DerefPtr(ptr, pos)  => DerefPtr(transformExpr(ptr), pos)
     case Fst(id: Ident, pos) => Fst(updateIdent(id), pos)
     case Snd(id: Ident, pos) => Snd(updateIdent(id), pos)
-    // Not for EqAssign
-    case id: Ident => updateIdent(id)
     case ArrayElem(id, es, pos) =>
       ArrayElem(updateIdent(id), es.map(transformExpr), pos)
     // Semantically incorrect
@@ -106,25 +109,32 @@ object SSA {
   }
 
   /* Transforms a given statement S into SSA form. */
-  private def transformStat(s: Stat): Stat = {
+  private def transformStat(s: Stat): ListBuffer[Stat] = {
+    val buf = ListBuffer.empty[Stat]
     s match {
       case EqIdent(t, id @ Ident(_, pos), r) =>
         val v = addToHashMap(id, r)
-        deadCodeElimination(r, EqIdent(t, v, r))
+        deadCodeElimination(r, EqIdent(t, v, r), buf)
       case EqAssign(id: Ident, r) =>
         val v = addToHashMap(id, r)
-        deadCodeElimination(r, EqAssign(v, r))
-      case EqAssign(lhs, rhs) => EqAssign(updateLhs(lhs), updateRhs(rhs))
-      case Read(lhs)          => Read(updateLhs(lhs))
-      case Free(e)            => Free(transformExpr(e))
-      case Return(e)          => Return(transformExpr(e))
-      case Exit(e)            => Exit(transformExpr(e))
-      case Print(e)           => Print(transformExpr(e))
-      case PrintLn(e)         => PrintLn(transformExpr(e))
-      case Seq(statList) =>
-        Seq(statList.map(transformStat).filter(x => x != null))
-      case Skip => Skip
-      case _    => ???
+        deadCodeElimination(r, EqAssign(v, r), buf)
+      case EqAssign(lhs, rhs) => buf += EqAssign(updateLhs(lhs), updateRhs(rhs))
+      case Read(id: Ident) =>
+        val Ident(s, _) = updateIdent(id)
+        val e = kvs(s)
+        // add to dict but not kvs
+        val v = addToHashMap(id, null)
+        buf += EqIdent(getExprType(e), v, e)
+        buf += Read(v)
+      case Read(lhs)     => buf += Read(updateLhs(lhs))
+      case Free(e)       => buf += Free(transformExpr(e))
+      case Return(e)     => buf += Return(transformExpr(e))
+      case Exit(e)       => buf += Exit(transformExpr(e))
+      case Print(e)      => buf += Print(transformExpr(e))
+      case PrintLn(e)    => buf += PrintLn(transformExpr(e))
+      case Seq(statList) => statList.flatMap(transformStat).to(ListBuffer)
+      case Skip          => buf += Skip
+      case _             => ???
     }
   }
 
@@ -132,13 +142,13 @@ object SSA {
   def transformFunc(f: Func): Func = {
     val Func(t, id, params, s) = f
     // TODO: transform params
-    Func(t, id, params, transformStat(s))
+    Func(t, id, params, Seq(transformStat(s).toList))
   }
 
   /* Transforms a given program AST into SSA form. */
   def toSSA(ast: Program): Program = {
     val Program(fs, s) = ast
-    val x = Program(fs.map(f => transformFunc(f)), transformStat(s))
+    val x = Program(fs.map(f => transformFunc(f)), Seq(transformStat(s).toList))
     println(x)
     x
   }
