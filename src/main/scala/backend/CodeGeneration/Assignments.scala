@@ -55,6 +55,12 @@ object Assignments {
         val (_, instrs) = assignRHS(getExprType(ae), aRHS, freeReg)
         instructions ++= instrs
         instructions ++= storeArrayElem(id, es, freeReg)
+      case DerefPtr(ptr, _) =>
+        val (isByte, instrs) = assignRHS(getExprType(ptr), aRHS, freeReg)
+        val nextFreeReg = getFreeReg()
+        instructions ++= transExp(ptr, nextFreeReg)
+        instructions += Str(freeReg, RegAdd(nextFreeReg))
+        addUnusedReg(nextFreeReg)
       // Semantically incorrect
       case _ =>
     }
