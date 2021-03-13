@@ -1,6 +1,7 @@
 package backend.CodeGeneration
 
 import backend.CodeGeneration.Arrays.loadArrayElem
+import backend.CodeGeneration.MemoryAllocs._
 import backend.CodeGenerator
 import backend.CodeGenerator._
 import backend.DefinedFuncs.PreDefinedFuncs.{
@@ -107,9 +108,11 @@ object Expressions {
         instructions += BranchLink(Label("__aeabi_idivmod"))
         instructions += Mov(rd, R1)
       case _: Plus =>
+        instructions ++= pointerArith(op.lExpr, rm)
         instructions += AddS(rd, rd, rm)
         instructions += BranchLinkCond(VS, addRuntimeError(Overflow))
       case _: frontend.Rules.Sub =>
+        instructions ++= pointerArith(op.lExpr, rm)
         instructions += SubS(rd, rd, rm)
         instructions += BranchLinkCond(VS, addRuntimeError(Overflow))
       case _: frontend.Rules.And =>
@@ -199,6 +202,7 @@ object Expressions {
       case DerefPtr(ptr, _) =>
         instructions ++= transExp(ptr, rd)
         instructions += Ldr(rd, RegAdd(rd))
+        instructions ++= derefPointerSizeOffset(rd)
       case SizeOf(t, _) =>
         instructions += Ldr(rd, ImmMem(getBaseTypeSize(t)))
     }
