@@ -5,7 +5,7 @@ import backend.DefinedFuncs.PreDefinedFuncs.{FreePair, FreeArray}
 import backend.DefinedFuncs.RuntimeErrors.addRuntimeError
 import backend.IR.InstructionSet._
 import backend.IR.Operand._
-import frontend.Rules.{ArrayT, Ident, Pair}
+import frontend.Rules.{ArrayT, Ident, Pair, PtrT}
 import scala.collection.mutable.ListBuffer
 
 object Free {
@@ -24,10 +24,10 @@ object Free {
     t match {
       case _: Pair =>
         instructions += BranchLink(addRuntimeError(FreePair))
-      case _: ArrayT =>
+      case _: ArrayT | _: PtrT =>
         instructions += BranchLink(addRuntimeError(FreeArray))
       // Semantically incorrect
-      case _ => ListBuffer.empty[Instruction]
+      case _ => ???
     }
     instructions
   }
