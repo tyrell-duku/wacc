@@ -99,7 +99,7 @@ object PeepholeStrong {
             if (shiftAmount1 != 0) {
               newInstructions = instructions.tail
               Mov(r1, ASL(r1, ImmInt(shiftAmount1))) +=: newInstructions
-              Ldr(r2, ImmMem(0)) +=: newInstructions
+              Mov(r2, ASR(r1, ImmInt(31))) +=: newInstructions
             }
             Ldr(r1, op2) +=: newInstructions
             // Optimise instructinos from NEWINSTRUCTIONS
@@ -111,7 +111,7 @@ object PeepholeStrong {
             if (shiftAmount2 != 0) {
               newInstructions = instructions.tail
               Mov(r1, ASL(r1, ImmInt(shiftAmount2))) +=: newInstructions
-              Ldr(r2, ImmMem(0)) +=: newInstructions
+              Mov(r2, ASR(r1, ImmInt(31))) +=: newInstructions
             }
             Ldr(r1, op1) +=: newInstructions
             // Optimise instructinos from NEWINSTRUCTIONS
