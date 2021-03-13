@@ -23,8 +23,9 @@ object MemoryAllocs {
         instructions ++= transExp(mallocSize, freeReg)
         instructions += Mov(resultReg, freeReg)
         instructions += BranchLink(Label("malloc"))
+        instructions += Mov(freeReg, resultReg)
         val nextFreeReg = getFreeReg()
-        instructions += transExp(arraySize, nextFreeReg)
+        instructions ++= transExp(arraySize, nextFreeReg)
         instructions += Str(nextFreeReg, RegAdd(freeReg))
         addUnusedReg(nextFreeReg)
       case Realloc(ptr, size, _) =>
