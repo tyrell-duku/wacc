@@ -199,6 +199,8 @@ object Expressions {
       case DerefPtr(ptr, _) =>
         instructions ++= transExp(ptr, rd)
         instructions += Ldr(rd, RegAdd(rd))
+      case SizeOf(t, _) =>
+        instructions += Ldr(rd, ImmMem(getBaseTypeSize(t)))
     }
     instructions
   }
