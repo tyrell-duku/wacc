@@ -195,10 +195,10 @@ object Expressions {
       case e: BinOp =>
         instructions ++= transBinOp(e, rd)
       case Addr(ptr, _) =>
-        instructions ++= transExp(ptr, reg)
+        instructions ++= transExp(ptr, rd)
       case DerefPtr(ptr, _) =>
-        instructions ++= transExp(ptr, reg)
-        instructions += Ldr(reg, RegAdd(reg))
+        instructions ++= transExp(ptr, rd)
+        instructions += Ldr(rd, RegAdd(rd))
     }
     instructions
   }
