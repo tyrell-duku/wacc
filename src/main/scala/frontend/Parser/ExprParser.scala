@@ -55,11 +55,11 @@ object ExprParser {
     ),
     // bitwise binary operators
     Ops[Expr](InfixL)(
-      BitWiseAnd(attempt("&" <* notFollowedBy("&"))) ? "bitwise operator"
+      BitwiseAnd(attempt("&" <* notFollowedBy("&"))) ? "bitwise operator"
     ),
-    Ops[Expr](InfixL)(BitWiseXor("^") ? "bitwise operator"),
+    Ops[Expr](InfixL)(BitwiseXor("^") ? "bitwise operator"),
     Ops[Expr](InfixL)(
-      BitWiseOr(attempt("|" <* notFollowedBy("|"))) ? "bitwise operator"
+      BitwiseOr(attempt("|" <* notFollowedBy("|"))) ? "bitwise operator"
     ),
     // boolean binary operators
     Ops[Expr](InfixL)(And("&&") ? "boolean operator"),
