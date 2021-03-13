@@ -3,6 +3,7 @@ package backend.CodeGeneration
 import backend.CodeGeneration.Arrays._
 import backend.CodeGeneration.Expressions.transExp
 import backend.CodeGeneration.Functions.transCall
+import backend.CodeGeneration.MemoryAllocs.transMemoryAlloc
 import backend.CodeGeneration.Pairs._
 import backend.CodeGenerator._
 import backend.IR.InstructionSet._
@@ -84,6 +85,8 @@ object Assignments {
         instructions ++= transArrayLiter(t, opArr, freeReg)
       case Newpair(fst, snd, _) =>
         instructions ++= assignRHSPair(t, fst, snd, freeReg)
+      case memAlloc: MemoryAlloc =>
+        instructions ++= transMemoryAlloc(t, memAlloc, freeReg)
       // Semantically incorrect
       case _ =>
     }
