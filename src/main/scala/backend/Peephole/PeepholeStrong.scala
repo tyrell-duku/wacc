@@ -85,11 +85,11 @@ object PeepholeStrong {
     val load2 = Ldr(r2, op2)
     // Ensure SMULL instruction
     if (instructions.size >= 4) {
-      val newInstructions = instructions.drop(3)
+      var newInstructions = instructions.drop(3)
       (op1, op2) match {
         // If multiplying by 0, load 0 into the destination register
         case (ImmMem(0), _) | (_, ImmMem(0)) =>
-          optimise(Ldr(r1, ImmMem(0)), newInstructions, optimised)
+          optimise(Ldr(r1, ImmMem(0)), instructions.drop(3), optimised)
         case (ImmMem(n1), ImmMem(n2)) =>
           val shiftAmount1 = getShiftAmount(n1)
           val shiftAmount2 = getShiftAmount(n2)
@@ -97,6 +97,7 @@ object PeepholeStrong {
           if (shiftAmount1 > shiftAmount2 && shiftAmount1 != LOG_ERROR) {
             // Shift destReg by the rigth amount
             if (shiftAmount1 != 0) {
+              newInstructions = instructions.tail
               Mov(r1, LSL(r1, ImmInt(shiftAmount1))) +=: newInstructions
             }
             Ldr(r1, op2) +=: newInstructions
@@ -107,6 +108,7 @@ object PeepholeStrong {
           ) {
             // Shift destReg by the rigth amount
             if (shiftAmount2 != 0) {
+              newInstructions = instructions.tail
               Mov(r1, LSL(r1, ImmInt(shiftAmount2))) +=: newInstructions
             }
             Ldr(r1, op1) +=: newInstructions
