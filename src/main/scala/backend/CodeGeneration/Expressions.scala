@@ -194,6 +194,11 @@ object Expressions {
       case e: UnOp              => instructions ++= transUnOp(e, rd)
       case e: BinOp =>
         instructions ++= transBinOp(e, rd)
+      case Addr(ptr, _) =>
+        instructions ++= transExp(ptr, reg)
+      case DerefPtr(ptr, _) =>
+        instructions ++= transExp(ptr, reg)
+        instructions += Ldr(reg, RegAdd(reg))
     }
     instructions
   }
