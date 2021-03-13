@@ -230,13 +230,14 @@ object CodeGenerator {
   /* Return size of T in SP. */
   def getBaseTypeSize(t: Type): Int = {
     t match {
-      case IntT           => INT_SIZE
-      case BoolT          => BOOL_SIZE
-      case CharT          => CHAR_SIZE
-      case StringT        => STR_SIZE
-      case ArrayT(innerT) => ARRAY_SIZE
-      case Pair(_, _)     => PAIR_SIZE
-      case _              => ERROR
+      case IntT    => INT_SIZE
+      case BoolT   => BOOL_SIZE
+      case CharT   => CHAR_SIZE
+      case StringT => STR_SIZE
+      // Heap variables are all of size ADDRESS_SIZE (4 bytes)
+      case ArrayT(_) | Pair(_, _) | PtrT(_) => ADDRESS_SIZE
+      // Semantically incorrect
+      case _ => ???
     }
   }
 
