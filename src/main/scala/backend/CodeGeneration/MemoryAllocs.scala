@@ -57,4 +57,13 @@ object MemoryAllocs {
     }
     instructions
   }
+
+  def derefPointerSizeOffset(rd: Reg): ListBuffer[Instruction] = {
+    val instructions = ListBuffer.empty[Instruction]
+    val rm = getFreeReg()
+    instructions += Ldr(rm, ImmMem(INT_SIZE))
+    instructions += AddS(rd, rd, rm)
+    addUnusedReg(rm)
+    instructions += BranchLinkCond(VS, addRuntimeError(Overflow))
+  }
 }
