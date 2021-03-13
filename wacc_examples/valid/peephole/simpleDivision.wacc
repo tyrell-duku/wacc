@@ -1,0 +1,3 @@
+begin
+  println 5 / 8
+end

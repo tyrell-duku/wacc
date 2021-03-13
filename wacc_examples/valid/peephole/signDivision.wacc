@@ -1,0 +1,5 @@
+begin
+  int x = 7 / 8;
+  int y = -7 / 8;
+  println(x == (-1 * y))
+end
