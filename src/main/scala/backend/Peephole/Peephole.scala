@@ -73,6 +73,9 @@ object Peephole {
         case (Ldr(r1, op1), Ldr(r2, op2)) =>
           // Potential strong operation
           peepStrong(r1, op1, r2, op2, remainingTail, optimised)
+        case (Str(r1, op1), Ldr(r2, op2)) =>
+          // Potential useless Load
+          peepStrLdr(r1, op1, r2, op2, remainingTail, optimised)
         case _ =>
           continueOptimise(cur, remainingHead, remainingTail, optimised)
       }
