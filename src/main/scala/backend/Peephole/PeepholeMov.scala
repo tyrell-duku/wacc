@@ -42,11 +42,7 @@ object PeepholeMov {
   ): Unit = {
     if (r1 == r2 && op1 == op2) {
       // Skip over the Load intruction
-      if (isByte) {
-        optimise(StrB(r1, op1), instructions, optimised)
-      } else {
-        optimise(Str(r1, op1), instructions, optimised)
-      }
+      optimise(Str(isByte, r1, op1), instructions, optimised)
     } else {
       if (isByte) {
         continueOptimise(StrB(r1, op1), LdrSB(r2, op2), instructions, optimised)
