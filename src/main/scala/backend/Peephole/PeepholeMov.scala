@@ -37,13 +37,22 @@ object PeepholeMov {
       r2: Reg,
       op2: LoadOperand,
       instructions: mutable.ListBuffer[Instruction],
-      optimised: mutable.ListBuffer[Instruction]
+      optimised: mutable.ListBuffer[Instruction],
+      isByte: Boolean
   ): Unit = {
     if (r1 == r2 && op1 == op2) {
       // Skip over the Load intruction
-      optimise(Str(r1, op1), instructions, optimised)
+      if (isByte) {
+        optimise(StrB(r1, op1), instructions, optimised)
+      } else {
+        optimise(Str(r1, op1), instructions, optimised)
+      }
     } else {
-      continueOptimise(Str(r1, op1), Ldr(r2, op2), instructions, optimised)
+      if(isByte) {
+        continueOptimise(StrB(r1, op1), LdrSB(r2, op2), instructions, optimised)
+      } else {
+        continueOptimise(Str(r1, op1), Ldr(r2, op2), instructions, optimised)
+      }
     }
   }
 }
