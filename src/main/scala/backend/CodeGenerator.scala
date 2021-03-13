@@ -135,20 +135,23 @@ object CodeGenerator {
         var (_, t) = sTable(id)
         t = es.foldLeft(t)((x, _) => getArrayInnerType(x))
         t
-      case _: BitwiseNot            => IntT
-      case _: Not                   => BoolT
-      case _: Negation              => IntT
-      case _: Len                   => IntT
-      case _: Ord                   => IntT
-      case _: Chr                   => CharT
-      case _: ArithOps              => IntT
-      case _: ComparOps             => BoolT
-      case _: EqOps                 => BoolT
-      case _: LogicalOps            => BoolT
-      case _: BitWiseOps            => IntT
-      case Addr(t, _)               => PtrT(t)
-      case DerefPtr(PtrT(inner), _) => inner
-      case _                        => ???
+      case _: BitwiseNot => IntT
+      case _: Not        => BoolT
+      case _: Negation   => IntT
+      case _: Len        => IntT
+      case _: Ord        => IntT
+      case _: Chr        => CharT
+      case _: ArithOps   => IntT
+      case _: ComparOps  => BoolT
+      case _: EqOps      => BoolT
+      case _: LogicalOps => BoolT
+      case _: BitWiseOps => IntT
+      case Addr(e, _)    => PtrT(getExprType(e))
+      case DerefPtr(ptr, _) =>
+        val PtrT(inner) = getExprType(ptr)
+        inner
+      case _: SizeOf => IntT
+      case _         => ???
     }
   }
 
