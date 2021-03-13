@@ -4,19 +4,31 @@ import backend.CodeGeneration.Arrays.loadArrayElem
 import backend.CodeGenerator
 import backend.CodeGenerator._
 import backend.DefinedFuncs.PreDefinedFuncs.{
+  PreDefFunc,
   Overflow,
   DivideByZero,
   NegativeShift
 }
 import backend.DefinedFuncs.RuntimeErrors.addRuntimeError
+import backend.IR
 import backend.IR.Condition.{Condition, VS}
-import backend.IR.InstructionSet._
+import IR.InstructionSet._
 import backend.IR.Operand._
 import frontend.Rules._
 import scala.collection.mutable.ListBuffer
-import backend.IR
 
 object Expressions {
+  /* Moves the value to register R0 for the branch to the predefined function
+     FUNC. */
+  private def branchRuntimeError(
+      rd: Reg,
+      func: PreDefFunc
+  ): ListBuffer[Instruction] = {
+    val instructions = ListBuffer[Instruction](Mov(resultReg, rd))
+    instructions += BranchLink(addRuntimeError(func))
+    instructions
+  }
+
   /* Translates unary operator OP to the internal representation,
      into the internal . */
   private def transUnOp(op: UnOp, rd: Reg): ListBuffer[Instruction] = {
@@ -68,6 +80,74 @@ object Expressions {
     instructions
   }
 
+  private def transArithOp(
+      op: ArithOps,
+      rd: Reg,
+      rm: Reg
+  ): ListBuffer[Instruction] = {
+    val instructions = ListBuffer.empty[Instruction]
+    op match {
+      case _: frontend.Rules.Mul =>
+        // Runtime error check
+        instructions += SMul(rd, rm, rd, rm)
+        instructions += Cmp(rm, ASR(rd, ImmInt(31)))
+        instructions += BranchLinkCond(
+          IR.Condition.NE,
+          addRuntimeError(Overflow)
+        )
+      case _: Div =>
+        // Values need to be in R0 and R1 for "__aeabi_idiv"
+        instructions += Mov(R1, rm)
+        instructions ++= branchRuntimeError(rd, DivideByZero)
+        // Divide function
+        instructions += BranchLink(Label("__aeabi_idiv"))
+        instructions += Mov(rd, resultReg)
+      case _: Mod =>
+        // Needs to be in R0 and R1 for "__aeabi_idivmod"
+        instructions += Mov(R1, rm)
+        instructions ++= branchRuntimeError(rd, DivideByZero)
+        // Mod function
+        instructions += BranchLink(Label("__aeabi_idivmod"))
+        instructions += Mov(rd, R1)
+      case _: Plus =>
+        instructions += AddS(rd, rd, rm)
+        instructions += BranchLinkCond(VS, addRuntimeError(Overflow))
+      case _: frontend.Rules.Sub =>
+        instructions += SubS(rd, rd, rm)
+        instructions += BranchLinkCond(VS, addRuntimeError(Overflow))
+    }
+    instructions
+  }
+
+  /* Translates a bitwise operator to the internal representation. */
+  private def transBitwise(
+      op: BitwiseOps,
+      rd: Reg,
+      rm: Reg
+  ): ListBuffer[Instruction] = {
+    val instructions = ListBuffer.empty[Instruction]
+    op match {
+      case _: BitwiseAnd => instructions += IR.InstructionSet.And(rd, rd, rm)
+      case _: BitwiseOr =>
+        instructions += IR.InstructionSet.Or(rd, rd, rm)
+        instructions += BranchLinkCond(VS, addRuntimeError(Overflow))
+      case _: BitwiseXor =>
+        instructions += Eor(rd, rd, rm)
+        instructions += BranchLinkCond(VS, addRuntimeError(Overflow))
+      case _: LogicalShiftLeft =>
+        instructions ++= branchRuntimeError(rd, NegativeShift)
+        instructions ++= branchRuntimeError(rm, NegativeShift)
+        instructions += Mov(rd, LSL(rd, rm))
+        instructions += BranchLinkCond(VS, addRuntimeError(Overflow))
+      case _: LogicalShiftRight =>
+        instructions ++= branchRuntimeError(rd, NegativeShift)
+        instructions ++= branchRuntimeError(rm, NegativeShift)
+        instructions += Mov(rd, LSR(rd, rm))
+        instructions += BranchLinkCond(VS, addRuntimeError(Overflow))
+    }
+    instructions
+  }
+
   /* Translates a binary operator to the internal representation. */
   private def transBinOp(op: BinOp, rn: Reg): ListBuffer[Instruction] = {
     val instructions = transExp(op.lExpr, rn)
@@ -80,71 +160,15 @@ object Expressions {
       instructions += Pop(ListBuffer(popReg))
       rd = R10
     }
-
     op match {
-      case _: frontend.Rules.Mul =>
-        // Runtime error check
-        instructions += SMul(rd, rm, rd, rm)
-        instructions += Cmp(rm, ASR(rd, ImmInt(31)))
-        instructions += BranchLinkCond(
-          IR.Condition.NE,
-          addRuntimeError(Overflow)
-        )
-      case _: Div =>
-        // Values need to be in R0 and R1 for "__aeabi_idiv"
-        instructions += Mov(resultReg, rd)
-        instructions += Mov(R1, rm)
-        instructions += BranchLink(addRuntimeError(DivideByZero))
-        // Divide function
-        instructions += BranchLink(Label("__aeabi_idiv"))
-        instructions += Mov(rd, resultReg)
-      case _: Mod =>
-        // Needs to be in R0 and R1 for "__aeabi_idivmod"
-        instructions += Mov(resultReg, rd)
-        instructions += Mov(R1, rm)
-        instructions += BranchLink(addRuntimeError(DivideByZero))
-        // Mod function
-        instructions += BranchLink(Label("__aeabi_idivmod"))
-        instructions += Mov(rd, R1)
-      case _: Plus =>
-        instructions += AddS(rd, rd, rm)
-        instructions += BranchLinkCond(VS, addRuntimeError(Overflow))
-      case _: frontend.Rules.Sub =>
-        instructions += SubS(rd, rd, rm)
-        instructions += BranchLinkCond(VS, addRuntimeError(Overflow))
       case _: frontend.Rules.And =>
         instructions += IR.InstructionSet.And(rd, rd, rm)
       case _: frontend.Rules.Or =>
         instructions += IR.InstructionSet.Or(rd, rd, rm)
-      case _: BitWiseAnd => instructions += IR.InstructionSet.And(rd, rd, rm)
-      case _: BitWiseOr =>
-        instructions += IR.InstructionSet.Or(rd, rd, rm)
-        instructions += BranchLinkCond(VS, addRuntimeError(Overflow))
-      case _: BitWiseXor =>
-        instructions += Eor(rd, rd, rm)
-        instructions += BranchLinkCond(VS, addRuntimeError(Overflow))
-      case _: LogicalShiftLeft =>
-        instructions += Mov(resultReg, rd)
-        instructions += BranchLink(
-          addRuntimeError(NegativeShift)
-        )
-        instructions += Mov(resultReg, rm)
-        instructions += BranchLink(
-          addRuntimeError(NegativeShift)
-        )
-        instructions += Mov(rd, LSL(rd, rm))
-        instructions += BranchLinkCond(VS, addRuntimeError(Overflow))
-      case _: LogicalShiftRight =>
-        instructions += Mov(resultReg, rd)
-        instructions += BranchLink(
-          addRuntimeError(NegativeShift)
-        )
-        instructions += Mov(resultReg, rm)
-        instructions += BranchLink(
-          addRuntimeError(NegativeShift)
-        )
-        instructions += Mov(rd, LSR(rd, rm))
-        instructions += BranchLinkCond(VS, addRuntimeError(Overflow))
+      // Arithmetic binary operators
+      case arithOp: ArithOps => instructions ++= transArithOp(arithOp, rd, rm)
+      // Bitwise binary operators
+      case bwOp: BitwiseOps => instructions ++= transBitwise(bwOp, rd, rm)
       // Comparison binary operators
       case cmpOp => instructions ++= transCond(cmpOp, rd, rm)
     }

@@ -141,6 +141,7 @@ object RuntimeErrors {
     )
   }
 
+  /* Checks if attempting to use logical shift with negative numbers.*/
   def negativeShift: (Label, List[Instruction]) = {
     (
       NegativeShift.funcLabel,
@@ -148,7 +149,8 @@ object RuntimeErrors {
         Push(ListBuffer(LR)),
         Cmp(resultReg, ImmInt(FALSE_INT)),
         LdrCond(LT, resultReg, DataLabel(Label(NegativeShift.msgName(0)))),
-        BranchLinkCond(LT, RuntimeError.funcLabel)
+        BranchLinkCond(LT, RuntimeError.funcLabel),
+        Pop(ListBuffer(PC))
       )
     )
   }
