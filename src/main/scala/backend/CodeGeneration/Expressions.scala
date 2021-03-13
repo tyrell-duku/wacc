@@ -121,17 +121,17 @@ object Expressions {
 
   /* Translates a bitwise operator to the internal representation. */
   private def transBitwise(
-      op: BitWiseOps,
+      op: BitwiseOps,
       rd: Reg,
       rm: Reg
   ): ListBuffer[Instruction] = {
     val instructions = ListBuffer.empty[Instruction]
     op match {
-      case _: BitWiseAnd => instructions += IR.InstructionSet.And(rd, rd, rm)
-      case _: BitWiseOr =>
+      case _: BitwiseAnd => instructions += IR.InstructionSet.And(rd, rd, rm)
+      case _: BitwiseOr =>
         instructions += IR.InstructionSet.Or(rd, rd, rm)
         instructions += BranchLinkCond(VS, addRuntimeError(Overflow))
-      case _: BitWiseXor =>
+      case _: BitwiseXor =>
         instructions += Eor(rd, rd, rm)
         instructions += BranchLinkCond(VS, addRuntimeError(Overflow))
       case _: LogicalShiftLeft =>
@@ -168,7 +168,7 @@ object Expressions {
       // Arithmetic binary operators
       case arithOp: ArithOps => instructions ++= transArithOp(arithOp, rd, rm)
       // Bitwise binary operators
-      case bwOp: BitWiseOps => instructions ++= transBitwise(bwOp, rd, rm)
+      case bwOp: BitwiseOps => instructions ++= transBitwise(bwOp, rd, rm)
       // Comparison binary operators
       case cmpOp => instructions ++= transCond(cmpOp, rd, rm)
     }

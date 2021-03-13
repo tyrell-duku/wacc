@@ -145,7 +145,7 @@ object CodeGenerator {
       case _: ComparOps  => BoolT
       case _: EqOps      => BoolT
       case _: LogicalOps => BoolT
-      case _: BitWiseOps => IntT
+      case _: BitwiseOps => IntT
     }
   }
 
