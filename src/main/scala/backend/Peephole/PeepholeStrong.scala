@@ -14,7 +14,7 @@ object PeepholeStrong {
 
   /* Get log2 of i, returns LOG_ERROR if I == 0 or value is not an Integer */
   def getShiftAmount(i: Int): Int = {
-    if (i == 0) {
+    if (i <= 0) {
       LOG_ERROR
     } else {
       val dVal = log(i) / log(2.0)
@@ -48,24 +48,33 @@ object PeepholeStrong {
         optimised += BranchLink(RuntimeError.funcLabel)
       case ImmMem(n) =>
         val shiftAmount = getShiftAmount(n)
-        if (!(shiftAmount == LOG_ERROR)) {
-          instructions.head match {
-            // Get the destination reg for the division
-            case Mov(rd, _) =>
-              // Instructinos in order to shift rather than using __aeabi_idiv
-              val newInstructions = instructions.drop(4)
-              // Cons Instructions to the head of the list
-              Mov(rd, r1) +=: newInstructions
-              if (shiftAmount != 0) {
-                Mov(r1, LSR(r1, ImmInt(shiftAmount))) +=: newInstructions
+        op1 match {
+          case ImmMem(n1) =>
+            if (
+              (shiftAmount != LOG_ERROR && getShiftAmount(n1) != LOG_ERROR)
+            ) {
+              instructions.head match {
+                // Get the destination reg for the division
+                case Mov(rd, _) =>
+                  // Instructions in order to shift rather than using __aeabi_idiv
+                  val newInstructions = instructions.drop(4)
+                  // Cons Instructions to the head of the list
+                  Mov(rd, r1) +=: newInstructions
+                  if (shiftAmount != 0) {
+                    // Add(r1, r1, r2) +=: newInstructions
+                    Mov(r1, LSR(r1, ImmInt(shiftAmount))) +=: newInstructions
+                  }
+                  // Mov(r2, ASR(r1, ImmInt(31))) +=: newInstructions
+                  load1 +=: newInstructions
+                  // Optimise instructinos from NEWINSTRUCTIONS
+                  optimise(newInstructions, optimised)
+                case _ =>
+                  continueOptimise(load1, load2, instructions, optimised)
               }
-              load1 +=: newInstructions
-              // Optimise instructinos from NEWINSTRUCTIONS
-              optimise(newInstructions, optimised)
-            case _ => continueOptimise(load1, load2, instructions, optimised)
-          }
-        } else {
-          continueOptimise(load1, load2, instructions, optimised)
+            } else {
+              continueOptimise(load1, load2, instructions, optimised)
+            }
+          case _ => continueOptimise(load1, load2, instructions, optimised)
         }
       case _ =>
         continueOptimise(load1, load2, instructions, optimised)
@@ -125,6 +134,26 @@ object PeepholeStrong {
     } else {
       continueOptimise(load1, load2, instructions, optimised)
     }
+  }
+
+  def foo(
+      shiftAmount: Int,
+      instructions: mutable.ListBuffer[Instruction],
+      r1: Reg,
+      r2: Reg,
+      op1: LoadOperand,
+      optimised: mutable.ListBuffer[Instruction]
+  ): Unit = {
+    var newInstructions = instructions.drop(3)
+    if (shiftAmount != 0) {
+      newInstructions = instructions.tail
+      Mov(r1, ASL(r1, ImmInt(shiftAmount))) +=: newInstructions
+      Mov(r2, ASR(r1, ImmInt(31))) +=: newInstructions
+    }
+    Ldr(r1, op1) +=: newInstructions
+
+    // Optimise instructinos from NEWINSTRUCTIONS
+    optimise(newInstructions, optimised)
   }
 
   /* Function for strength reduction */
