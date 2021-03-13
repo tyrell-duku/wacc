@@ -1,6 +1,7 @@
 package backend.CodeGeneration
 
 import backend.CodeGeneration.Arrays.transArrayElem
+import backend.CodeGeneration.Expressions.transExp
 import backend.CodeGeneration.Pairs.transPairElem
 import backend.CodeGenerator._
 import backend.DefinedFuncs.ReadInstructions.{charRead, intRead}
@@ -104,6 +105,16 @@ object Read {
       case ae: ArrayElem => transReadArrayElem(ae)
       case fst: Fst      => transReadPairElem(fst, IS_FST_ELEM)
       case snd: Snd      => transReadPairElem(snd, IS_SND_ELEM)
+      case derefPtr @ DerefPtr(ptr, _) =>
+        val instructions = ListBuffer.empty[Instruction]
+        val resReg = getFreeReg()
+        instructions ++= transExp(ptr, resReg)
+        // value must be in R0 for branch
+        instructions += Mov(resultReg, resReg)
+        addUnusedReg(resReg)
+        val t = getExprType(derefPtr)
+        instructions += readBranch(t)
+        instructions
     }
   }
 
