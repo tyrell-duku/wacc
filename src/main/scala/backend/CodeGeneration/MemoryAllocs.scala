@@ -18,18 +18,15 @@ object MemoryAllocs {
       case Malloc(size, _) =>
         val PtrT(inner) = t
         val varSize = getBaseTypeSize(inner)
-        val arraySize =
-          Plus(
-            Div(size, IntLiter(varSize, null), null),
-            IntLiter(INT_SIZE, null),
-            null
-          )
-        instructions ++= transExp(arraySize, freeReg)
-        val nextFreeReg = getFreeReg()
-        instructions += Mov(nextFreeReg, freeReg)
+        val mallocSize = Plus(size, IntLiter(INT_SIZE, null), null)
+        val arraySize = Div(size, IntLiter(varSize, null), null)
+        instructions ++= transExp(mallocSize, freeReg)
         instructions += Mov(resultReg, freeReg)
         instructions += BranchLink(Label("malloc"))
+        val nextFreeReg = getFreeReg()
+        instructions += transExp(arraySize, nextFreeReg)
         instructions += Str(nextFreeReg, RegAdd(freeReg))
+        addUnusedReg(nextFreeReg)
       case Realloc(ptr, size, _) =>
       case Calloc(num, size, _)  =>
     }
