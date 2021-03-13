@@ -104,27 +104,11 @@ object PeepholeStrong {
           val shiftAmount2 = getShiftAmount(n2)
           // Get largest shift to optimise division
           if (shiftAmount1 > shiftAmount2 && shiftAmount1 != LOG_ERROR) {
-            // Shift destReg by the rigth amount
-            if (shiftAmount1 != 0) {
-              newInstructions = instructions.tail
-              Mov(r1, ASL(r1, ImmInt(shiftAmount1))) +=: newInstructions
-              Mov(r2, ASR(r1, ImmInt(31))) +=: newInstructions
-            }
-            Ldr(r1, op2) +=: newInstructions
-            // Optimise instructinos from NEWINSTRUCTIONS
-            optimise(newInstructions, optimised)
+            shiftOptimise(shiftAmount1, instructions, r1, r2, op2, optimised)
           } else if (
             shiftAmount1 <= shiftAmount2 && shiftAmount2 != LOG_ERROR
           ) {
-            // Shift destReg by the rigth amount
-            if (shiftAmount2 != 0) {
-              newInstructions = instructions.tail
-              Mov(r1, ASL(r1, ImmInt(shiftAmount2))) +=: newInstructions
-              Mov(r2, ASR(r1, ImmInt(31))) +=: newInstructions
-            }
-            Ldr(r1, op1) +=: newInstructions
-            // Optimise instructinos from NEWINSTRUCTIONS
-            optimise(newInstructions, optimised)
+            shiftOptimise(shiftAmount2, instructions, r1, r2, op1, optimised)
           } else {
             continueOptimise(load1, load2, instructions, optimised)
           }
@@ -136,7 +120,7 @@ object PeepholeStrong {
     }
   }
 
-  def foo(
+  def shiftOptimise(
       shiftAmount: Int,
       instructions: mutable.ListBuffer[Instruction],
       r1: Reg,
