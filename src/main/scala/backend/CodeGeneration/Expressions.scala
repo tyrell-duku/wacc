@@ -18,6 +18,17 @@ import frontend.Rules._
 import scala.collection.mutable.ListBuffer
 
 object Expressions {
+  /* Moves the value to register R0 for the branch to the predefined function
+     FUNC. */
+  private def branchRuntimeError(
+      rd: Reg,
+      func: PreDefFunc
+  ): ListBuffer[Instruction] = {
+    val instructions = ListBuffer[Instruction](Mov(resultReg, rd))
+    instructions += BranchLink(addRuntimeError(func))
+    instructions
+  }
+
   /* Translates unary operator OP to the internal representation,
      into the internal . */
   private def transUnOp(op: UnOp, rd: Reg): ListBuffer[Instruction] = {
@@ -69,58 +80,12 @@ object Expressions {
     instructions
   }
 
-  private def branchRuntimeError(
-      rd: Reg,
-      runtimeErr: PreDefFunc
-  ): ListBuffer[Instruction] = {
-    val instructions = ListBuffer[Instruction](Mov(resultReg, rd))
-    instructions += BranchLink(addRuntimeError(runtimeErr))
-    instructions
-  }
-
-  /* Translates a bitwise operator to the internal representation. */
-  private def transBitwise(
-      op: BinOp,
+  private def transArithOp(
+      op: ArithOps,
       rd: Reg,
       rm: Reg
   ): ListBuffer[Instruction] = {
     val instructions = ListBuffer.empty[Instruction]
-    op match {
-      case _: BitWiseAnd => instructions += IR.InstructionSet.And(rd, rd, rm)
-      case _: BitWiseOr =>
-        instructions += IR.InstructionSet.Or(rd, rd, rm)
-        instructions += BranchLinkCond(VS, addRuntimeError(Overflow))
-      case _: BitWiseXor =>
-        instructions += Eor(rd, rd, rm)
-        instructions += BranchLinkCond(VS, addRuntimeError(Overflow))
-      case _: LogicalShiftLeft =>
-        instructions ++= branchRuntimeError(rd, NegativeShift)
-        instructions ++= branchRuntimeError(rm, NegativeShift)
-        instructions += Mov(rd, LSL(rd, rm))
-        instructions += BranchLinkCond(VS, addRuntimeError(Overflow))
-      case _: LogicalShiftRight =>
-        instructions ++= branchRuntimeError(rd, NegativeShift)
-        instructions ++= branchRuntimeError(rm, NegativeShift)
-        instructions += Mov(rd, LSR(rd, rm))
-        instructions += BranchLinkCond(VS, addRuntimeError(Overflow))
-      case _ => ???
-    }
-    instructions
-  }
-
-  /* Translates a binary operator to the internal representation. */
-  private def transBinOp(op: BinOp, rn: Reg): ListBuffer[Instruction] = {
-    val instructions = transExp(op.lExpr, rn)
-    val rm = getFreeReg()
-    instructions ++= transExp(op.rExpr, rm)
-    // Register over allocation check, if true pops variable from stack
-    // into popReg
-    var rd = rn
-    if (popReg == rm) {
-      instructions += Pop(ListBuffer(popReg))
-      rd = R10
-    }
-
     op match {
       case _: frontend.Rules.Mul =>
         // Runtime error check
@@ -152,12 +117,60 @@ object Expressions {
       case _: frontend.Rules.Sub =>
         instructions += SubS(rd, rd, rm)
         instructions += BranchLinkCond(VS, addRuntimeError(Overflow))
+    }
+    instructions
+  }
+
+  /* Translates a bitwise operator to the internal representation. */
+  private def transBitwise(
+      op: BitWiseOps,
+      rd: Reg,
+      rm: Reg
+  ): ListBuffer[Instruction] = {
+    val instructions = ListBuffer.empty[Instruction]
+    op match {
+      case _: BitWiseAnd => instructions += IR.InstructionSet.And(rd, rd, rm)
+      case _: BitWiseOr =>
+        instructions += IR.InstructionSet.Or(rd, rd, rm)
+        instructions += BranchLinkCond(VS, addRuntimeError(Overflow))
+      case _: BitWiseXor =>
+        instructions += Eor(rd, rd, rm)
+        instructions += BranchLinkCond(VS, addRuntimeError(Overflow))
+      case _: LogicalShiftLeft =>
+        instructions ++= branchRuntimeError(rd, NegativeShift)
+        instructions ++= branchRuntimeError(rm, NegativeShift)
+        instructions += Mov(rd, LSL(rd, rm))
+        instructions += BranchLinkCond(VS, addRuntimeError(Overflow))
+      case _: LogicalShiftRight =>
+        instructions ++= branchRuntimeError(rd, NegativeShift)
+        instructions ++= branchRuntimeError(rm, NegativeShift)
+        instructions += Mov(rd, LSR(rd, rm))
+        instructions += BranchLinkCond(VS, addRuntimeError(Overflow))
+    }
+    instructions
+  }
+
+  /* Translates a binary operator to the internal representation. */
+  private def transBinOp(op: BinOp, rn: Reg): ListBuffer[Instruction] = {
+    val instructions = transExp(op.lExpr, rn)
+    val rm = getFreeReg()
+    instructions ++= transExp(op.rExpr, rm)
+    // Register over allocation check, if true pops variable from stack
+    // into popReg
+    var rd = rn
+    if (popReg == rm) {
+      instructions += Pop(ListBuffer(popReg))
+      rd = R10
+    }
+    op match {
       case _: frontend.Rules.And =>
         instructions += IR.InstructionSet.And(rd, rd, rm)
       case _: frontend.Rules.Or =>
         instructions += IR.InstructionSet.Or(rd, rd, rm)
+      // Arithmetic binary operators
+      case arithOp: ArithOps => instructions ++= transArithOp(arithOp, rd, rm)
       // Bitwise binary operators
-      case _: BitWiseOps => transBitwise(op, rd, rm)
+      case bwOp: BitWiseOps => instructions ++= transBitwise(bwOp, rd, rm)
       // Comparison binary operators
       case cmpOp => instructions ++= transCond(cmpOp, rd, rm)
     }
