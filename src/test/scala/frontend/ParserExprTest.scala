@@ -160,17 +160,17 @@ class FrontendParserExprTest extends AnyFunSuite {
     assert(
       expr
         .runParser("5&10")
-        .contains(BitWiseAnd(IntLiter(5, (1, 1)), IntLiter(10, (1, 3)), (1, 2)))
+        .contains(BitwiseAnd(IntLiter(5, (1, 1)), IntLiter(10, (1, 3)), (1, 2)))
     )
     assert(
       expr
         .runParser("5 |  10")
-        .contains(BitWiseOr(IntLiter(5, (1, 1)), IntLiter(10, (1, 6)), (1, 3)))
+        .contains(BitwiseOr(IntLiter(5, (1, 1)), IntLiter(10, (1, 6)), (1, 3)))
     )
     assert(
       expr
         .runParser("5 ^ 10")
-        .contains(BitWiseXor(IntLiter(5, (1, 1)), IntLiter(10, (1, 5)), (1, 3)))
+        .contains(BitwiseXor(IntLiter(5, (1, 1)), IntLiter(10, (1, 5)), (1, 3)))
     )
     assert(
       expr
@@ -193,9 +193,9 @@ class FrontendParserExprTest extends AnyFunSuite {
       expr
         .runParser("5|10 & 100")
         .contains(
-          BitWiseOr(
+          BitwiseOr(
             IntLiter(5, (1, 1)),
-            BitWiseAnd(IntLiter(10, (1, 3)), IntLiter(100, (1, 8)), (1, 6)),
+            BitwiseAnd(IntLiter(10, (1, 3)), IntLiter(100, (1, 8)), (1, 6)),
             (1, 2)
           )
         )
@@ -204,9 +204,9 @@ class FrontendParserExprTest extends AnyFunSuite {
       expr
         .runParser("5 |  10 ^ 2")
         .contains(
-          BitWiseOr(
+          BitwiseOr(
             IntLiter(5, (1, 1)),
-            BitWiseXor(IntLiter(10, (1, 6)), IntLiter(2, (1, 11)), (1, 9)),
+            BitwiseXor(IntLiter(10, (1, 6)), IntLiter(2, (1, 11)), (1, 9)),
             (1, 3)
           )
         )
@@ -215,9 +215,9 @@ class FrontendParserExprTest extends AnyFunSuite {
       expr
         .runParser("4 ^ 5 & 10")
         .contains(
-          BitWiseXor(
+          BitwiseXor(
             IntLiter(4, (1, 1)),
-            BitWiseAnd(IntLiter(5, (1, 5)), IntLiter(10, (1, 9)), (1, 7)),
+            BitwiseAnd(IntLiter(5, (1, 5)), IntLiter(10, (1, 9)), (1, 7)),
             (1, 3)
           )
         )
@@ -226,7 +226,7 @@ class FrontendParserExprTest extends AnyFunSuite {
       expr
         .runParser("5 << 2 & 3")
         .contains(
-          BitWiseAnd(
+          BitwiseAnd(
             LogicalShiftLeft(IntLiter(5, (1, 1)), IntLiter(2, (1, 6)), (1, 3)),
             IntLiter(3, (1, 10)),
             (1, 8)
@@ -237,7 +237,7 @@ class FrontendParserExprTest extends AnyFunSuite {
       expr
         .runParser("20 >> 2 | 10")
         .contains(
-          BitWiseOr(
+          BitwiseOr(
             LogicalShiftRight(
               IntLiter(20, (1, 1)),
               IntLiter(2, (1, 7)),
@@ -317,7 +317,7 @@ class FrontendParserExprTest extends AnyFunSuite {
         .contains(
           And(
             IntLiter(20, (1, 1)),
-            BitWiseAnd(
+            BitwiseAnd(
               IntLiter(2, (1, 7)),
               IntLiter(3, (1, 11)),
               (1, 9)
@@ -332,7 +332,7 @@ class FrontendParserExprTest extends AnyFunSuite {
         .contains(
           Or(
             IntLiter(20, (1, 1)),
-            BitWiseOr(
+            BitwiseOr(
               IntLiter(2, (1, 7)),
               IntLiter(3, (1, 11)),
               (1, 9)
