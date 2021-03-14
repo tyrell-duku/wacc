@@ -44,11 +44,12 @@ object PeepholeMov {
       // Skip over the Load intruction
       optimise(Str(isByte, r1, op1), instructions, optimised)
     } else {
-      if (isByte) {
-        continueOptimise(StrB(r1, op1), LdrSB(r2, op2), instructions, optimised)
-      } else {
-        continueOptimise(Str(r1, op1), Ldr(r2, op2), instructions, optimised)
-      }
+      continueOptimise(
+        Str(isByte, r1, op1),
+        Ldr(isByte, r2, op2),
+        instructions,
+        optimised
+      )
     }
   }
 }
