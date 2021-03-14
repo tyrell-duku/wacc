@@ -5,6 +5,26 @@ import backend.CodeGenerator.getBaseTypeSize
 
 object ConstantFolding {
 
+  private def foldIntOps(op: Expr): Expr = op match {
+    // Base case
+    case n: IntLiter => n
+    // Folding
+    case Mul(IntLiter(n1, p), IntLiter(n2, _), _)        => IntLiter(n1 * n2, p)
+    case Div(IntLiter(n1, p), IntLiter(n2, _), _)        => IntLiter(n1 / n2, p)
+    case Plus(IntLiter(n1, p), IntLiter(n2, _), _)       => IntLiter(n1 + n2, p)
+    case Sub(IntLiter(n1, p), IntLiter(n2, _), _)        => IntLiter(n1 - n2, p)
+    case Mod(IntLiter(n1, p), IntLiter(n2, _), _)        => IntLiter(n1 % n2, p)
+    case BitwiseAnd(IntLiter(n1, p), IntLiter(n2, _), _) => IntLiter(n1 & n2, p)
+    case BitwiseOr(IntLiter(n1, p), IntLiter(n2, _), _)  => IntLiter(n1 | n2, p)
+    case BitwiseXor(IntLiter(n1, p), IntLiter(n2, _), _) => IntLiter(n1 ^ n2, p)
+    case LogicalShiftLeft(IntLiter(n1, p), IntLiter(n2, _), _) =>
+      IntLiter(n1 << n2, p)
+    case LogicalShiftRight(IntLiter(n1, p), IntLiter(n2, _), _) =>
+      IntLiter(n1 >> n2, p)
+    // Recursive case (ArithOps & BitwiseOps)
+    case _ => foldIntOps(op.map(foldIntOps))
+  }
+
   def foldExpr(e: Expr): Expr = e match {
     // case DerefPtr(ptr, pos)                   =>
     // case Addr(ptr, pos)                       =>
