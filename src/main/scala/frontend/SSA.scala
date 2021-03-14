@@ -121,8 +121,7 @@ object SSA {
     case DerefPtr(ptr, pos)  => DerefPtr(transformExpr(ptr), pos)
     case Fst(id: Ident, pos) => Fst(updateIdent(id), pos)
     case Snd(id: Ident, pos) => Snd(updateIdent(id), pos)
-    case ArrayElem(id @ Ident(s, idPos), es, pos) =>
-      addToHashMap(Ident(arrayElemIdentifier(s, es), idPos), r)
+    case ArrayElem(id, es, pos) =>
       ArrayElem(updateIdent(id), es.map(transformExpr), pos)
     // Semantically incorrect
     case _ => ???
@@ -138,6 +137,10 @@ object SSA {
       case EqAssign(id: Ident, r) =>
         val v = addToHashMap(id, r)
         deadCodeElimination(r, EqAssign(v, r), buf)
+      case EqAssign(ArrayElem(id @ Ident(s, idPos), es, pos), r) =>
+        addToHashMap(Ident(arrayElemIdentifier(s, es), idPos), r)
+        val lhs = ArrayElem(updateIdent(id), es.map(transformExpr), pos)
+        buf += EqAssign(lhs, updateRhs(r))
       case EqAssign(lhs, rhs) => buf += EqAssign(updateLhs(lhs), updateRhs(rhs))
       case Read(id: Ident) =>
         val Ident(s, _) = updateIdent(id)
