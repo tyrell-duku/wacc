@@ -8,19 +8,19 @@ object Operand {
   sealed case class ImmInt(n: Int) extends Operand {
     override def toString: String = s"#$n"
   }
-
+  // Logical shift left
   case class LSL(r: Reg, op: Operand) extends Operand {
     override def toString: String = s"$r, LSL $op"
   }
-
+  // Logical shift right
   case class LSR(r: Reg, op: Operand) extends Operand {
     override def toString: String = s"$r, LSR $op"
   }
-
+  // Arithmetic shift left
   case class ASL(r: Reg, n: ImmInt) extends Operand {
     override def toString: String = s"$r, ASL $n"
   }
-
+  // Arithmetic shift right
   case class ASR(r: Reg, n: ImmInt) extends Operand {
     override def toString: String = s"$r, ASR $n"
   }
