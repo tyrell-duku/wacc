@@ -124,6 +124,9 @@ object InstructionSet {
       if (offset == 0) Str(src, RegAdd(dst))
       else Str(src, RegisterOffset(dst, offset))
     }
+    def apply(isByte: Boolean, src: Reg, addr: Address): Instruction = {
+      if (isByte) StrB(src, addr) else Str(src, addr)
+    }
   }
   // Store byte
   case class StrB(rd: Reg, add: Address) extends Instruction {
