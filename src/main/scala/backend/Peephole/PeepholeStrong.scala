@@ -50,11 +50,14 @@ object PeepholeStrong {
         val shiftAmount = getShiftAmount(n)
         op1 match {
           case ImmMem(n1) =>
-            if ((shiftAmount != LOG_ERROR && getShiftAmount(n1) != LOG_ERROR)) {
+            if (
+              (shiftAmount != LOG_ERROR) && (getShiftAmount(n1) != LOG_ERROR)
+            ) {
               instructions.head match {
                 // Get the destination reg for the division
                 case Mov(rd, _) =>
-                  // Instructions in order to shift rather than using __aeabi_idiv
+                  // Instructions in order to shift rather than
+                  //  using __aeabi_idiv
                   val newInstructions = instructions.drop(4)
                   // Cons Instructions to the head of the list
                   Mov(rd, r1) +=: newInstructions
