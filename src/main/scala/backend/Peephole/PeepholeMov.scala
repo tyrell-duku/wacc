@@ -29,4 +29,30 @@ object PeepholeMov {
       continueOptimise(Mov(r1, op1), Mov(rd, r2), instructions, optimised)
     }
   }
+
+  /* Removes redundant Load instructions */
+  def peepStrLdr(
+      r1: Reg,
+      op1: Address,
+      r2: Reg,
+      op2: LoadOperand,
+      instructions: mutable.ListBuffer[Instruction],
+      optimised: mutable.ListBuffer[Instruction],
+      isByte: Boolean
+  ): Unit = {
+    if (r1 == r2 && op1 == op2) {
+      // Skip over the Load intruction
+      if (isByte) {
+        optimise(StrB(r1, op1), instructions, optimised)
+      } else {
+        optimise(Str(r1, op1), instructions, optimised)
+      }
+    } else {
+      if (isByte) {
+        continueOptimise(StrB(r1, op1), LdrSB(r2, op2), instructions, optimised)
+      } else {
+        continueOptimise(Str(r1, op1), Ldr(r2, op2), instructions, optimised)
+      }
+    }
+  }
 }

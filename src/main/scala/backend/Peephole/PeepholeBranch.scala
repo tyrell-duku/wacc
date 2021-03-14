@@ -8,6 +8,7 @@ import scala.collection._
 
 object PeepholeBranch {
 
+  /* Removes redundant branches */
   def peepBranch(
       r1: Reg,
       op1: Operand,
