@@ -25,7 +25,17 @@ object SSA {
     val v = x.toString + str
     rhs match {
       case e: Expr => kvs += ((v, transformExpr(e)))
-      case _       =>
+      case arr: ArrayLiter =>
+        arr match {
+          case ArrayLiter(Some(es), _) =>
+            for (i <- es.indices) {
+              val aeStr = str + "-" + i
+              dict += ((aeStr, (x, y)))
+              kvs += ((x.toString + aeStr, transformExpr(es(i))))
+            }
+          case _ =>
+        }
+      case _ =>
     }
     Ident(v, pos)
   }
@@ -75,8 +85,12 @@ object SSA {
     case id: Ident =>
       val id2 @ Ident(x, _) = updateIdent(id)
       kvs.getOrElse(x, id2)
-    case ArrayElem(id, es, pos) =>
-      ArrayElem(updateIdent(id), es.map(transformExpr), pos)
+    case ArrayElem(id @ Ident(s, _), es, pos) =>
+      val arrayElemName = arrayElemIdentifier(s, es)
+      val (_, y) = dict(arrayElemName)
+      kvs(y.toString + arrayElemName)
+    // TODO: make Liter class in Rules for pattern match?
+    // case class Liters extends Expr
     case x: IntLiter  => x
     case b: BoolLiter => b
     case c: CharLiter => c
@@ -99,11 +113,16 @@ object SSA {
     case _       => rhs
   }
 
+  private def arrayElemIdentifier(varName: String, es: List[Expr]): String = {
+    varName + "-" + es.map(transformExpr).mkString("-")
+  }
+
   private def updateLhs(lhs: AssignLHS): AssignLHS = lhs match {
     case DerefPtr(ptr, pos)  => DerefPtr(transformExpr(ptr), pos)
     case Fst(id: Ident, pos) => Fst(updateIdent(id), pos)
     case Snd(id: Ident, pos) => Snd(updateIdent(id), pos)
-    case ArrayElem(id, es, pos) =>
+    case ArrayElem(id @ Ident(s, idPos), es, pos) =>
+      addToHashMap(Ident(arrayElemIdentifier(s, es), idPos), r)
       ArrayElem(updateIdent(id), es.map(transformExpr), pos)
     // Semantically incorrect
     case _ => ???
