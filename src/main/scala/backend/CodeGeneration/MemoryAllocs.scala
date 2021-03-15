@@ -32,7 +32,21 @@ object MemoryAllocs {
         instructions += Str(nextFreeReg, RegAdd(freeReg))
         addUnusedReg(nextFreeReg)
       case Realloc(ptr, size, _) =>
-      case Calloc(num, size, _)  =>
+        val PtrT(inner) = t
+        val varSize = getBaseTypeSize(inner)
+        val mallocSize = Plus(size, IntLiter(INT_SIZE, null), null)
+        val arraySize = Div(size, IntLiter(varSize, null), null)
+        instructions ++= transExp(mallocSize, freeReg)
+        instructions += Mov(R1, freeReg)
+        instructions ++= transExp(ptr, freeReg)
+        instructions += Mov(R0, freeReg)
+        instructions += BranchLink(Label("realloc"))
+        instructions += Mov(freeReg, resultReg)
+        val nextFreeReg = getFreeReg()
+        instructions ++= transExp(arraySize, nextFreeReg)
+        instructions += Str(nextFreeReg, RegAdd(freeReg))
+        addUnusedReg(nextFreeReg)
+      case Calloc(num, size, _) =>
     }
     instructions
   }
