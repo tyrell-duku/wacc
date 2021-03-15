@@ -17,25 +17,27 @@ object MemoryAllocs {
       freeReg: Reg
   ): ListBuffer[Instruction] = {
     val instructions = ListBuffer.empty[Instruction]
+    val PtrT(inner) = t
+    val varSize = getBaseTypeSize(inner)
     elem match {
       case Malloc(size, _) =>
-        val PtrT(inner) = t
-        val varSize = getBaseTypeSize(inner)
         instructions ++= transExp(size, freeReg)
         instructions += Mov(resultReg, freeReg)
         instructions += BranchLink(Label("malloc"))
-        instructions += Mov(freeReg, resultReg)
       case Realloc(ptr, size, _) =>
-        val PtrT(inner) = t
-        val varSize = getBaseTypeSize(inner)
         instructions ++= transExp(size, freeReg)
         instructions += Mov(R1, freeReg)
         instructions ++= transExp(ptr, freeReg)
         instructions += Mov(R0, freeReg)
         instructions += BranchLink(Label("realloc"))
-        instructions += Mov(freeReg, resultReg)
       case Calloc(num, size, _) =>
+        instructions ++= transExp(size, freeReg)
+        instructions += Mov(R1, freeReg)
+        instructions ++= transExp(num, freeReg)
+        instructions += Mov(R0, freeReg)
+        instructions += BranchLink(Label("calloc"))
     }
+    instructions += Mov(freeReg, resultReg)
     instructions
   }
 
