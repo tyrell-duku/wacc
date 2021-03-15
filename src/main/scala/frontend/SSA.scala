@@ -48,6 +48,7 @@ object SSA {
     Ident(y.toString + str, pos)
   }
 
+  /* Transforms an expression E. */
   private def transformExpr(e: Expr): Expr = e match {
     case sizeof: SizeOf => sizeof
     case id: Ident =>
@@ -56,7 +57,10 @@ object SSA {
     case ArrayElem(id @ Ident(s, _), es, pos) =>
       val arrayElemName = arrayElemIdentifier(s, es)
       val (_, y) = dict(arrayElemName)
-      kvs(y.toString + arrayElemName)
+      kvs.getOrElse(
+        y.toString + arrayElemName,
+        Ident(y.toString + arrayElemName, null)
+      )
     case x: IntLiter  => x
     case b: BoolLiter => b
     case c: CharLiter => c
@@ -107,14 +111,20 @@ object SSA {
         deadCodeElimination(r, EqAssign(v, r), buf)
       case EqAssign(ArrayElem(id @ Ident(s, idPos), es, pos), r) =>
         addToHashMap(Ident(arrayElemIdentifier(s, es), idPos), r)
-        val lhs = ArrayElem(updateIdent(id), es.map(transformExpr), pos)
-        buf += EqAssign(lhs, updateRhs(r))
+        buf
       case EqAssign(lhs, rhs) => buf += EqAssign(updateLhs(lhs), updateRhs(rhs))
       case Read(id: Ident) =>
         val Ident(s, _) = updateIdent(id)
         val e = kvs(s)
         // add to dict but not kvs
         val v = addToHashMap(id, null)
+        buf += EqIdent(getExprType(e), v, e)
+        buf += Read(v)
+      case Read(ArrayElem(id @ Ident(s, _), es, pos)) =>
+        val arrayElemName = arrayElemIdentifier(s, es)
+        val (_, y) = dict(arrayElemName)
+        val e = kvs(y.toString + arrayElemName)
+        val v = addToHashMap(Ident(arrayElemName, null), null)
         buf += EqIdent(getExprType(e), v, e)
         buf += Read(v)
       case Read(lhs)  => buf += Read(updateLhs(lhs))
@@ -128,7 +138,7 @@ object SSA {
         if (b) buf ++= transformStat(s1) else buf ++= transformStat(s2)
       case Seq(statList) => statList.flatMap(transformStat).to(ListBuffer)
       case Skip          => buf += Skip
-      case _             => ???
+      case _             => buf
     }
   }
 
