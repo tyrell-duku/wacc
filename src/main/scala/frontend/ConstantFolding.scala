@@ -5,7 +5,8 @@ import backend.CodeGenerator.getBaseTypeSize
 
 object ConstantFolding {
 
-  private def foldIntOps(op: Expr): Expr = op match {
+  /* Folds an application of OP on two integer operands, returning the result. */
+  def foldIntOps(op: Expr): Expr = op match {
     // Base case
     case n: IntLiter => n
     // Folding
@@ -25,6 +26,7 @@ object ConstantFolding {
     case _ => foldIntOps(op.map(foldIntOps))
   }
 
+  /* Folds an expression E, returning its result. */
   def foldExpr(e: Expr): Expr = e match {
     // case DerefPtr(ptr, pos)                   =>
     // case Addr(ptr, pos)                       =>
@@ -52,6 +54,7 @@ object ConstantFolding {
     case e: Expr => e
   }
 
+  /* Folds a Boolean expression E, returning its result. */
   def foldBool(e: Expr): (Boolean, Boolean) = e match {
     case BoolLiter(b, _) => (b, true)
     case And(l, r, _) =>
@@ -118,6 +121,7 @@ object ConstantFolding {
     case _ => (false, false)
   }
 
+  /* Folds an integer expression E, returning the result. */
   def foldInt(e: Expr): (Int, Boolean) = e match {
     case IntLiter(n, _) => (n, true)
     case Plus(l, r, _) =>
@@ -151,6 +155,7 @@ object ConstantFolding {
     case _ => (0, false)
   }
 
+  /* Folds a character expression E, returning its result. */
   def foldChar(e: Expr): (Char, Boolean) = e match {
     case CharLiter(NormalChar(c), _) => (c, true)
     case Chr(e, _) =>
