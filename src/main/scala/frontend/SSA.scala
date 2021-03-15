@@ -171,24 +171,7 @@ object SSA {
           // Array has not been defined then add to list of Statements
           case _ =>
             // rhs = array
-            val r = rhs match {
-              case ArrayLiter(Some(elems), pos) =>
-                val updatedElems = ListBuffer.empty[Expr]
-                for (i <- elems.indices) {
-                  val aeStr = s + "-" + i
-                  val (_, y) = dict(aeStr)
-                  val aeName = y.toString + aeStr
-                  updatedElems += toExpr(
-                    kvs.getOrElse(aeName, Ident(aeName, null))
-                  )
-                }
-                val updatedArr = ArrayLiter(Some(updatedElems.toList), pos)
-                addToHashMap(id, updatedArr)
-                id2 = updateIdent(id)
-                updatedArr
-              case r => r
-            }
-            buf += EqIdent(ArrayT(null), id2, r)
+            buf += EqIdent(rhs.getType(null), id2, rhs)
             buf += pf(id2)
         }
       // Not array, transformExpr as usual
