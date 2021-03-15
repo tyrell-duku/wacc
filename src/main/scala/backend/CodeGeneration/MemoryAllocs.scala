@@ -21,31 +21,19 @@ object MemoryAllocs {
       case Malloc(size, _) =>
         val PtrT(inner) = t
         val varSize = getBaseTypeSize(inner)
-        val mallocSize = Plus(size, IntLiter(INT_SIZE, null), null)
-        val arraySize = Div(size, IntLiter(varSize, null), null)
-        instructions ++= transExp(mallocSize, freeReg)
+        instructions ++= transExp(size, freeReg)
         instructions += Mov(resultReg, freeReg)
         instructions += BranchLink(Label("malloc"))
         instructions += Mov(freeReg, resultReg)
-        val nextFreeReg = getFreeReg()
-        instructions ++= transExp(arraySize, nextFreeReg)
-        instructions += Str(nextFreeReg, RegAdd(freeReg))
-        addUnusedReg(nextFreeReg)
       case Realloc(ptr, size, _) =>
         val PtrT(inner) = t
         val varSize = getBaseTypeSize(inner)
-        val mallocSize = Plus(size, IntLiter(INT_SIZE, null), null)
-        val arraySize = Div(size, IntLiter(varSize, null), null)
-        instructions ++= transExp(mallocSize, freeReg)
+        instructions ++= transExp(size, freeReg)
         instructions += Mov(R1, freeReg)
         instructions ++= transExp(ptr, freeReg)
         instructions += Mov(R0, freeReg)
         instructions += BranchLink(Label("realloc"))
         instructions += Mov(freeReg, resultReg)
-        val nextFreeReg = getFreeReg()
-        instructions ++= transExp(arraySize, nextFreeReg)
-        instructions += Str(nextFreeReg, RegAdd(freeReg))
-        addUnusedReg(nextFreeReg)
       case Calloc(num, size, _) =>
     }
     instructions
@@ -70,14 +58,5 @@ object MemoryAllocs {
 
     }
     instructions
-  }
-
-  def derefPointerSizeOffset(rd: Reg): ListBuffer[Instruction] = {
-    val instructions = ListBuffer.empty[Instruction]
-    val rm = getFreeReg()
-    instructions += Ldr(rm, ImmMem(INT_SIZE))
-    instructions += AddS(rd, rd, rm)
-    addUnusedReg(rm)
-    instructions += BranchLinkCond(VS, addRuntimeError(Overflow))
   }
 }

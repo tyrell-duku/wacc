@@ -63,7 +63,6 @@ object Assignments {
         instructions ++= instrs
         val nextFreeReg = getFreeReg()
         instructions ++= transExp(ptr, nextFreeReg)
-        instructions ++= derefPointerSizeOffset(nextFreeReg)
         instructions += Str(freeReg, RegAdd(nextFreeReg))
         addUnusedReg(nextFreeReg)
       // Semantically incorrect
