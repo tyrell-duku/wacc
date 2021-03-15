@@ -52,22 +52,28 @@ object Arrays {
     val nextReg = getFreeReg()
     // Handles nested array elems
     for (exp <- es) {
-      // Gets type of array elem at current depth
-      t = getArrayInnerType(t)
-      instructions ++= transExp(exp, nextReg)
-      instructions += Ldr(reg, RegAdd(reg))
-      // Values must be in R0 & R1 for array bounds check
-      instructions += Mov(resultReg, nextReg)
-      instructions += Mov(R1, reg)
-      instructions += BranchLink(addRuntimeError(ArrayBounds))
-      // Add offset to account for array size at start of array in memory
-      instructions += Add(reg, reg, ImmInt(CodeGenerator.INT_SIZE))
-      // Gets address of array elem
-      if (isByte(t)) {
+      if (t.isPtr) {
+        instructions ++= transExp(exp, nextReg)
         instructions += Add(reg, reg, nextReg)
+        instructions += Ldr(reg, RegAdd(reg))
       } else {
-        // LSL to account for 4 byte increment between elems
-        instructions += Add(reg, reg, LSL(nextReg, ImmInt(SHIFT_TWO)))
+        // Gets type of array elem at current depth
+        t = getInnerType(t)
+        instructions ++= transExp(exp, nextReg)
+        instructions += Ldr(reg, RegAdd(reg))
+        // Values must be in R0 & R1 for array bounds check
+        instructions += Mov(resultReg, nextReg)
+        instructions += Mov(R1, reg)
+        instructions += BranchLink(addRuntimeError(ArrayBounds))
+        // Add offset to account for array size at start of array in memory
+        instructions += Add(reg, reg, ImmInt(CodeGenerator.INT_SIZE))
+        // Gets address of array elem
+        if (isByte(t)) {
+          instructions += Add(reg, reg, nextReg)
+        } else {
+          // LSL to account for 4 byte increment between elems
+          instructions += Add(reg, reg, LSL(nextReg, ImmInt(SHIFT_TWO)))
+        }
       }
     }
     addUnusedReg(nextReg)
