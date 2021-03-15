@@ -27,14 +27,16 @@ object SSA {
       case e: Expr => kvs += ((v, transformExpr(e)))
       case arr: ArrayLiter =>
         kvs += ((v, arr))
-        arr match {
-          case ArrayLiter(Some(es), _) =>
-            for (i <- es.indices) {
-              val aeStr = str + "-" + i
-              dict += ((aeStr, (x, y)))
-              kvs += ((x.toString + aeStr, transformExpr(es(i))))
-            }
-          case _ =>
+        if (x == INITIAL_LHS + 1) {
+          arr match {
+            case ArrayLiter(Some(es), _) =>
+              for (i <- es.indices) {
+                val aeStr = str + "-" + i
+                dict += ((aeStr, (x, y)))
+                kvs += ((x.toString + aeStr, transformExpr(es(i))))
+              }
+            case _ =>
+          }
         }
       case _ =>
     }
@@ -123,17 +125,9 @@ object SSA {
       case EqAssign(id: Ident, r) =>
         val v = addToHashMap(id, r)
         deadCodeElimination(r, EqAssign(v, r), buf)
-      case EqAssign(ArrayElem(id, es, pos), e: Expr) =>
-        val Ident(s, _) = updateIdent(id)
-        val newArray = kvs(s) match {
-          case ArrayLiter(Some(elems), pos) =>
-            val index =
-              es.map(x => foldIntOps(transformExpr(x))).map(intLiterToInt)
-            ArrayLiter(Some(elems.updated(index(0), transformExpr(e))), pos)
-          // TODO: out of bound
-          case _ => ???
-        }
-        addToHashMap(id, newArray)
+      case EqAssign(ArrayElem(Ident(s, _), es, pos), e: Expr) =>
+        // foldIntOps(e) > es.length -> exit 255
+        addToHashMap(Ident(arrayElemIdentifier(s, es), null), e)
         buf
       case EqAssign(lhs, rhs) => buf += EqAssign(updateLhs(lhs), updateRhs(rhs))
       case Read(id: Ident) =>
@@ -168,15 +162,33 @@ object SSA {
   private def transExpArray(e: Expr, pf: (Expr => Stat)): ListBuffer[Stat] = {
     val buf = ListBuffer.empty[Stat]
     e match {
-      case id: Ident =>
-        val id2 @ Ident(x, _) = updateIdent(id)
+      case id @ Ident(s, _) =>
+        var id2 @ Ident(x, _) = updateIdent(id)
         val rhs = kvs.getOrElse(x, id2)
         rhs match {
           // Not array, transformExpr as usual
           case _: Expr => buf += pf(toExpr(rhs))
           // Array has not been defined then add to list of Statements
           case _ =>
-            buf += EqIdent(rhs.getType(null), id2, rhs)
+            // rhs = array
+            val r = rhs match {
+              case ArrayLiter(Some(elems), pos) =>
+                val updatedElems = ListBuffer.empty[Expr]
+                for (i <- elems.indices) {
+                  val aeStr = s + "-" + i
+                  val (_, y) = dict(aeStr)
+                  val aeName = y.toString + aeStr
+                  updatedElems += toExpr(
+                    kvs.getOrElse(aeName, Ident(aeName, null))
+                  )
+                }
+                val updatedArr = ArrayLiter(Some(updatedElems.toList), pos)
+                addToHashMap(id, updatedArr)
+                id2 = updateIdent(id)
+                updatedArr
+              case r => r
+            }
+            buf += EqIdent(ArrayT(null), id2, r)
             buf += pf(id2)
         }
       // Not array, transformExpr as usual
