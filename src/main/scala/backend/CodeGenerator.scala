@@ -114,10 +114,11 @@ object CodeGenerator {
     }
   }
 
-  /* Gets the inner type of the array. */
-  def getArrayInnerType(t: Type): Type = {
-    val ArrayT(inner) = t
-    inner
+  /* Gets the inner type of the array or pointer. */
+  def getInnerType(t: Type): Type = t match {
+    case ArrayT(inner) => inner
+    case PtrT(inner)   => inner
+    case _             => ???
   }
 
   /* Gets the type of the given expression E. */
@@ -133,7 +134,7 @@ object CodeGenerator {
         t
       case ArrayElem(id, es, _) =>
         var (_, t) = sTable(id)
-        t = es.foldLeft(t)((x, _) => getArrayInnerType(x))
+        t = es.foldLeft(t)((x, _) => getInnerType(x))
         t
       case _: BitwiseNot => IntT
       case _: Not        => BoolT
