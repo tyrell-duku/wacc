@@ -4,9 +4,10 @@ import Rules._
 import scala.collection.immutable.HashMap
 import scala.collection.mutable.ListBuffer
 import backend.CodeGenerator.getExprType
+import frontend.Semantics.SymbolTable
 import ConstantFolding.{foldExpr, foldIntOps}
 
-object SSA {
+case class SSA(sTable: SymbolTable) {
   // <Identifier's name, (LHS unique identifier, RHS unique identifier)>
   private var dict = new HashMap[String, (Int, Int)]
   private var kvs = new HashMap[String, AssignRHS]
@@ -18,29 +19,33 @@ object SSA {
      identifier STR, then the values are updated for unique identifying. */
   private def addToHashMap(id: Ident, rhs: AssignRHS): Ident = {
     val Ident(str, pos) = id
-    var (x, y) = dict.getOrElse(str, (INITIAL_LHS, INITIAL_RHS))
-    x += 1
-    y += 1
-    dict += ((str, (x, y)))
-    val v = x.toString + str
+    val v = addToDict(str)
     rhs match {
       case e: Expr => kvs += ((v, transformExpr(e)))
       case arr: ArrayLiter =>
         kvs += ((v, arr))
-        if (x == INITIAL_LHS + 1) {
-          arr match {
-            case ArrayLiter(Some(es), _) =>
-              for (i <- es.indices) {
-                val aeStr = str + "-" + i
-                dict += ((aeStr, (x, y)))
-                kvs += ((x.toString + aeStr, transformExpr(es(i))))
-              }
-            case _ =>
-          }
+        arr match {
+          case ArrayLiter(Some(es), _) =>
+            for (i <- es.indices) {
+              val aeName = addToDict(str + "-" + i)
+              kvs += ((aeName, transformExpr(es(i))))
+            }
+          case _ =>
         }
       case _ =>
     }
     Ident(v, pos)
+  }
+
+  /* Add the string s to dict hashmap. If already present then variable counter
+     is incremented by 1 and updated in dict. The string for the next unique
+     identifier is returned. */
+  private def addToDict(s: String): String = {
+    var (x, y) = dict.getOrElse(s, (INITIAL_LHS, INITIAL_RHS))
+    x += 1
+    y += 1
+    dict += ((s, (x, y)))
+    x.toString + s
   }
 
   /* Updates an identifier, prepending the RHS unique ID.
@@ -119,7 +124,7 @@ object SSA {
   private def transformStat(s: Stat): ListBuffer[Stat] = {
     val buf = ListBuffer.empty[Stat]
     s match {
-      case EqIdent(t, id @ Ident(_, pos), r) =>
+      case EqIdent(t, id, r) =>
         val v = addToHashMap(id, r)
         deadCodeElimination(r, EqIdent(t, v, r), buf)
       case EqAssign(id: Ident, r) =>
@@ -127,6 +132,7 @@ object SSA {
         deadCodeElimination(r, EqAssign(v, r), buf)
       case EqAssign(ArrayElem(Ident(s, _), es, pos), e: Expr) =>
         // foldIntOps(e) > es.length -> exit 255
+        // TODO: Array out of bounds check
         addToHashMap(Ident(arrayElemIdentifier(s, es), null), e)
         buf
       case EqAssign(lhs, rhs) => buf += EqAssign(updateLhs(lhs), updateRhs(rhs))
@@ -159,6 +165,34 @@ object SSA {
     }
   }
 
+  /* Updates the elements of an arrayLiter using the updated arrayElem values
+     from the kvs. */
+  private def updateArrayLiter(
+      elems: List[Expr],
+      pos: (Int, Int),
+      arrStr: String
+  ): AssignRHS = {
+    val ArrayLiter(Some(elems), pos) = arrLiter
+    val updatedElems = ListBuffer.empty[Expr]
+    // Gets most up to date array elem values from kvs or its corresponding
+    // variable name if not present in kvs
+    for (i <- elems.indices) {
+      val aeStr = arrStr + "-" + i
+      val (_, y) = dict(aeStr)
+      val aeName = y.toString + aeStr
+      updatedElems += toExpr(
+        kvs.getOrElse(aeName, Ident(aeName, null))
+      )
+    }
+    // Only update the arrayLiter in kvs for variable arrStr if necessary
+    if (updatedElems.toList != elems) {
+      val updatedArr = ArrayLiter(Some(updatedElems.toList), pos)
+      kvs += ((addToDict(s), updatedArr))
+      id2 = updateIdent(id)
+    }
+    updatedArr
+  }
+
   private def transExpArray(e: Expr, pf: (Expr => Stat)): ListBuffer[Stat] = {
     val buf = ListBuffer.empty[Stat]
     e match {
@@ -168,11 +202,17 @@ object SSA {
         rhs match {
           // Not array, transformExpr as usual
           case _: Expr => buf += pf(toExpr(rhs))
-          // Array has not been defined then add to list of Statements
-          case _ =>
-            // rhs = array
-            buf += EqIdent(rhs.getType(null), id2, rhs)
+          // Array has not been defined in current ast then add to list of
+          // statements
+          case arrLiter: ArrayLiter =>
+            val rhsUpdated = arrLiter match {
+              case ArrayLiter(Some(es), pos) => updateArrayLiter(es, pos, s)
+              case emptyArrLiter             => emptyArrLiter
+            }
+            val t = sTable.lookupAllType(id)
+            buf += EqIdent(t, id2, rhsUpdated)
             buf += pf(id2)
+          case _ => ???
         }
       // Not array, transformExpr as usual
       case _ => buf += pf(transformExpr(e))
