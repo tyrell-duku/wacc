@@ -132,7 +132,12 @@ object Rules {
       s: Stat
   )
 
-  sealed case class ParamList(ps: List[Param])
+  sealed case class ParamList(ps: List[Param]) {
+    def map(f: Ident => Ident): ParamList = ParamList(ps.map(p => {
+      val Param(t, id) = p
+      Param(t, f(id))
+    }))
+  }
 
   sealed case class Param(t: Type, id: Ident)
 
