@@ -102,11 +102,6 @@ case class SSA(sTable: SymbolTable) {
       case _                                                  => buf += stat
     }
 
-  private def updateRhs(rhs: AssignRHS): AssignRHS = rhs match {
-    case e: Expr => transformExpr(e)
-    case _       => rhs
-  }
-
   private def toExpr(rhs: AssignRHS): Expr = rhs match {
     case e: Expr => e
     // invalid
@@ -122,14 +117,39 @@ case class SSA(sTable: SymbolTable) {
     varName + "-" + pairElemType
   }
 
-  private def updateLhs(lhs: AssignLHS): AssignLHS = lhs match {
-    case DerefPtr(ptr, pos)  => DerefPtr(transformExpr(ptr), pos)
-    case Fst(id: Ident, pos) => Fst(updateIdent(id), pos)
-    case Snd(id: Ident, pos) => Snd(updateIdent(id), pos)
-    case ArrayElem(id, es, pos) =>
-      ArrayElem(updateIdent(id), es.map(transformExpr), pos)
-    // Semantically incorrect
-    case _ => ???
+  /* Transforms a read function to SSA */
+  private def transformRead(lhs: AssignLHS): ListBuffer[Stat] = {
+    var e: Expr = null
+    val varName = lhs match {
+      case id @ Ident(s, _) =>
+        e = toExpr(kvs(updateIdent(id).s))
+        s
+      case ArrayElem(id @ Ident(s, _), es, pos) =>
+        val aeName = arrayElemIdentifier(s, es)
+        e = getLatestHeapExpr(aeName)
+        aeName
+      case Fst(id @ Ident(s, _), _) =>
+        val fstName = pairElemIdentifier(s, true)
+        e = getLatestHeapExpr(fstName)
+        fstName
+      case Snd(id @ Ident(s, _), _) =>
+        val sndName = pairElemIdentifier(s, false)
+        e = getLatestHeapExpr(sndName)
+        sndName
+      // TODO: Deref Ptr
+      // Semantically incorrect
+      case _ => ???
+    }
+    e match {
+      // If lhs evaluates to an ident then use that var for read
+      case id: Ident => ListBuffer(Read(id))
+      // Otherwise introduce next variable in dict for read
+      case _ =>
+        // add to dict but not kvs
+        val v = Ident(addToDict(varName), null)
+        ListBuffer(EqIdent(getExprType(e), v, e), Read(v))
+    }
+
   }
 
   /* Transforms a given statement S into SSA form. */
@@ -142,33 +162,19 @@ case class SSA(sTable: SymbolTable) {
       case EqAssign(id: Ident, r) =>
         val v = addToHashMap(id, r)
         deadCodeElimination(r, EqAssign(v, r), buf)
-      case EqAssign(ArrayElem(Ident(str, _), es, pos), r) =>
+      case EqAssign(ArrayElem(Ident(str, pos), es, _), r) =>
         // foldIntOps(e) > es.length -> exit 255
         // TODO: Array out of bounds check
-        addToHashMap(Ident(arrayElemIdentifier(str, es), null), r)
-        buf
-      case EqAssign(Fst(Ident(str, _), _), r) =>
-        addToHashMap(Ident(pairElemIdentifier(str, true), null), r)
-        buf
-      case EqAssign(Snd(Ident(str, _), _), r) =>
-        addToHashMap(Ident(pairElemIdentifier(str, false), null), r)
-        buf
-      case EqAssign(lhs, rhs) => buf += EqAssign(updateLhs(lhs), updateRhs(rhs))
-      case Read(id: Ident) =>
-        val Ident(s, _) = updateIdent(id)
-        val e = toExpr(kvs(s))
-        // add to dict but not kvs
-        val v = addToHashMap(id, null)
-        buf += EqIdent(getExprType(e), v, e)
-        buf += Read(v)
-      case Read(ArrayElem(id @ Ident(s, _), es, pos)) =>
-        val arrayElemName = arrayElemIdentifier(s, es)
-        val (_, y) = dict(arrayElemName)
-        val e = toExpr(kvs(y.toString + arrayElemName))
-        val v = addToHashMap(Ident(arrayElemName, null), null)
-        buf += EqIdent(getExprType(e), v, e)
-        buf += Read(v)
-      case Read(lhs)  => buf += Read(updateLhs(lhs))
+        val v = addToHashMap(Ident(arrayElemIdentifier(str, es), pos), r)
+        deadCodeElimination(r, EqAssign(v, r), buf)
+      case EqAssign(Fst(Ident(str, pos), _), r) =>
+        val v = addToHashMap(Ident(pairElemIdentifier(str, true), pos), r)
+        deadCodeElimination(r, EqAssign(v, r), buf)
+      case EqAssign(Snd(Ident(str, pos), _), r) =>
+        val v = addToHashMap(Ident(pairElemIdentifier(str, false), pos), r)
+        deadCodeElimination(r, EqAssign(v, r), buf)
+      //TODO: EqAssign, deref ptr case
+      case Read(lhs)  => buf ++= transformRead(lhs)
       case Free(e)    => buf ++= transExpArray(e, Free)
       case Return(e)  => buf ++= transExpArray(e, Return)
       case Exit(e)    => buf += Exit(transformExpr(e))
