@@ -3,9 +3,9 @@ package frontend
 import Rules._
 import scala.collection.immutable.HashMap
 import scala.collection.mutable.ListBuffer
+import scala.collection.mutable.Map
 import backend.CodeGenerator.getExprType
 import frontend.Semantics.SymbolTable
-import ConstantFolding.{foldExpr, foldIntOps}
 
 case class SSA(sTable: SymbolTable) {
   // <Identifier's name, (LHS unique identifier, RHS unique identifier)>
@@ -151,10 +151,88 @@ case class SSA(sTable: SymbolTable) {
     }
   }
 
+  /* Counts the number of assignments a variable previously declared in a higher
+     scope has within an IF or ELSE branch. */
+  private def countVariables(stat: Stat, map: Map[String, Int], mapScope: Map[String, Int]): Unit = {
+    stat match {
+      case EqAssign(Ident(s, _), rhs) =>
+        // Only add to map if already declared in higher scope
+        if (kvs.contains(s)) {
+          // map is for both if and else branches
+          map(s) =  map.getOrElseUpdate(s, 0) + 1
+          // mapScope is map for individual if or else branch
+          mapScope(s) = mapScope.getOrElseUpdate(s, 0) + 1
+        }
+      case EqAssign(ArrayElem(Ident(s, _), elems, _), rhs) =>
+      // case EqAssign(PairElem(Ident(s, _), _), rhs)         =>
+      case Seq(stats) =>
+        for (s <- stats) {
+          countVariables(s, map, mapScope)
+        }
+      case _ =>
+    }
+  }
+
+  private def pruneIf(ssa: ListBuffer[Stat]): Stat = {
+    if (ssa.isEmpty) Skip else Seq(ssa.toList)
+  }
+  
+  /* If a variable from higher scope is changed within an if or else branch,
+     introduce new variable before if statement to account for phi. */
+  private def createPhiVar(x: (String, Int)): Stat = {
+    // n is the number of assignments in both if and else branches
+    val (s, n) = x
+    // y is the current number of assignments for the given variable
+    val (_, y) = dict(s)
+    val varName = y.toString + s
+    // Get previously defined value from kvs
+    val rhs = kvs.getOrElse(varName, Ident(varName, null))
+    EqIdent(rhs.getType(sTable), Ident((n + y + 1).toString + s, null), rhs)
+  }
+
+  /* Updates the PHI variable, given the map of the condition branch */
+  private def updatePhiVar(x: (String, Int), map: Map[String, Int]): Stat = {
+    val (s, _) = x
+    val (_, y) = dict(s)
+    val varName = y.toString + s
+    val rhs = kvs.getOrElse(varName, Ident(varName, null))
+    if (map != null) {
+      EqAssign(Ident((1 + map.getOrElse(s, 0) + y).toString + s, null), rhs)
+    } else {
+      EqAssign(Ident((1 + y).toString + s, null), rhs)
+    }
+  }
+
   /* Transforms an if stat into SSA form, using PHI functions. */
   private def transformIf(cond: Expr, s1: Stat, s2: Stat): ListBuffer[Stat] = {
     val stats = ListBuffer.empty[Stat]
-    stats
+    // Variable occurances in IF and ELSE branches
+    val map = Map.empty[String, Int]
+    // Variable occurances in IF branch
+    val mapIf = Map.empty[String, Int]
+    // Variable occurances in ELSE branch
+    val mapElse = Map.empty[String, Int]
+    // Count variable into map, mapIf & mapElse
+    countVariables(s1, map, mapIf)
+    countVariables(s2, map, mapElse)
+    
+    // Create the PHI variables if necessary
+    val mapList = map.toList
+    stats ++= mapList.map(createPhiVar)
+    
+    // Transform S1 and S2 and updatePhiVar within each branch (if necessary)
+    val e = transformExpr(cond)
+    val ssa1 = transformStat(s1) ++ mapIf.toList.map(x => updatePhiVar(x, mapElse))
+    val ssa2 = transformStat(s2) ++ mapElse.toList.map(x => updatePhiVar(x, null))
+    val ifStat = If(e, pruneIf(ssa1), pruneIf(ssa2))
+    
+    // Increment var in dict if phi var is used
+    mapList.foreach((x: (String, Int)) => addToDict(x._1))
+    
+    ifStat match {
+      case If(_, Skip, Skip) => stats
+      case _                 => stats += ifStat
+    }
   }
 
   /* Function used to retrieve the latest value of a heap variable in kvs.
@@ -255,13 +333,13 @@ case class SSA(sTable: SymbolTable) {
         val v = addToHashMap(Ident(pairElemIdentifier(str, false), pos), r)
         deadCodeElimination(r, EqAssign(v, r), buf)
       //TODO: EqAssign, deref ptr case
-      case Read(lhs)  => buf ++= transformRead(lhs)
-      case Free(e)    => buf ++= transExpArray(e, Free)
-      case Return(e)  => buf ++= transExpArray(e, Return)
-      case Exit(e)    => buf += Exit(transformExpr(e))
-      case Print(e)   => buf ++= transExpArray(e, Print)
-      case PrintLn(e) => buf ++= transExpArray(e, PrintLn)
-      // case If(cond, s1, s2) =>
+      case Read(lhs)        => buf ++= transformRead(lhs)
+      case Free(e)          => buf ++= transExpArray(e, Free)
+      case Return(e)        => buf ++= transExpArray(e, Return)
+      case Exit(e)          => buf += Exit(transformExpr(e))
+      case Print(e)         => buf ++= transExpArray(e, Print)
+      case PrintLn(e)       => buf ++= transExpArray(e, PrintLn)
+      case If(cond, s1, s2) => buf ++= transformIf(cond, s1, s2)
       //   val BoolLiter(b, _) = foldExpr(transformExpr(cond))
       //   if (b) buf ++= transformStat(s1) else buf ++= transformStat(s2)
       case Seq(statList) => statList.flatMap(transformStat).to(ListBuffer)
@@ -286,5 +364,4 @@ case class SSA(sTable: SymbolTable) {
     val Program(fs, s) = ast
     Program(fs.map(f => transformFunc(f)), Seq(transformStat(s).toList))
   }
-
 }
