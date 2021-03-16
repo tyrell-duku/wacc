@@ -91,7 +91,7 @@ object Rules {
           null
       }
     }
-    override def map(f: Expr => Expr) = DerefPtr(f(ptr), pos)
+    override def map[B >: AssignRHS](f: Expr => Expr) = DerefPtr(f(ptr), pos)
   }
   object DerefPtr {
     def apply(op: Parsley[_]): Parsley[Expr => Expr] =
@@ -104,7 +104,7 @@ object Rules {
       semErrs = ptr.semErrs
       PtrT(t)
     }
-    override def map(f: Expr => Expr) = Addr(f(ptr), pos)
+    override def map[B >: AssignRHS](f: Expr => Expr) = Addr(f(ptr), pos)
   }
   object Addr {
     def apply(op: Parsley[_]): Parsley[Expr => Expr] =
@@ -137,16 +137,28 @@ object Rules {
   sealed case class Param(t: Type, id: Ident)
 
   // Trait for all possible variations of a statement
-  sealed trait Stat
+  sealed trait Stat {
+    def map(f: Expr => Expr): Stat = this
+  }
   case object Skip extends Stat
   case class EqIdent(t: Type, id: Ident, aRHS: AssignRHS) extends Stat
   case class EqAssign(aLHS: AssignLHS, aRHS: AssignRHS) extends Stat
   case class Read(aLHS: AssignLHS) extends Stat
-  case class Free(e: Expr) extends Stat
-  case class Return(e: Expr) extends Stat
-  case class Exit(e: Expr) extends Stat
-  case class Print(e: Expr) extends Stat
-  case class PrintLn(e: Expr) extends Stat
+  case class Free(e: Expr) extends Stat {
+    override def map(f: Expr => Expr) = Free(f(e))
+  }
+  case class Return(e: Expr) extends Stat {
+    override def map(f: Expr => Expr) = Return(f(e))
+  }
+  case class Exit(e: Expr) extends Stat {
+    override def map(f: Expr => Expr) = Exit(f(e))
+  }
+  case class Print(e: Expr) extends Stat {
+    override def map(f: Expr => Expr) = Print(f(e))
+  }
+  case class PrintLn(e: Expr) extends Stat {
+    override def map(f: Expr => Expr) = PrintLn(f(e))
+  }
   case class If(cond: Expr, s1: Stat, s2: Stat) extends Stat
   case class While(cond: Expr, s: Stat) extends Stat
   case class Begin(s: Stat) extends Stat
@@ -162,6 +174,7 @@ object Rules {
     // Field to store it's semantic errors
     var semErrs: mutable.ListBuffer[SemanticError] =
       mutable.ListBuffer.empty[SemanticError]
+    def map[B >: AssignRHS](f: Expr => Expr): B = this
   }
 
   case class Newpair(fst: Expr, snd: Expr, pos: (Int, Int)) extends AssignRHS {
@@ -216,13 +229,13 @@ object Rules {
 
   sealed trait PairElem extends AssignLHS with AssignRHS {
     val e: Expr
-    def map(f: Expr => Expr): PairElem
+    override def map[B >: AssignRHS](f: Expr => Expr): PairElem = this
   }
 
   case class Fst(e: Expr, pos: (Int, Int)) extends PairElem {
     override def toString: String = "fst " + e
 
-    override def map(f: Expr => Expr) = Fst(f(e), pos)
+    override def map[B >: AssignRHS](f: Expr => Expr) = Fst(f(e), pos)
 
     override def getType(sTable: SymbolTable): Type = {
       e match {
@@ -246,7 +259,7 @@ object Rules {
   case class Snd(e: Expr, pos: (Int, Int)) extends PairElem {
     override def toString: String = "snd " + e
 
-    override def map(f: Expr => Expr) = Snd(f(e), pos)
+    override def map[B >: AssignRHS](f: Expr => Expr) = Snd(f(e), pos)
 
     override def getType(sTable: SymbolTable): Type = {
       e match {
@@ -346,7 +359,7 @@ object Rules {
 
   // Trait for all possible variations of an expression
   sealed trait Expr extends AssignRHS {
-    def map(f: Expr => Expr) = this
+    override def map[B >: AssignRHS](f: Expr => Expr): Expr = this
   }
 
   // Trait for all possible variations of an unary operation
@@ -370,7 +383,7 @@ object Rules {
   case class Not(e: Expr, pos: (Int, Int)) extends UnOp {
     override val expected: (Type, Type) = (BoolT, BoolT)
     val unOperatorStr = "!"
-    override def map(f: Expr => Expr) = Not(f(e), pos)
+    override def map[B >: AssignRHS](f: Expr => Expr) = Not(f(e), pos)
   }
   object Not {
     def apply(op: Parsley[_]): Parsley[Expr => Expr] =
@@ -379,7 +392,7 @@ object Rules {
   case class Negation(e: Expr, pos: (Int, Int)) extends UnOp {
     override val expected: (Type, Type) = (IntT, IntT)
     val unOperatorStr = "-"
-    override def map(f: Expr => Expr) = Negation(f(e), pos)
+    override def map[B >: AssignRHS](f: Expr => Expr) = Negation(f(e), pos)
   }
   object Negation {
     def apply(op: Parsley[_]): Parsley[Expr => Expr] =
@@ -388,7 +401,7 @@ object Rules {
   case class Len(e: Expr, pos: (Int, Int)) extends UnOp {
     override val expected: (Type, Type) = (ArrayT(null), IntT)
     val unOperatorStr = "len "
-    override def map(f: Expr => Expr) = Len(f(e), pos)
+    override def map[B >: AssignRHS](f: Expr => Expr) = Len(f(e), pos)
 
     override def getType(sTable: SymbolTable): Type = {
       val actual = e.getType(sTable)
@@ -406,7 +419,7 @@ object Rules {
   case class Ord(e: Expr, pos: (Int, Int)) extends UnOp {
     override val expected: (Type, Type) = (CharT, IntT)
     val unOperatorStr = "ord "
-    override def map(f: Expr => Expr) = Ord(f(e), pos)
+    override def map[B >: AssignRHS](f: Expr => Expr) = Ord(f(e), pos)
   }
   object Ord {
     def apply(op: Parsley[_]): Parsley[Expr => Expr] =
@@ -415,7 +428,7 @@ object Rules {
   case class Chr(e: Expr, pos: (Int, Int)) extends UnOp {
     override val expected: (Type, Type) = (IntT, CharT)
     val unOperatorStr = "chr "
-    override def map(f: Expr => Expr) = Chr(f(e), pos)
+    override def map[B >: AssignRHS](f: Expr => Expr) = Chr(f(e), pos)
   }
   object Chr {
     def apply(op: Parsley[_]): Parsley[Expr => Expr] =
@@ -424,7 +437,7 @@ object Rules {
   case class BitwiseNot(e: Expr, pos: (Int, Int)) extends UnOp {
     override val expected: (Type, Type) = (IntT, IntT)
     val unOperatorStr = "~"
-    override def map(f: Expr => Expr) = BitwiseNot(f(e), pos)
+    override def map[B >: AssignRHS](f: Expr => Expr) = BitwiseNot(f(e), pos)
   }
   object BitwiseNot {
     def apply(op: Parsley[_]): Parsley[Expr => Expr] =
@@ -482,7 +495,8 @@ object Rules {
   }
   case class Mul(lExpr: Expr, rExpr: Expr, pos: (Int, Int)) extends ArithOps {
     val operatorStr = "*"
-    override def map(f: Expr => Expr) = Mul(f(lExpr), f(rExpr), pos)
+    override def map[B >: AssignRHS](f: Expr => Expr) =
+      Mul(f(lExpr), f(rExpr), pos)
   }
   object Mul {
     def apply(op: Parsley[_]): Parsley[(Expr, Expr) => Expr] =
@@ -490,7 +504,8 @@ object Rules {
   }
   case class Div(lExpr: Expr, rExpr: Expr, pos: (Int, Int)) extends ArithOps {
     val operatorStr = "/"
-    override def map(f: Expr => Expr) = Div(f(lExpr), f(rExpr), pos)
+    override def map[B >: AssignRHS](f: Expr => Expr) =
+      Div(f(lExpr), f(rExpr), pos)
   }
   object Div {
     def apply(op: Parsley[_]): Parsley[(Expr, Expr) => Expr] =
@@ -498,7 +513,8 @@ object Rules {
   }
   case class Mod(lExpr: Expr, rExpr: Expr, pos: (Int, Int)) extends ArithOps {
     val operatorStr = "%"
-    override def map(f: Expr => Expr) = Mod(f(lExpr), f(rExpr), pos)
+    override def map[B >: AssignRHS](f: Expr => Expr) =
+      Mod(f(lExpr), f(rExpr), pos)
   }
   object Mod {
     def apply(op: Parsley[_]): Parsley[(Expr, Expr) => Expr] =
@@ -506,7 +522,8 @@ object Rules {
   }
   case class Plus(lExpr: Expr, rExpr: Expr, pos: (Int, Int)) extends ArithOps {
     val operatorStr = "+"
-    override def map(f: Expr => Expr) = Plus(f(lExpr), f(rExpr), pos)
+    override def map[B >: AssignRHS](f: Expr => Expr) =
+      Plus(f(lExpr), f(rExpr), pos)
   }
   object Plus {
     def apply(op: Parsley[_]): Parsley[(Expr, Expr) => Expr] =
@@ -514,7 +531,8 @@ object Rules {
   }
   case class Sub(lExpr: Expr, rExpr: Expr, pos: (Int, Int)) extends ArithOps {
     val operatorStr = "-"
-    override def map(f: Expr => Expr) = Sub(f(lExpr), f(rExpr), pos)
+    override def map[B >: AssignRHS](f: Expr => Expr) =
+      Sub(f(lExpr), f(rExpr), pos)
   }
   object Sub {
     def apply(op: Parsley[_]): Parsley[(Expr, Expr) => Expr] =
@@ -526,7 +544,8 @@ object Rules {
   }
   case class GT(lExpr: Expr, rExpr: Expr, pos: (Int, Int)) extends ComparOps {
     val operatorStr = ">"
-    override def map(f: Expr => Expr) = GT(f(lExpr), f(rExpr), pos)
+    override def map[B >: AssignRHS](f: Expr => Expr) =
+      GT(f(lExpr), f(rExpr), pos)
   }
   object GT {
     def apply(op: Parsley[_]): Parsley[(Expr, Expr) => Expr] =
@@ -534,7 +553,8 @@ object Rules {
   }
   case class GTE(lExpr: Expr, rExpr: Expr, pos: (Int, Int)) extends ComparOps {
     val operatorStr = ">="
-    override def map(f: Expr => Expr) = GTE(f(lExpr), f(rExpr), pos)
+    override def map[B >: AssignRHS](f: Expr => Expr) =
+      GTE(f(lExpr), f(rExpr), pos)
   }
   object GTE {
     def apply(op: Parsley[_]): Parsley[(Expr, Expr) => Expr] =
@@ -542,7 +562,8 @@ object Rules {
   }
   case class LT(lExpr: Expr, rExpr: Expr, pos: (Int, Int)) extends ComparOps {
     val operatorStr = "<"
-    override def map(f: Expr => Expr) = LT(f(lExpr), f(rExpr), pos)
+    override def map[B >: AssignRHS](f: Expr => Expr) =
+      LT(f(lExpr), f(rExpr), pos)
   }
   object LT {
     def apply(op: Parsley[_]): Parsley[(Expr, Expr) => Expr] =
@@ -550,7 +571,8 @@ object Rules {
   }
   case class LTE(lExpr: Expr, rExpr: Expr, pos: (Int, Int)) extends ComparOps {
     val operatorStr = "<="
-    override def map(f: Expr => Expr) = LTE(f(lExpr), f(rExpr), pos)
+    override def map[B >: AssignRHS](f: Expr => Expr) =
+      LTE(f(lExpr), f(rExpr), pos)
   }
   object LTE {
     def apply(op: Parsley[_]): Parsley[(Expr, Expr) => Expr] =
@@ -562,7 +584,8 @@ object Rules {
   }
   case class Equal(lExpr: Expr, rExpr: Expr, pos: (Int, Int)) extends EqOps {
     val operatorStr = "=="
-    override def map(f: Expr => Expr) = Equal(f(lExpr), f(rExpr), pos)
+    override def map[B >: AssignRHS](f: Expr => Expr) =
+      Equal(f(lExpr), f(rExpr), pos)
   }
   object Equal {
     def apply(op: Parsley[_]): Parsley[(Expr, Expr) => Expr] =
@@ -570,7 +593,8 @@ object Rules {
   }
   case class NotEqual(lExpr: Expr, rExpr: Expr, pos: (Int, Int)) extends EqOps {
     val operatorStr = "!="
-    override def map(f: Expr => Expr) = NotEqual(f(lExpr), f(rExpr), pos)
+    override def map[B >: AssignRHS](f: Expr => Expr) =
+      NotEqual(f(lExpr), f(rExpr), pos)
   }
   object NotEqual {
     def apply(op: Parsley[_]): Parsley[(Expr, Expr) => Expr] =
@@ -582,7 +606,8 @@ object Rules {
   }
   case class And(lExpr: Expr, rExpr: Expr, pos: (Int, Int)) extends LogicalOps {
     val operatorStr = "&&"
-    override def map(f: Expr => Expr) = And(f(lExpr), f(rExpr), pos)
+    override def map[B >: AssignRHS](f: Expr => Expr) =
+      And(f(lExpr), f(rExpr), pos)
   }
   object And {
     def apply(op: Parsley[_]): Parsley[(Expr, Expr) => Expr] =
@@ -590,7 +615,8 @@ object Rules {
   }
   case class Or(lExpr: Expr, rExpr: Expr, pos: (Int, Int)) extends LogicalOps {
     val operatorStr = "||"
-    override def map(f: Expr => Expr) = Or(f(lExpr), f(rExpr), pos)
+    override def map[B >: AssignRHS](f: Expr => Expr) =
+      Or(f(lExpr), f(rExpr), pos)
   }
   object Or {
     def apply(op: Parsley[_]): Parsley[(Expr, Expr) => Expr] =
@@ -603,7 +629,8 @@ object Rules {
   case class BitwiseAnd(lExpr: Expr, rExpr: Expr, pos: (Int, Int))
       extends BitwiseOps {
     val operatorStr = "&"
-    override def map(f: Expr => Expr) = BitwiseAnd(f(lExpr), f(rExpr), pos)
+    override def map[B >: AssignRHS](f: Expr => Expr) =
+      BitwiseAnd(f(lExpr), f(rExpr), pos)
   }
   object BitwiseAnd {
     def apply(op: Parsley[_]): Parsley[(Expr, Expr) => Expr] =
@@ -614,7 +641,8 @@ object Rules {
   case class BitwiseOr(lExpr: Expr, rExpr: Expr, pos: (Int, Int))
       extends BitwiseOps {
     val operatorStr = "|"
-    override def map(f: Expr => Expr) = BitwiseOr(f(lExpr), f(rExpr), pos)
+    override def map[B >: AssignRHS](f: Expr => Expr) =
+      BitwiseOr(f(lExpr), f(rExpr), pos)
   }
   object BitwiseOr {
     def apply(op: Parsley[_]): Parsley[(Expr, Expr) => Expr] =
@@ -623,7 +651,8 @@ object Rules {
   case class BitwiseXor(lExpr: Expr, rExpr: Expr, pos: (Int, Int))
       extends BitwiseOps {
     val operatorStr = "^"
-    override def map(f: Expr => Expr) = BitwiseXor(f(lExpr), f(rExpr), pos)
+    override def map[B >: AssignRHS](f: Expr => Expr) =
+      BitwiseXor(f(lExpr), f(rExpr), pos)
   }
   object BitwiseXor {
     def apply(op: Parsley[_]): Parsley[(Expr, Expr) => Expr] =
@@ -634,7 +663,7 @@ object Rules {
   case class LogicalShiftLeft(lExpr: Expr, rExpr: Expr, pos: (Int, Int))
       extends BitwiseOps {
     val operatorStr = "<<"
-    override def map(f: Expr => Expr) =
+    override def map[B >: AssignRHS](f: Expr => Expr) =
       LogicalShiftLeft(f(lExpr), f(rExpr), pos)
   }
   object LogicalShiftLeft {
@@ -646,7 +675,7 @@ object Rules {
   case class LogicalShiftRight(lExpr: Expr, rExpr: Expr, pos: (Int, Int))
       extends BitwiseOps {
     val operatorStr = ">>"
-    override def map(f: Expr => Expr) =
+    override def map[B >: AssignRHS](f: Expr => Expr) =
       LogicalShiftRight(f(lExpr), f(rExpr), pos)
   }
   object LogicalShiftRight {
