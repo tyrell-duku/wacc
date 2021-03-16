@@ -268,8 +268,12 @@ case class SSA(sTable: SymbolTable) {
   /* Transforms a given function F into SSA form. */
   def transformFunc(f: Func): Func = {
     val Func(t, id, params, s) = f
-    // TODO: transform params
-    Func(t, id, params, Seq(transformStat(s).toList))
+    Func(
+      t,
+      id,
+      params.map(pList => pList.map(i => addToHashMap(i, null))),
+      Seq(transformStat(s).toList)
+    )
   }
 
   /* Transforms a given program AST into SSA form. */
