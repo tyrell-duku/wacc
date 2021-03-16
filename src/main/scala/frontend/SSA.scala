@@ -32,6 +32,13 @@ case class SSA(sTable: SymbolTable) {
             }
           case _ =>
         }
+      case newpair: Newpair =>
+        kvs += ((v, newpair))
+        val Newpair(fst, snd, _) = newpair
+        val fstName = addToDict(pairElemIdentifier(str, true))
+        kvs += ((fstName, transformExpr(fst)))
+        val sndName = addToDict(pairElemIdentifier(str, false))
+        kvs += ((sndName, transformExpr(snd)))
       case _ =>
     }
     Ident(v, pos)
@@ -105,6 +112,11 @@ case class SSA(sTable: SymbolTable) {
     varName + "-" + es.map(transformExpr).mkString("-")
   }
 
+  private def pairElemIdentifier(varName: String, isFst: Boolean): String = {
+    val pairElemType = if (isFst) "fst" else "snd"
+    varName + "-" + pairElemType
+  }
+
   private def updateLhs(lhs: AssignLHS): AssignLHS = lhs match {
     case DerefPtr(ptr, pos)  => DerefPtr(transformExpr(ptr), pos)
     case Fst(id: Ident, pos) => Fst(updateIdent(id), pos)
@@ -113,11 +125,6 @@ case class SSA(sTable: SymbolTable) {
       ArrayElem(updateIdent(id), es.map(transformExpr), pos)
     // Semantically incorrect
     case _ => ???
-  }
-
-  private def intLiterToInt(e: Expr): Int = e match {
-    case IntLiter(n, _) => n
-    case _              => ???
   }
 
   /* Transforms a given statement S into SSA form. */
@@ -130,10 +137,16 @@ case class SSA(sTable: SymbolTable) {
       case EqAssign(id: Ident, r) =>
         val v = addToHashMap(id, r)
         deadCodeElimination(r, EqAssign(v, r), buf)
-      case EqAssign(ArrayElem(Ident(s, _), es, pos), e: Expr) =>
+      case EqAssign(ArrayElem(Ident(str, _), es, pos), r) =>
         // foldIntOps(e) > es.length -> exit 255
         // TODO: Array out of bounds check
-        addToHashMap(Ident(arrayElemIdentifier(s, es), null), e)
+        addToHashMap(Ident(arrayElemIdentifier(str, es), null), r)
+        buf
+      case EqAssign(Fst(Ident(str, _), _), r) =>
+        addToHashMap(Ident(pairElemIdentifier(str, true), null), r)
+        buf
+      case EqAssign(Snd(Ident(str, _), _), r) =>
+        addToHashMap(Ident(pairElemIdentifier(str, false), null), r)
         buf
       case EqAssign(lhs, rhs) => buf += EqAssign(updateLhs(lhs), updateRhs(rhs))
       case Read(id: Ident) =>
@@ -165,32 +178,49 @@ case class SSA(sTable: SymbolTable) {
     }
   }
 
+  /* Function used to retrieve the latest value of a heap variable in kvs.
+     If not present in kvs then it returns the most recent ident associated
+     with the given heap variable. */
+  private def updateHeapExpr(elemName: String): Expr = {
+    val (_, y) = dict(elemName)
+    val elemIdent = y.toString + elemName
+    toExpr(kvs.getOrElse(elemIdent, Ident(elemIdent, null)))
+  }
+
   /* Updates the elements of an arrayLiter using the updated arrayElem values
      from the kvs. */
   private def updateArrayLiter(
       elems: List[Expr],
       pos: (Int, Int),
-      arrStr: String
+      arrName: String
   ): AssignRHS = {
-    val ArrayLiter(Some(elems), pos) = arrLiter
     val updatedElems = ListBuffer.empty[Expr]
     // Gets most up to date array elem values from kvs or its corresponding
     // variable name if not present in kvs
     for (i <- elems.indices) {
-      val aeStr = arrStr + "-" + i
-      val (_, y) = dict(aeStr)
-      val aeName = y.toString + aeStr
-      updatedElems += toExpr(
-        kvs.getOrElse(aeName, Ident(aeName, null))
-      )
+      updatedElems += updateHeapExpr(arrName + "-" + i)
     }
+    val updatedArr = ArrayLiter(Some(updatedElems.toList), pos)
     // Only update the arrayLiter in kvs for variable arrStr if necessary
     if (updatedElems.toList != elems) {
-      val updatedArr = ArrayLiter(Some(updatedElems.toList), pos)
-      kvs += ((addToDict(s), updatedArr))
-      id2 = updateIdent(id)
+      kvs += ((addToDict(arrName), updatedArr))
     }
     updatedArr
+  }
+
+  /* Updates the elements of a Newpair using the updated fst and snd values
+     from the kvs. */
+  private def updateNewpair(pairName: String, oldPair: Newpair): AssignRHS = {
+    val Newpair(_, _, pos) = oldPair
+    // Gets most up to date values for fst and snd from kvs
+    val updatedFst = updateHeapExpr(pairName + "-fst")
+    val updatedSnd = updateHeapExpr(pairName + "-snd")
+    val updatedPair = Newpair(updatedFst, updatedSnd, pos)
+    // Only update newpair in kvs if necessary
+    if (updatedPair != oldPair) {
+      kvs += ((addToDict(pairName), updatedPair))
+    }
+    updatedPair
   }
 
   private def transExpArray(e: Expr, pf: (Expr => Stat)): ListBuffer[Stat] = {
@@ -202,19 +232,23 @@ case class SSA(sTable: SymbolTable) {
         rhs match {
           // Not array, transformExpr as usual
           case _: Expr => buf += pf(toExpr(rhs))
-          // Array has not been defined in current ast then add to list of
-          // statements
-          case arrLiter: ArrayLiter =>
-            val rhsUpdated = arrLiter match {
+          // Heap variable has not been defined in current ast then add to list
+          // of statements
+          case rhs =>
+            val rhsUpdated = rhs match {
               case ArrayLiter(Some(es), pos) => updateArrayLiter(es, pos, s)
-              case emptyArrLiter             => emptyArrLiter
+              // Empty arrayLiter case, nothing to update
+              case ArrayLiter(None, pos) => ArrayLiter(None, pos)
+              case pair: Newpair         => updateNewpair(s, pair)
+              case _                     => ???
             }
+            // Get latest ident as it may be updated
+            id2 = updateIdent(id)
             val t = sTable.lookupAllType(id)
             buf += EqIdent(t, id2, rhsUpdated)
             buf += pf(id2)
-          case _ => ???
         }
-      // Not array, transformExpr as usual
+      // Not ident so not heap variable, transformExpr as usual
       case _ => buf += pf(transformExpr(e))
     }
     buf
