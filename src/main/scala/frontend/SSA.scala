@@ -13,6 +13,11 @@ case class SSA(sTable: SymbolTable) {
   private var kvs = new HashMap[String, AssignRHS]
   val INITIAL_LHS = 0
   val INITIAL_RHS = 0
+  val Undefined_Value = null
+  val Undefined_Pos = null
+  val Undefined_Map = null
+  val Is_Fst = true
+  val Not_Fst = false
 
   /* If the hashmap doesn't contain the identifier STR, then it is added to
      the hashmap with initial values (1, 1). If the hashmap contains the
@@ -80,7 +85,7 @@ case class SSA(sTable: SymbolTable) {
       toExpr(
         kvs.getOrElse(
           y.toString + arrayElemName,
-          Ident(y.toString + arrayElemName, null)
+          Ident(y.toString + arrayElemName, Undefined_Pos)
         )
       )
     case x: IntLiter  => x
@@ -154,11 +159,11 @@ case class SSA(sTable: SymbolTable) {
         e = getLatestHeapExpr(aeName)
         aeName
       case Fst(id @ Ident(s, _), _) =>
-        val fstName = pairElemIdentifier(s, true)
+        val fstName = pairElemIdentifier(s, Is_Fst)
         e = getLatestHeapExpr(fstName)
         fstName
       case Snd(id @ Ident(s, _), _) =>
-        val sndName = pairElemIdentifier(s, false)
+        val sndName = pairElemIdentifier(s, Not_Fst)
         e = getLatestHeapExpr(sndName)
         sndName
       // TODO: Deref Ptr
@@ -171,7 +176,7 @@ case class SSA(sTable: SymbolTable) {
       // Otherwise introduce next variable in dict for read
       case _ =>
         // add to dict but not kvs
-        val v = Ident(addToDict(varName), null)
+        val v = Ident(addToDict(varName), Undefined_Value)
         ListBuffer(EqIdent(getExprType(e), v, e), Read(v))
     }
   }
@@ -219,7 +224,7 @@ case class SSA(sTable: SymbolTable) {
       // map is for both if and else branches
       map(s) = map.getOrElseUpdate(s, 0) + 1
       // mapScope is map for individual if or else branch
-      if (mapScope != null) {
+      if (mapScope != Undefined_Map) {
         mapScope(s) = mapScope.getOrElseUpdate(s, 0) + 1
       }
     }
@@ -238,9 +243,9 @@ case class SSA(sTable: SymbolTable) {
     val (_, y) = dict(s)
     val varName = y.toString + s
     // Get previously defined value from kvs
-    val rhs = kvs.getOrElse(varName, Ident(varName, null))
-    val originalType = Ident(s, null).getType(sTable)
-    EqIdent(originalType, Ident((n + y).toString + s, null), rhs)
+    val rhs = kvs.getOrElse(varName, Ident(varName, Undefined_Value))
+    val originalType = Ident(s, Undefined_Pos).getType(sTable)
+    EqIdent(originalType, Ident((n + y).toString + s, Undefined_Pos), rhs)
   }
 
   /* Updates the PHI variable, given the map of the condition branch */
@@ -248,11 +253,14 @@ case class SSA(sTable: SymbolTable) {
     val (s, _) = x
     val (_, y) = dict(s)
     val varName = y.toString + s
-    val rhs = kvs.getOrElse(varName, Ident(varName, null))
-    if (map != null) {
-      EqAssign(Ident((map.getOrElse(s, 0) + y).toString + s, null), rhs)
+    val rhs = kvs.getOrElse(varName, Ident(varName, Undefined_Pos))
+    if (map != Undefined_Map) {
+      EqAssign(
+        Ident((map.getOrElse(s, 0) + y).toString + s, Undefined_Pos),
+        rhs
+      )
     } else {
-      EqAssign(Ident(y.toString + s, null), rhs)
+      EqAssign(Ident(y.toString + s, Undefined_Pos), rhs)
     }
   }
 
@@ -278,7 +286,9 @@ case class SSA(sTable: SymbolTable) {
     val ssa1 =
       transformStat(s1) ++ mapIf.toList.map(x => updatePhiVar(x, mapElse))
     val ssa2 =
-      transformStat(s2) ++ mapElse.toList.map(x => updatePhiVar(x, null))
+      transformStat(s2) ++ mapElse.toList.map(x =>
+        updatePhiVar(x, Undefined_Map)
+      )
     val ifStat = If(e, pruneIf(ssa1), pruneIf(ssa2))
 
     // Remove phi var from kvs so if called upon later, ident is used
@@ -298,7 +308,7 @@ case class SSA(sTable: SymbolTable) {
     // Number of re-assignments of pre-declared vars within WHILE
     val map = Map.empty[String, Int]
     // Count var re-assignments into map
-    countVariables(s, map, null)
+    countVariables(s, map, Undefined_Map)
 
     // Create the PHI variables if necessary
     val mapList = map.toList
@@ -307,13 +317,17 @@ case class SSA(sTable: SymbolTable) {
     // Transform the while condition, updating with the phi vars if necessary
     // Transform the inner of the while, updating phi vars if necessary
     val e = transformExpr(cond, map)
-    val ssa = transformStat(s) ++ map.toList.map(x => updatePhiVar(x, null))
+
+    val ssa =
+      transformStat(s) ++ mapList.map(x => updatePhiVar(x, Undefined_Map))
 
     // Remove phi var from kvs so if called upon later, ident is used
     mapList.foreach((x: (String, Int)) => {
-      val (_, y) = dict(x._1)
-      kvs -= y.toString + x._1
+      val (s, _) = x
+      val (_, y) = dict(s)
+      kvs -= y.toString + s
     })
+
     stats += While(e, Seq(ssa.toList))
     stats
   }
@@ -324,7 +338,7 @@ case class SSA(sTable: SymbolTable) {
   private def getLatestHeapExpr(elemName: String): Expr = {
     val (_, y) = dict(elemName)
     val elemIdent = y.toString + elemName
-    toExpr(kvs.getOrElse(elemIdent, Ident(elemIdent, null)))
+    toExpr(kvs.getOrElse(elemIdent, Ident(elemIdent, Undefined_Pos)))
   }
 
   /* Updates the elements of an arrayLiter using the updated arrayElem values
@@ -436,7 +450,7 @@ case class SSA(sTable: SymbolTable) {
     Func(
       t,
       id,
-      params.map(pList => pList.map(i => addToHashMap(i, null))),
+      params.map(pList => pList.map(i => addToHashMap(i, Undefined_Value))),
       Seq(transformStat(s).toList)
     )
   }
