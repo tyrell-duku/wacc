@@ -92,6 +92,31 @@ case class SSA(sTable: SymbolTable) {
     case _ => e.map(transformExpr)
   }
 
+  /* Transforms an expression E for the condition of a while loop. */
+  private def transformExpr(e: Expr, map: Map[String, Int]): Expr = e match {
+    case sizeof: SizeOf => sizeof
+    case id @ Ident(s, p) =>
+      val v = map.getOrElse(s, 0)
+      // If ident not present in map, it is not changed in while loop so,
+      // transformExpr as usual
+      if (v == 0) {
+        transformExpr(id)
+      } else {
+        // Update id to use phi var
+        val (_, y) = dict(s)
+        Ident((v + y).toString + s, p)
+      }
+    case ae: ArrayElem => transformExpr(ae)
+    case x: IntLiter   => x
+    case b: BoolLiter  => b
+    case c: CharLiter  => c
+    case s: StrLiter   => s
+    case p: PairLiter  => p
+    // All operators
+    case _ =>
+      e.map(exp => transformExpr(exp, map))
+  }
+
   private def deadCodeElimination(
       rhs: AssignRHS,
       stat: Stat,
@@ -152,19 +177,28 @@ case class SSA(sTable: SymbolTable) {
   }
 
   /* Counts the number of assignments a variable previously declared in a higher
-     scope has within an IF or ELSE branch. */
-  private def countVariables(stat: Stat, map: Map[String, Int], mapScope: Map[String, Int]): Unit = {
+     scope has within an IF, ELSE or WHILE statement. */
+  private def countVariables(
+      stat: Stat,
+      map: Map[String, Int],
+      mapScope: Map[String, Int]
+  ): Unit = {
     stat match {
-      case EqAssign(Ident(s, _), rhs) =>
-        // Only add to map if already declared in higher scope
-        if (kvs.contains(s)) {
-          // map is for both if and else branches
-          map(s) =  map.getOrElseUpdate(s, 0) + 1
-          // mapScope is map for individual if or else branch
-          mapScope(s) = mapScope.getOrElseUpdate(s, 0) + 1
-        }
-      case EqAssign(ArrayElem(Ident(s, _), elems, _), rhs) =>
-      // case EqAssign(PairElem(Ident(s, _), _), rhs)         =>
+      case EqAssign(Ident(s, _), _) => incrementMap(s, map, mapScope)
+      case EqAssign(ArrayElem(Ident(s, _), elems, _), _) =>
+        incrementMap(arrayElemIdentifier(s, elems), map, mapScope)
+      case EqAssign(Fst(Ident(s, _), _), _) =>
+        incrementMap(pairElemIdentifier(s, true), map, mapScope)
+      case EqAssign(Snd(Ident(s, _), _), _) =>
+        incrementMap(pairElemIdentifier(s, false), map, mapScope)
+      case Read(Ident(s, _)) =>
+        incrementMap(s, map, mapScope)
+      case Read(ArrayElem(Ident(s, _), elems, _)) =>
+        incrementMap(arrayElemIdentifier(s, elems), map, mapScope)
+      case Read(Fst(Ident(s, _), _)) =>
+        incrementMap(pairElemIdentifier(s, true), map, mapScope)
+      case Read(Snd(Ident(s, _), _)) =>
+        incrementMap(pairElemIdentifier(s, false), map, mapScope)
       case Seq(stats) =>
         for (s <- stats) {
           countVariables(s, map, mapScope)
@@ -173,10 +207,28 @@ case class SSA(sTable: SymbolTable) {
     }
   }
 
+  /* Function called by countVariables to increment the number for each
+     variable if and only if it has been declared in higher scope. */
+  private def incrementMap(
+      s: String,
+      map: Map[String, Int],
+      mapScope: Map[String, Int]
+  ): Unit = {
+    // Only add to map if already declared in higher scope
+    if (dict.contains(s)) {
+      // map is for both if and else branches
+      map(s) = map.getOrElseUpdate(s, 0) + 1
+      // mapScope is map for individual if or else branch
+      if (mapScope != null) {
+        mapScope(s) = mapScope.getOrElseUpdate(s, 0) + 1
+      }
+    }
+  }
+
   private def pruneIf(ssa: ListBuffer[Stat]): Stat = {
     if (ssa.isEmpty) Skip else Seq(ssa.toList)
   }
-  
+
   /* If a variable from higher scope is changed within an if or else branch,
      introduce new variable before if statement to account for phi. */
   private def createPhiVar(x: (String, Int)): Stat = {
@@ -187,7 +239,8 @@ case class SSA(sTable: SymbolTable) {
     val varName = y.toString + s
     // Get previously defined value from kvs
     val rhs = kvs.getOrElse(varName, Ident(varName, null))
-    EqIdent(rhs.getType(sTable), Ident((n + y + 1).toString + s, null), rhs)
+    val originalType = Ident(s, null).getType(sTable)
+    EqIdent(originalType, Ident((n + y).toString + s, null), rhs)
   }
 
   /* Updates the PHI variable, given the map of the condition branch */
@@ -197,42 +250,72 @@ case class SSA(sTable: SymbolTable) {
     val varName = y.toString + s
     val rhs = kvs.getOrElse(varName, Ident(varName, null))
     if (map != null) {
-      EqAssign(Ident((1 + map.getOrElse(s, 0) + y).toString + s, null), rhs)
+      EqAssign(Ident((map.getOrElse(s, 0) + y).toString + s, null), rhs)
     } else {
-      EqAssign(Ident((1 + y).toString + s, null), rhs)
+      EqAssign(Ident(y.toString + s, null), rhs)
     }
   }
 
   /* Transforms an if stat into SSA form, using PHI functions. */
   private def transformIf(cond: Expr, s1: Stat, s2: Stat): ListBuffer[Stat] = {
     val stats = ListBuffer.empty[Stat]
-    // Variable occurances in IF and ELSE branches
+    // Number of re-assignments of pre-declared vars in IF and ELSE branches
     val map = Map.empty[String, Int]
-    // Variable occurances in IF branch
+    // Number of re-assignments of pre-declared vars in IF branch
     val mapIf = Map.empty[String, Int]
-    // Variable occurances in ELSE branch
+    // Number of re-assignments of pre-declared vars in ELSE branch
     val mapElse = Map.empty[String, Int]
-    // Count variable into map, mapIf & mapElse
+    // Count var re-assignments into map, mapIf & mapElse
     countVariables(s1, map, mapIf)
     countVariables(s2, map, mapElse)
-    
+
     // Create the PHI variables if necessary
     val mapList = map.toList
     stats ++= mapList.map(createPhiVar)
-    
+
     // Transform S1 and S2 and updatePhiVar within each branch (if necessary)
     val e = transformExpr(cond)
-    val ssa1 = transformStat(s1) ++ mapIf.toList.map(x => updatePhiVar(x, mapElse))
-    val ssa2 = transformStat(s2) ++ mapElse.toList.map(x => updatePhiVar(x, null))
+    val ssa1 =
+      transformStat(s1) ++ mapIf.toList.map(x => updatePhiVar(x, mapElse))
+    val ssa2 =
+      transformStat(s2) ++ mapElse.toList.map(x => updatePhiVar(x, null))
     val ifStat = If(e, pruneIf(ssa1), pruneIf(ssa2))
-    
-    // Increment var in dict if phi var is used
-    mapList.foreach((x: (String, Int)) => addToDict(x._1))
-    
+
+    // Remove phi var from kvs so if called upon later, ident is used
+    mapList.foreach((x: (String, Int)) => {
+      val (_, y) = dict(x._1)
+      kvs -= y.toString + x._1
+    })
+
     ifStat match {
       case If(_, Skip, Skip) => stats
       case _                 => stats += ifStat
     }
+  }
+
+  private def transformWhile(cond: Expr, s: Stat): ListBuffer[Stat] = {
+    val stats = ListBuffer.empty[Stat]
+    // Number of re-assignments of pre-declared vars within WHILE
+    val map = Map.empty[String, Int]
+    // Count var re-assignments into map
+    countVariables(s, map, null)
+
+    // Create the PHI variables if necessary
+    val mapList = map.toList
+    stats ++= mapList.map(createPhiVar)
+
+    // Transform the while condition, updating with the phi vars if necessary
+    // Transform the inner of the while, updating phi vars if necessary
+    val e = transformExpr(cond, map)
+    val ssa = transformStat(s) ++ map.toList.map(x => updatePhiVar(x, null))
+
+    // Remove phi var from kvs so if called upon later, ident is used
+    mapList.foreach((x: (String, Int)) => {
+      val (_, y) = dict(x._1)
+      kvs -= y.toString + x._1
+    })
+    stats += While(e, Seq(ssa.toList))
+    stats
   }
 
   /* Function used to retrieve the latest value of a heap variable in kvs.
@@ -340,11 +423,10 @@ case class SSA(sTable: SymbolTable) {
       case Print(e)         => buf ++= transExpArray(e, Print)
       case PrintLn(e)       => buf ++= transExpArray(e, PrintLn)
       case If(cond, s1, s2) => buf ++= transformIf(cond, s1, s2)
-      //   val BoolLiter(b, _) = foldExpr(transformExpr(cond))
-      //   if (b) buf ++= transformStat(s1) else buf ++= transformStat(s2)
-      case Seq(statList) => statList.flatMap(transformStat).to(ListBuffer)
-      case Skip          => buf += Skip
-      case s             => buf += s
+      case Seq(statList)    => statList.flatMap(transformStat).to(ListBuffer)
+      case Skip             => buf += Skip
+      case While(cond, s)   => buf ++= transformWhile(cond, s)
+      case s                => buf += s
     }
   }
 
