@@ -117,7 +117,7 @@ case class SSA(sTable: SymbolTable) {
     varName + "-" + pairElemType
   }
 
-  /* Transforms a read function to SSA */
+  /* Transforms a read stat to SSA. */
   private def transformRead(lhs: AssignLHS): ListBuffer[Stat] = {
     var e: Expr = null
     val varName = lhs match {
@@ -149,44 +149,12 @@ case class SSA(sTable: SymbolTable) {
         val v = Ident(addToDict(varName), null)
         ListBuffer(EqIdent(getExprType(e), v, e), Read(v))
     }
-
   }
 
-  /* Transforms a given statement S into SSA form. */
-  private def transformStat(s: Stat): ListBuffer[Stat] = {
-    val buf = ListBuffer.empty[Stat]
-    s match {
-      case EqIdent(t, id, r) =>
-        val v = addToHashMap(id, r)
-        deadCodeElimination(r, EqIdent(t, v, r), buf)
-      case EqAssign(id: Ident, r) =>
-        val v = addToHashMap(id, r)
-        deadCodeElimination(r, EqAssign(v, r), buf)
-      case EqAssign(ArrayElem(Ident(str, pos), es, _), r) =>
-        // foldIntOps(e) > es.length -> exit 255
-        // TODO: Array out of bounds check
-        val v = addToHashMap(Ident(arrayElemIdentifier(str, es), pos), r)
-        deadCodeElimination(r, EqAssign(v, r), buf)
-      case EqAssign(Fst(Ident(str, pos), _), r) =>
-        val v = addToHashMap(Ident(pairElemIdentifier(str, true), pos), r)
-        deadCodeElimination(r, EqAssign(v, r), buf)
-      case EqAssign(Snd(Ident(str, pos), _), r) =>
-        val v = addToHashMap(Ident(pairElemIdentifier(str, false), pos), r)
-        deadCodeElimination(r, EqAssign(v, r), buf)
-      //TODO: EqAssign, deref ptr case
-      case Read(lhs)  => buf ++= transformRead(lhs)
-      case Free(e)    => buf ++= transExpArray(e, Free)
-      case Return(e)  => buf ++= transExpArray(e, Return)
-      case Exit(e)    => buf += Exit(transformExpr(e))
-      case Print(e)   => buf ++= transExpArray(e, Print)
-      case PrintLn(e) => buf ++= transExpArray(e, PrintLn)
-      // case If(cond, s1, s2) =>
-      //   val BoolLiter(b, _) = foldExpr(transformExpr(cond))
-      //   if (b) buf ++= transformStat(s1) else buf ++= transformStat(s2)
-      case Seq(statList) => statList.flatMap(transformStat).to(ListBuffer)
-      case Skip          => buf += Skip
-      case s             => buf += s
-    }
+  /* Transforms an if stat into SSA form, using PHI functions. */
+  private def transformIf(cond: Expr, s1: Stat, s2: Stat): ListBuffer[Stat] = {
+    val stats = ListBuffer.empty[Stat]
+    stats
   }
 
   /* Function used to retrieve the latest value of a heap variable in kvs.
@@ -263,6 +231,43 @@ case class SSA(sTable: SymbolTable) {
       case _ => buf += pf(transformExpr(e))
     }
     buf
+  }
+
+  /* Transforms a given statement S into SSA form. */
+  private def transformStat(s: Stat): ListBuffer[Stat] = {
+    val buf = ListBuffer.empty[Stat]
+    s match {
+      case EqIdent(t, id, r) =>
+        val v = addToHashMap(id, r)
+        deadCodeElimination(r, EqIdent(t, v, r), buf)
+      case EqAssign(id: Ident, r) =>
+        val v = addToHashMap(id, r)
+        deadCodeElimination(r, EqAssign(v, r), buf)
+      case EqAssign(ArrayElem(Ident(str, pos), es, _), r) =>
+        // foldIntOps(e) > es.length -> exit 255
+        // TODO: Array out of bounds check
+        val v = addToHashMap(Ident(arrayElemIdentifier(str, es), pos), r)
+        deadCodeElimination(r, EqAssign(v, r), buf)
+      case EqAssign(Fst(Ident(str, pos), _), r) =>
+        val v = addToHashMap(Ident(pairElemIdentifier(str, true), pos), r)
+        deadCodeElimination(r, EqAssign(v, r), buf)
+      case EqAssign(Snd(Ident(str, pos), _), r) =>
+        val v = addToHashMap(Ident(pairElemIdentifier(str, false), pos), r)
+        deadCodeElimination(r, EqAssign(v, r), buf)
+      //TODO: EqAssign, deref ptr case
+      case Read(lhs)  => buf ++= transformRead(lhs)
+      case Free(e)    => buf ++= transExpArray(e, Free)
+      case Return(e)  => buf ++= transExpArray(e, Return)
+      case Exit(e)    => buf += Exit(transformExpr(e))
+      case Print(e)   => buf ++= transExpArray(e, Print)
+      case PrintLn(e) => buf ++= transExpArray(e, PrintLn)
+      // case If(cond, s1, s2) =>
+      //   val BoolLiter(b, _) = foldExpr(transformExpr(cond))
+      //   if (b) buf ++= transformStat(s1) else buf ++= transformStat(s2)
+      case Seq(statList) => statList.flatMap(transformStat).to(ListBuffer)
+      case Skip          => buf += Skip
+      case s             => buf += s
+    }
   }
 
   /* Transforms a given function F into SSA form. */
