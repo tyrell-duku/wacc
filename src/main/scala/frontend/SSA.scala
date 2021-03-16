@@ -39,7 +39,12 @@ case class SSA(sTable: SymbolTable) {
         kvs += ((fstName, transformExpr(fst)))
         val sndName = addToDict(pairElemIdentifier(str, false))
         kvs += ((sndName, transformExpr(snd)))
+      case Fst(Ident(s, _), _) =>
+        kvs += ((v, getLatestHeapExpr(s + "-fst")))
+      case Snd(Ident(s, _), _) =>
+        kvs += ((v, getLatestHeapExpr(s + "-snd")))
       case _ =>
+
     }
     Ident(v, pos)
   }
@@ -93,8 +98,8 @@ case class SSA(sTable: SymbolTable) {
       buf: ListBuffer[Stat]
   ): ListBuffer[Stat] =
     rhs match {
-      case _: Expr | _: ArrayLiter => buf
-      case _                       => buf += stat
+      case _: Expr | _: ArrayLiter | _: Newpair | _: PairElem => buf
+      case _                                                  => buf += stat
     }
 
   private def updateRhs(rhs: AssignRHS): AssignRHS = rhs match {
@@ -181,7 +186,7 @@ case class SSA(sTable: SymbolTable) {
   /* Function used to retrieve the latest value of a heap variable in kvs.
      If not present in kvs then it returns the most recent ident associated
      with the given heap variable. */
-  private def updateHeapExpr(elemName: String): Expr = {
+  private def getLatestHeapExpr(elemName: String): Expr = {
     val (_, y) = dict(elemName)
     val elemIdent = y.toString + elemName
     toExpr(kvs.getOrElse(elemIdent, Ident(elemIdent, null)))
@@ -198,7 +203,7 @@ case class SSA(sTable: SymbolTable) {
     // Gets most up to date array elem values from kvs or its corresponding
     // variable name if not present in kvs
     for (i <- elems.indices) {
-      updatedElems += updateHeapExpr(arrName + "-" + i)
+      updatedElems += getLatestHeapExpr(arrName + "-" + i)
     }
     val updatedArr = ArrayLiter(Some(updatedElems.toList), pos)
     // Only update the arrayLiter in kvs for variable arrStr if necessary
@@ -213,8 +218,8 @@ case class SSA(sTable: SymbolTable) {
   private def updateNewpair(pairName: String, oldPair: Newpair): AssignRHS = {
     val Newpair(_, _, pos) = oldPair
     // Gets most up to date values for fst and snd from kvs
-    val updatedFst = updateHeapExpr(pairName + "-fst")
-    val updatedSnd = updateHeapExpr(pairName + "-snd")
+    val updatedFst = getLatestHeapExpr(pairName + "-fst")
+    val updatedSnd = getLatestHeapExpr(pairName + "-snd")
     val updatedPair = Newpair(updatedFst, updatedSnd, pos)
     // Only update newpair in kvs if necessary
     if (updatedPair != oldPair) {
