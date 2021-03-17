@@ -43,6 +43,9 @@ object ConstantFolding {
     // UnOp folding
     // TODO: overflow
     case Negation(IntLiter(n, _), pos)   => IntLiter(-n, pos)
+    case od @ Ord(e, pos) if od.containsNoIdent =>
+      val CharLiter(NormalChar(c), _) = fold(e)
+      IntLiter(c.toInt, pos)
     case BitwiseNot(IntLiter(n, _), pos) => IntLiter(~n, pos)
     case SizeOf(t, pos)                  => IntLiter(getBaseTypeSize(t), pos)
     // BinOp folding
@@ -102,10 +105,19 @@ object ConstantFolding {
     case eq @ Equal(l, r, pos) if eq.containsNoIdent =>
       BoolLiter(fold(l) == fold(r), pos)
     case neq @ NotEqual(l, r, pos) if neq.containsNoIdent =>
-      BoolLiter(fold(l) != fold(r), pos)  
+      BoolLiter(fold(l) != fold(r), pos)
+    case op: Not if op.containsNoIdent => foldBoolOps(op.map(foldBoolOps))
     case op: ComparOps if op.containsNoIdent => foldBoolOps(op.map(fold))
-    case op: EqOps if op.containsNoIdent => foldBoolOps(op.map(fold))
-    case op: LogicalOps if op.containsNoIdent => foldBoolOps(op.map(foldBoolOps))
+    case op: EqOps if op.containsNoIdent     => foldBoolOps(op.map(fold))
+    case op: LogicalOps if op.containsNoIdent =>
+      foldBoolOps(op.map(foldBoolOps))
+  }
+
+  /* Folds an expression that will evaluate to a char literal */
+  private def foldCharOps: PartialFunction[Expr, Expr] = {
+    case chr @ Chr(e, pos) if chr.containsNoIdent =>
+      val IntLiter(n, _) = foldIntOps(e)
+      CharLiter(NormalChar(n.toChar), pos)
   }
 
   /* If unable to fold, return original Expr */
@@ -113,6 +125,9 @@ object ConstantFolding {
     e
   }
 
-  val fold = (foldIntOps :: foldBoolOps :: id :: Nil).reduceLeft(_ orElse _)
+  /* Folds any constant expression, composes all fold partial functions to cover
+     all cases*/
+  val fold = (foldIntOps :: foldBoolOps :: foldCharOps :: id :: Nil)
+    .reduceLeft(_ orElse _)
 
 }
