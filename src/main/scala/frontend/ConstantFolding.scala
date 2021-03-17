@@ -3,6 +3,7 @@ package frontend
 import Rules._
 import frontend.LiterParser.notOverflow
 import backend.CodeGenerator.getBaseTypeSize
+import backend.DefinedFuncs.PreDefinedFuncs
 
 object ConstantFolding {
 
@@ -31,7 +32,7 @@ object ConstantFolding {
       op: (Long, Long) => Long,
       pos: (Int, Int)
   ): Expr = {
-    if (checkOverflow(n1, n2, op)) null else IntLiter(op(n1, n2).toInt, pos)
+    if (checkOverflow(n1, n2, op)) Overflow else IntLiter(op(n1, n2).toInt, pos)
   }
 
   /* Folds an application of OP on two integer operands, returning the result.
@@ -52,7 +53,7 @@ object ConstantFolding {
     case Mul(IntLiter(n1, p), IntLiter(n2, _), _) =>
       evalConditionally(n1, n2, (_ * _), p)
     case Div(IntLiter(n1, p), IntLiter(n2, _), _) =>
-      if (n2 == 0) null else evalConditionally(n1, n2, (_ / _), p)
+      if (n2 == 0) ZeroDivision else evalConditionally(n1, n2, (_ / _), p)
     case Plus(IntLiter(n1, p), IntLiter(n2, _), _) =>
       evalConditionally(n1, n2, (_ + _), p)
     case Sub(IntLiter(n1, p), IntLiter(n2, _), _) =>
@@ -65,9 +66,9 @@ object ConstantFolding {
     case BitwiseXor(IntLiter(n1, p), IntLiter(n2, _), _) =>
       evalConditionally(n1, n2, (_ ^ _), p)
     case LogicalShiftLeft(IntLiter(n1, p), IntLiter(n2, _), _) =>
-      if (n1 < 0 || n2 < 0) null else evalConditionally(n1, n2, (_ << _), p)
+      if (n1 < 0 || n2 < 0) NegShift else evalConditionally(n1, n2, (_ << _), p)
     case LogicalShiftRight(IntLiter(n1, p), IntLiter(n2, _), _) =>
-      if (n1 < 0 || n2 < 0) null else evalConditionally(n1, n2, (_ >> _), p)
+      if (n1 < 0 || n2 < 0) NegShift else evalConditionally(n1, n2, (_ >> _), p)
     // Recursive case (ArithOps & BitwiseOps)
     case op: ArithOps if op.containsNoIdent =>
       foldIntOps(op.map(foldIntOps))
