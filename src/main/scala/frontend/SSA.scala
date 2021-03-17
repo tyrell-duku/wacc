@@ -84,7 +84,7 @@ case class SSA(sTable: SymbolTable) {
         // update, otherwise return prev updated ident
         case Ident(str, _) =>
           if (str.endsWith(s)) toExpr(v) else id2
-        case _ => toExpr(f)
+        case _ => toExpr(v)
       }
     case ArrayElem(id @ Ident(s, _), es, pos) =>
       val arrayElemName = arrayElemIdentifier(s, es)
