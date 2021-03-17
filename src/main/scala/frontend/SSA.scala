@@ -603,7 +603,7 @@ case class SSA(sTable: SymbolTable) {
   }
 
   /* Transforms a given function F into SSA form. */
-  def transformFunc(f: Func): Func = {
+  def transformFunc(f: Func): (Func, StackSize) = {
     val Func(t, id, params, s) = f
     val newParams =
       params.map(pList =>
@@ -615,13 +615,17 @@ case class SSA(sTable: SymbolTable) {
     currSTable = currSTable.getNextScopeSSA
     val stat = transformStat(s)
     currSTable = currSTable.getPrevScope
-    Func(t, id, newParams, Seq(stat.toList))
+    val funcStackSize = stackSize
+    stackSize = 0
+    (Func(t, id, newParams, Seq(stat.toList)), funcStackSize)
   }
 
   /* Transforms a given program AST into SSA form. */
-  def toSSA(ast: Program): (Program, StackSize) = {
+  def toSSA(ast: Program): (Program, List[StackSize]) = {
     val Program(fs, s) = ast
-    val p = Program(fs.map(transformFunc), Seq(transformStat(s).toList))
-    (p, stackSize)
+    val (funcs, funcStackSizes) = fs.map(transformFunc).unzip
+    val p = Program(funcs, Seq(transformStat(s).toList))
+    val stackSizes = funcStackSizes :+ stackSize
+    (p, stackSizes)
   }
 }
