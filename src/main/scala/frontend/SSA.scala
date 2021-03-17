@@ -9,8 +9,13 @@ import frontend.Semantics.SymbolTable
 import frontend.ConstantFolding.fold
 
 case class SSA(sTable: SymbolTable) {
-  // <Identifier's name, (LHS unique identifier, RHS unique identifier)>
-  private var dict = new HashMap[String, (Int, Int, Int)]
+  type StackSize = Int
+  type UniqueNum = Int
+  type AssignmentNum = Int
+  type NumOfAssigns = Int
+  // hash map for unique identifying
+  private var dict = new HashMap[String, (UniqueNum, AssignmentNum, NumOfAssigns)]
+  // (key, values) hash map for constant propagation
   private var kvs = new HashMap[String, AssignRHS]
   var currSTable = sTable
   val INITIAL_DICT = 0
@@ -486,6 +491,29 @@ case class SSA(sTable: SymbolTable) {
     }
     buf
   }
+
+  /* Transforms a sequential statement to SSA form and removes any dead code
+     after Exit or Return statements. */
+  private def transformSeqStat(stats: List[Stat]): ListBuffer[Stat] = {
+    val buf = ListBuffer.empty[Stat]
+    var stop = false
+    var i = 0
+    while (!stop && i < stats.length) {
+      val curStat = transformStat(stats(i))
+      curStat match {
+        case _ if (curStat.isEmpty) =>
+        case nonEmptyList =>
+        nonEmptyList.last match {
+          case _: Return | _: Exit => stop = true
+          case _ =>
+        }
+      }
+      i += 1
+      buf ++= curStat
+    }
+    buf
+  }
+
   /* Transforms a given statement S into SSA form. */
   private def transformStat(s: Stat): ListBuffer[Stat] = {
     val buf = ListBuffer.empty[Stat]
@@ -504,30 +532,29 @@ case class SSA(sTable: SymbolTable) {
         deadCodeElimination(rhs, ae.getType(currSTable), v, buf)
       case EqAssign(fst @ Fst(Ident(str, pos), _), r) =>
         val (v, rhs) =
-          addToHashMap(Ident(pairElemIdentifier(str, true), pos), r)
+          addToHashMap(Ident(pairElemIdentifier(str, Is_Fst), pos), r)
         deadCodeElimination(rhs, fst.getType(currSTable), v, buf)
       case EqAssign(snd @ Snd(Ident(str, pos), _), r) =>
         val (v, rhs) =
-          addToHashMap(Ident(pairElemIdentifier(str, false), pos), r)
+          addToHashMap(Ident(pairElemIdentifier(str, Not_Fst), pos), r)
         deadCodeElimination(rhs, snd.getType(currSTable), v, buf)
-      //TODO: EqAssign, deref ptr case
-      case Read(lhs)  => buf ++= transformRead(lhs)
-      case Free(e)    => buf ++= transExpArray(e, Free)
-      case Return(e)  => buf ++= transExpArray(e, Return)
+      // TODO: EqAssign, deref ptr case
+      case Read(lhs)  => transformRead(lhs)
+      case Free(e)    => transExpArray(e, Free)
+      case Return(e)  => transExpArray(e, Return)
       case Exit(e)    => buf += Exit(transformExpr(e))
-      case Print(e)   => buf ++= transExpArray(e, Print)
-      case PrintLn(e) => buf ++= transExpArray(e, PrintLn)
-      case If(cond, s1, s2) =>
-        buf ++= transformIf(cond, s1, s2)
-      case Seq(statList)  => statList.flatMap(transformStat).to(ListBuffer)
+      case Print(e)   => transExpArray(e, Print)
+      case PrintLn(e) => transExpArray(e, PrintLn)
+      case If(cond, s1, s2) => transformIf(cond, s1, s2)
+      case Seq(statList) => transformSeqStat(statList)
       case Skip           => buf += Skip
-      case While(cond, s) => buf ++= transformWhile(cond, s)
+      case While(cond, s) => transformWhile(cond, s)
       case Begin(s) =>
         currSTable = currSTable.getNextScopeSSA
         val transformedS = transformStat(s)
         currSTable = currSTable.getPrevScope
         dict = dict.map(leavingScope)
-        buf ++= transformedS
+        transformedS
       case s => buf += s
     }
   }
@@ -547,20 +574,6 @@ case class SSA(sTable: SymbolTable) {
     (s, (x, y - z, INITIAL_DICT))
   }
 
-  /* Removes any dead code after a return statement in STATS. */
-  private def removeReturnDeadCode(stats: ListBuffer[Stat]): List[Stat] = {
-    val x = stats.takeWhile(s =>
-      s match {
-        case _: Return => false
-        case _         => true
-      }
-    )
-    if (x.length > 0) {
-      x += stats(x.length - 1)
-    }
-    x.toList
-  }
-
   /* Transforms a given function F into SSA form. */
   def transformFunc(f: Func): Func = {
     val Func(t, id, params, s) = f
@@ -574,16 +587,11 @@ case class SSA(sTable: SymbolTable) {
     currSTable = currSTable.getNextScopeSSA
     val stat = transformStat(s)
     currSTable = currSTable.getPrevScope
-    Func(
-      t,
-      id,
-      newParams,
-      Seq(removeReturnDeadCode(stat))
-    )
+    Func(t, id, newParams, Seq(stat.toList))
   }
 
   /* Transforms a given program AST into SSA form. */
-  def toSSA(ast: Program): (Program, Int) = {
+  def toSSA(ast: Program): (Program, StackSize) = {
     val Program(fs, s) = ast
     val p = Program(fs.map(transformFunc), Seq(transformStat(s).toList))
     (p, stackSize)
