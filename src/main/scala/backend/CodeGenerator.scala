@@ -61,7 +61,8 @@ object CodeGenerator {
      by ARMPrinter to generate .s file*/
   def transProg(
       prog: Program,
-      sTable: SymbolTable, stackSize: Int
+      sTable: SymbolTable,
+      stackSize: Int
   ): (List[Data], List[(Label, List[Instruction])]) = {
     this.sTable = sTable
     val Program(funcs, stat) = prog
@@ -146,6 +147,7 @@ object CodeGenerator {
       case _: EqOps      => BoolT
       case _: LogicalOps => BoolT
       case _: BitwiseOps => IntT
+      case _: RuntimeErr => ???
     }
   }
 
