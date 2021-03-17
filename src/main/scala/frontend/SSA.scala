@@ -88,34 +88,49 @@ case class SSA(sTable: SymbolTable) {
     Ident(y.toString + str, pos)
   }
 
-  /* Transforms an expression E. */
+  /* Transforms an ident ID into SSA form and applies constant propagation. */
+  private def transformExprId(id: Ident): Expr = {
+    val Ident(s, _) = id
+    val id2 @ Ident(x, _) = updateIdent(id)
+    val rhs = kvs.getOrElse(x, id2)
+    rhs match {
+      // If kvs returns a different updated ident name (while case) then
+      // update, otherwise return prev updated ident
+      case Ident(str, _) =>
+        if (str.endsWith(s)) toExpr(rhs) else id2
+      case _: Call => id2
+      case _       => toExpr(rhs)
+    }
+  }
+
+  /* Transforms an array-elem AE to SSA form. */
+  private def transformExprArrayElem(ae: ArrayElem): Expr = {
+    val ArrayElem(id @ Ident(s, _), es, pos) = ae
+    val arrayElemName = arrayElemIdentifier(s, es)
+    // If elem not in dict then out of bounds
+    dict.get(arrayElemName) match {
+      case Some((_, y, _)) =>
+        toExpr(
+          kvs.getOrElse(
+            y.toString + arrayElemName,
+            Ident(y.toString + arrayElemName, Undefined_Pos)
+          )
+        )
+      case None => Bounds
+    }
+  }
+
+  /* Transforms an expression E into SSA form and applies constant folding &
+     propagation. */
   private def transformExpr(e: Expr): Expr = e match {
     case sizeof: SizeOf => sizeof
-    case id @ Ident(s, _) =>
-      val id2 @ Ident(x, _) = updateIdent(id)
-      val v = kvs.getOrElse(x, id2)
-      v match {
-        // If kvs returns a different updated ident name (while case) then
-        // update, otherwise return prev updated ident
-        case Ident(str, _) =>
-          if (str.endsWith(s)) toExpr(v) else id2
-        case Call(id, args, pos) => id2
-        case _                   => toExpr(v)
-      }
-    case ArrayElem(id @ Ident(s, _), es, pos) =>
-      val arrayElemName = arrayElemIdentifier(s, es)
-      val (_, y, _) = dict(arrayElemName)
-      toExpr(
-        kvs.getOrElse(
-          y.toString + arrayElemName,
-          Ident(y.toString + arrayElemName, Undefined_Pos)
-        )
-      )
-    case x: IntLiter  => x
-    case b: BoolLiter => b
-    case c: CharLiter => c
-    case s: StrLiter  => s
-    case p: PairLiter => p
+    case id: Ident      => transformExprId(id)
+    case ae: ArrayElem  => transformExprArrayElem(ae)
+    case x: IntLiter    => x
+    case b: BoolLiter   => b
+    case c: CharLiter   => c
+    case s: StrLiter    => s
+    case p: PairLiter   => p
     // All operators
     case _ => fold(e.map(transformExpr))
   }
@@ -540,12 +555,14 @@ case class SSA(sTable: SymbolTable) {
         case _         => true
       }
     )
-    x += stats(x.length)
+    if (x.length > 0) {
+      x += stats(x.length - 1)
+    }
     x.toList
   }
 
   /* Transforms a given function F into SSA form. */
-  def transformFunc(f: Func, n: Int): Func = {
+  def transformFunc(f: Func): Func = {
     val Func(t, id, params, s) = f
     val newParams =
       params.map(pList =>
@@ -568,29 +585,7 @@ case class SSA(sTable: SymbolTable) {
   /* Transforms a given program AST into SSA form. */
   def toSSA(ast: Program): (Program, Int) = {
     val Program(fs, s) = ast
-    val funcs = ListBuffer.empty[Func]
-    for (i <- fs.indices) {
-      funcs += transformFunc(fs(i), i)
-    }
-    val p = Program(funcs.toList, Seq(transformStat(s).toList))
-    printProg(p)
+    val p = Program(fs.map(transformFunc), Seq(transformStat(s).toList))
     (p, stackSize)
   }
-
-  def printProg(x: Program): Unit = {
-    val Program(fs, s) = x
-    println("\n\nPROG IS COMING")
-
-    println(fs)
-
-    s match {
-      case Seq(stats) =>
-        for (k <- stats) {
-          println(k)
-        }
-        println("\n\nEND")
-      case _ => println(s)
-    }
-  }
-
 }
