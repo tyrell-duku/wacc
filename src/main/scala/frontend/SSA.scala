@@ -76,9 +76,16 @@ case class SSA(sTable: SymbolTable) {
   /* Transforms an expression E. */
   private def transformExpr(e: Expr): Expr = e match {
     case sizeof: SizeOf => sizeof
-    case id: Ident =>
+    case id @ Ident(s, _) =>
       val id2 @ Ident(x, _) = updateIdent(id)
-      toExpr(kvs.getOrElse(x, id2))
+      val v = kvs.getOrElse(x, id2)
+      v match {
+        // If kvs returns a different updated ident name (while case) then
+        // update, otherwise return prev updated ident
+        case Ident(str, _) =>
+          if (str.endsWith(s)) toExpr(v) else id2
+        case _ => toExpr(f)
+      }
     case ArrayElem(id @ Ident(s, _), es, pos) =>
       val arrayElemName = arrayElemIdentifier(s, es)
       val (_, y) = dict(arrayElemName)
