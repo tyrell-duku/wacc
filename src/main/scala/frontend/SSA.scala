@@ -311,24 +311,35 @@ case class SSA(sTable: SymbolTable) {
 
     // Transform S1 and S2 and updatePhiVar within each branch (if necessary)
     val e = transformExpr(cond)
-    val ssa1 =
-      transformStat(s1) ++ mapIf.toList.map(x => updatePhiVar(x, mapElse))
-    val ssa2 =
-      transformStat(s2) ++ mapElse.toList.map(x =>
-        updatePhiVar(x, Undefined_Map)
-      )
-    val ifStat = If(e, pruneIf(ssa1), pruneIf(ssa2))
 
-    // Remove phi var from kvs so if called upon later, ident is used
-    mapList.foreach((x: (String, Int)) => {
-      val (_, y, _) = dict(x._1)
-      kvs -= y.toString + x._1
-    })
+    e match {
+      case BoolLiter(true, _)  => transformStat(s1)
+      case BoolLiter(false, _) => transformStat(s2)
+      case _ =>
+        currSTable = currSTable.getNextScopeSSA
+        val ssa1 =
+          transformStat(s1) ++ mapIf.toList.map(x => updatePhiVar(x, mapElse))
+        currSTable = currSTable.getPrevScope
+        currSTable = currSTable.getNextScopeSSA
+        val ssa2 =
+          transformStat(s2) ++ mapElse.toList.map(x =>
+            updatePhiVar(x, Undefined_Map)
+          )
+        currSTable = currSTable.getPrevScope
+        val ifStat = If(e, pruneIf(ssa1), pruneIf(ssa2))
 
-    ifStat match {
-      case If(_, Skip, Skip) => stats
-      case _                 => stats += ifStat
+        // Remove phi var from kvs so if called upon later, ident is used
+        mapList.foreach((x: (String, Int)) => {
+          val (_, y, _) = dict(x._1)
+          kvs -= y.toString + x._1
+        })
+
+        ifStat match {
+          case If(_, Skip, Skip) => stats
+          case _                 => stats += ifStat
+        }
     }
+
   }
 
   private def getPhiVar(x: (String, Int)): (String, Ident) = {
@@ -367,8 +378,10 @@ case class SSA(sTable: SymbolTable) {
         kvs += ((y.toString + v, i))
       })
 
+    currSTable = currSTable.getNextScopeSSA
     val ssa =
       transformStat(s) ++ mapList.map(x => updatePhiVar(x, Undefined_Map))
+    currSTable = currSTable.getPrevScope
 
     // Remove phi var from kvs so if called upon later, ident is used
     mapList.foreach((x: (String, Int)) => {
@@ -483,18 +496,21 @@ case class SSA(sTable: SymbolTable) {
           addToHashMap(Ident(pairElemIdentifier(str, false), pos), r)
         deadCodeElimination(rhs, snd.getType(currSTable), v, buf)
       //TODO: EqAssign, deref ptr case
-      case Read(lhs)        => buf ++= transformRead(lhs)
-      case Free(e)          => buf ++= transExpArray(e, Free)
-      case Return(e)        => buf ++= transExpArray(e, Return)
-      case Exit(e)          => buf += Exit(transformExpr(e))
-      case Print(e)         => buf ++= transExpArray(e, Print)
-      case PrintLn(e)       => buf ++= transExpArray(e, PrintLn)
-      case If(cond, s1, s2) => buf ++= transformIf(cond, s1, s2)
-      case Seq(statList)    => statList.flatMap(transformStat).to(ListBuffer)
-      case Skip             => buf += Skip
-      case While(cond, s)   => buf ++= transformWhile(cond, s)
+      case Read(lhs)  => buf ++= transformRead(lhs)
+      case Free(e)    => buf ++= transExpArray(e, Free)
+      case Return(e)  => buf ++= transExpArray(e, Return)
+      case Exit(e)    => buf += Exit(transformExpr(e))
+      case Print(e)   => buf ++= transExpArray(e, Print)
+      case PrintLn(e) => buf ++= transExpArray(e, PrintLn)
+      case If(cond, s1, s2) =>
+        buf ++= transformIf(cond, s1, s2)
+      case Seq(statList)  => statList.flatMap(transformStat).to(ListBuffer)
+      case Skip           => buf += Skip
+      case While(cond, s) => buf ++= transformWhile(cond, s)
       case Begin(s) =>
+        currSTable = currSTable.getNextScopeSSA
         val transformedS = transformStat(s)
+        currSTable = currSTable.getPrevScope
         dict = dict.map(leavingScope)
         buf ++= transformedS
       case s => buf += s
@@ -538,9 +554,9 @@ case class SSA(sTable: SymbolTable) {
           Ident(addToDict(v), pos)
         })
       )
-    currSTable = currSTable.children(n)
+    currSTable = currSTable.getNextScopeSSA
     val stat = transformStat(s)
-    currSTable = currSTable.parent
+    currSTable = currSTable.getPrevScope
     Func(
       t,
       id,
@@ -557,6 +573,7 @@ case class SSA(sTable: SymbolTable) {
       funcs += transformFunc(fs(i), i)
     }
     val p = Program(funcs.toList, Seq(transformStat(s).toList))
+    printProg(p)
     (p, stackSize)
   }
 
