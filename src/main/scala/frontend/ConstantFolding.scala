@@ -59,7 +59,7 @@ object ConstantFolding {
     case Sub(IntLiter(n1, p), IntLiter(n2, _), _) =>
       evalConditionally(n1, n2, (_ - _), p)
     case Mod(IntLiter(n1, p), IntLiter(n2, _), _) =>
-      evalConditionally(n1, n2, (_ % _), p)
+      if (n2 == 0) ZeroDivision else evalConditionally(n1, n2, (_ % _), p)
     case BitwiseAnd(IntLiter(n1, p), IntLiter(n2, _), _) => IntLiter(n1 & n2, p)
     case BitwiseOr(IntLiter(n1, p), IntLiter(n2, _), _) =>
       evalConditionally(n1, n2, (_ | _), p)
