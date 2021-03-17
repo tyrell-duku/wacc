@@ -6,6 +6,7 @@ import scala.collection.mutable.ListBuffer
 import scala.collection.mutable.Map
 import backend.CodeGenerator.getExprType
 import frontend.Semantics.SymbolTable
+import frontend.ConstantFolding.fold
 
 case class SSA(sTable: SymbolTable) {
   // <Identifier's name, (LHS unique identifier, RHS unique identifier)>
@@ -109,7 +110,7 @@ case class SSA(sTable: SymbolTable) {
     case s: StrLiter  => s
     case p: PairLiter => p
     // All operators
-    case _ => e.map(transformExpr)
+    case _ => fold(e.map(transformExpr))
   }
 
   /* Transforms an expression E for the condition of a while loop. */
@@ -133,8 +134,7 @@ case class SSA(sTable: SymbolTable) {
     case s: StrLiter   => s
     case p: PairLiter  => p
     // All operators
-    case _ =>
-      e.map(exp => transformExpr(exp, map))
+    case _ => fold(e.map(exp => transformExpr(exp, map)))
   }
 
   private def deadCodeElimination(
