@@ -24,9 +24,10 @@ case class SSA(sTable: SymbolTable) {
   /* If the hashmap doesn't contain the identifier STR, then it is added to
      the hashmap with initial values (1, 1). If the hashmap contains the
      identifier STR, then the values are updated for unique identifying. */
-  private def addToHashMap(id: Ident, rhs: AssignRHS): Ident = {
+  private def addToHashMap(id: Ident, rhs: AssignRHS): (Ident, AssignRHS) = {
     val Ident(str, pos) = id
     var v: String = null
+    var updatedRhs = rhs
     rhs match {
       case e: Expr =>
         val transEx = transformExpr(e)
@@ -58,11 +59,12 @@ case class SSA(sTable: SymbolTable) {
         v = addToDict(str)
         kvs += ((v, getLatestHeapExpr(s + "-snd")))
       case call: Call =>
+        updatedRhs = call.map(transformExpr)
         v = addToDict(str)
       case _ =>
 
     }
-    Ident(v, pos)
+    (Ident(v, pos), updatedRhs)
   }
 
   /* Add the string s to dict hashmap. If already present then variable counter
@@ -456,37 +458,30 @@ case class SSA(sTable: SymbolTable) {
     }
     buf
   }
-
-  private def updateCallParams(rhs: AssignRHS): AssignRHS = {
-    rhs match {
-      case call: Call => call.map(transformExpr)
-      case _          => rhs
-    }
-  }
-
   /* Transforms a given statement S into SSA form. */
   private def transformStat(s: Stat): ListBuffer[Stat] = {
     val buf = ListBuffer.empty[Stat]
     s match {
       case EqIdent(t, id, r) =>
-        val v = addToHashMap(id, r)
+        val (v, rhs) = addToHashMap(id, r)
         scopeRedefine(id)
-        deadCodeElimination(r, t, v, buf)
+        deadCodeElimination(rhs, t, v, buf)
       case EqAssign(id: Ident, r) =>
-        val c = updateCallParams(r)
-        val v = addToHashMap(id, r)
-        deadCodeElimination(c, id.getType(currSTable), v, buf)
+        val (v, rhs) = addToHashMap(id, r)
+        deadCodeElimination(rhs, id.getType(currSTable), v, buf)
       case EqAssign(ae @ ArrayElem(Ident(str, pos), es, _), r) =>
         // foldIntOps(e) > es.length -> exit 255
         // TODO: Array out of bounds check
-        val v = addToHashMap(Ident(arrayElemIdentifier(str, es), pos), r)
-        deadCodeElimination(r, ae.getType(currSTable), v, buf)
+        val (v, rhs) = addToHashMap(Ident(arrayElemIdentifier(str, es), pos), r)
+        deadCodeElimination(rhs, ae.getType(currSTable), v, buf)
       case EqAssign(fst @ Fst(Ident(str, pos), _), r) =>
-        val v = addToHashMap(Ident(pairElemIdentifier(str, true), pos), r)
-        deadCodeElimination(r, fst.getType(currSTable), v, buf)
+        val (v, rhs) =
+          addToHashMap(Ident(pairElemIdentifier(str, true), pos), r)
+        deadCodeElimination(rhs, fst.getType(currSTable), v, buf)
       case EqAssign(snd @ Snd(Ident(str, pos), _), r) =>
-        val v = addToHashMap(Ident(pairElemIdentifier(str, false), pos), r)
-        deadCodeElimination(r, snd.getType(currSTable), v, buf)
+        val (v, rhs) =
+          addToHashMap(Ident(pairElemIdentifier(str, false), pos), r)
+        deadCodeElimination(rhs, snd.getType(currSTable), v, buf)
       //TODO: EqAssign, deref ptr case
       case Read(lhs)        => buf ++= transformRead(lhs)
       case Free(e)          => buf ++= transExpArray(e, Free)
@@ -562,7 +557,6 @@ case class SSA(sTable: SymbolTable) {
       funcs += transformFunc(fs(i), i)
     }
     val p = Program(funcs.toList, Seq(transformStat(s).toList))
-    printProg(p)
     (p, stackSize)
   }
 
