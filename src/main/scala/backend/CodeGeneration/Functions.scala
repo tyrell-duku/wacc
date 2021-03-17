@@ -65,12 +65,12 @@ object Functions {
 
   /* Translates functions by updating current scope, calls transFuncParams
      and translates the functions statements*/
-  def transFunc(func: Func): Unit = {
+  def transFunc(func: Func, stackSize: Int): Unit = {
     val Func(t, id, ps, s) = func
     currentLabel = Label("f_" + id)
     val oldScopeSP = scopeSP
     sTable = sTable.getNextScope
-    val curScopeMaxSPDepth = sTable.spMaxDepth(id)
+    val curScopeMaxSPDepth = stackSize
     transFuncParams(ps)
     scopeSP = currentSP
     currentSP += curScopeMaxSPDepth
@@ -92,8 +92,8 @@ object Functions {
     val reg = getFreeReg()
     val instructions = transExp(e, reg)
     instructions += Mov(resultReg, reg)
-    if (scopeSP > 0) {
-      instructions ++= addSP(scopeSP)
+    if (currentSP > 0) {
+      instructions ++= addSP(currentSP)
     }
     instructions ++= ListBuffer(
       Pop(ListBuffer(PC)),

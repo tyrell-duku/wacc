@@ -62,16 +62,16 @@ object CodeGenerator {
   def transProg(
       prog: Program,
       sTable: SymbolTable,
-      stackSize: Int
+      stackSizes: List[Int]
   ): (List[Data], List[(Label, List[Instruction])]) = {
     this.sTable = sTable
     val Program(funcs, stat) = prog
-    for (f <- funcs) {
-      transFunc(f)
+    for (i <- funcs.indices) {
+      transFunc(funcs(i), stackSizes(i))
     }
     currentLabel = Label("main")
     scopeSP = currentSP
-    val curScopeMaxSPDepth = stackSize
+    val curScopeMaxSPDepth = stackSizes.last
     currentSP += curScopeMaxSPDepth
     val instructions = transStat(
       stat,
