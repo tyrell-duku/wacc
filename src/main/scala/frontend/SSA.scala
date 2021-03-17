@@ -520,6 +520,19 @@ case class SSA(sTable: SymbolTable) {
     buf
   }
 
+  /* Partial function to retrieve runtime error from inside a statement. */
+  private def getRuntimeError: PartialFunction[Stat, Stat] = {
+    case EqIdent(_, _, err: RuntimeErr) => err
+    case EqAssign(_, err: RuntimeErr)   => err
+    case Free(err: RuntimeErr)          => err
+    case Return(err: RuntimeErr)        => err
+    case Exit(err: RuntimeErr)          => err
+    case Print(err: RuntimeErr)         => err
+    case PrintLn(err: RuntimeErr)       => err
+    case If(err: RuntimeErr, _, _)      => err
+    case While(err: RuntimeErr, _)      => err
+  }
+
   /* Transforms a sequential statement to SSA form and removes any dead code
      after Exit or Return statements. */
   private def transformSeqStat(stats: List[Stat]): ListBuffer[Stat] = {
@@ -527,14 +540,16 @@ case class SSA(sTable: SymbolTable) {
     var stop = false
     var i = 0
     while (!stop && i < stats.length) {
-      val curStat = transformStat(stats(i))
-      curStat match {
-        case _ if (curStat.isEmpty) =>
-        case nonEmptyList =>
-          nonEmptyList.last match {
-            case _: Return | _: Exit => stop = true
-            case _                   =>
-          }
+      var curStat = transformStat(stats(i))
+      if (!curStat.isEmpty) {
+        curStat.last match {
+          case s if getRuntimeError.isDefinedAt(s) =>
+            stop = true
+            curStat = ListBuffer(getRuntimeError(s))
+          // dead code elimination
+          case _: Return | _: Exit => stop = true
+          case _                   => // otherwise continue
+        }
       }
       i += 1
       buf ++= curStat
