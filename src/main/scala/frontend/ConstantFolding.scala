@@ -88,9 +88,24 @@ object ConstantFolding {
       BoolLiter(b1 || b2, pos)
     // ComparOps folding
     case GT(CharLiter(NormalChar(c1), pos), CharLiter(NormalChar(c2), _), _) =>
+      BoolLiter(c1 > c2, pos)
+    case GT(IntLiter(n1, pos), IntLiter(n2, _), _) => BoolLiter(n1 > n2, pos)
+    case GTE(CharLiter(NormalChar(c1), pos), CharLiter(NormalChar(c2), _), _) =>
+      BoolLiter(c1 >= c2, pos)
+    case GTE(IntLiter(n1, pos), IntLiter(n2, _), _) => BoolLiter(n1 >= n2, pos)
+    case LT(CharLiter(NormalChar(c1), pos), CharLiter(NormalChar(c2), _), _) =>
       BoolLiter(c1 < c2, pos)
-    case GT(IntLiter(n1, pos), IntLiter(n2, _), _) => BoolLiter(n1 < n2, pos)
-    case gt: GT if gt.containsNoIdent              => foldBoolOps(gt.map(foldIntOps))
+    case LT(IntLiter(n1, pos), IntLiter(n2, _), _) => BoolLiter(n1 < n2, pos)
+    case LTE(CharLiter(NormalChar(c1), pos), CharLiter(NormalChar(c2), _), _) =>
+      BoolLiter(c1 <= c2, pos)
+    case LTE(IntLiter(n1, pos), IntLiter(n2, _), _) => BoolLiter(n1 <= n2, pos)
+    case eq @ Equal(l, r, pos) if eq.containsNoIdent =>
+      BoolLiter(fold(l) == fold(r), pos)
+    case neq @ NotEqual(l, r, pos) if neq.containsNoIdent =>
+      BoolLiter(fold(l) != fold(r), pos)  
+    case op: ComparOps if op.containsNoIdent => foldBoolOps(op.map(fold))
+    case op: EqOps if op.containsNoIdent => foldBoolOps(op.map(fold))
+    case op: LogicalOps if op.containsNoIdent => foldBoolOps(op.map(foldBoolOps))
   }
 
   /* If unable to fold, return original Expr */
