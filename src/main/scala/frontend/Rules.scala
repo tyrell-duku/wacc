@@ -10,6 +10,21 @@ object Rules {
 
   /* EXTENSION */
 
+  // For runtime errors detected at compile time.
+  sealed trait RuntimeErr extends Expr
+  case object Overflow extends RuntimeErr {
+    override val pos: (Int, Int) = null
+    override def getType(sTable: SymbolTable) = null
+  }
+  case object ZeroDivision extends RuntimeErr {
+    override val pos: (Int, Int) = null
+    override def getType(sTable: SymbolTable) = null
+  }
+  case object NegShift extends RuntimeErr {
+    override val pos: (Int, Int) = null
+    override def getType(sTable: SymbolTable) = null
+  }
+
   sealed trait MemoryAlloc extends AssignRHS
   case class Malloc(size: Expr, pos: (Int, Int)) extends MemoryAlloc {
     override def getType(sTable: SymbolTable): Type = {
