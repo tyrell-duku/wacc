@@ -215,6 +215,8 @@ object Rules {
     }
     override def toString: String =
       id.toString + "(" + args.getOrElse(ArgList(List())) + ")"
+    override def map[B >: AssignRHS](f: Expr => Expr) =
+      Call(id, args.map(arg => arg.map(f)), pos)
   }
   object Call {
     def apply(
@@ -230,6 +232,7 @@ object Rules {
     override def toString: String = {
       args.mkString(", ")
     }
+    def map(f: Expr => Expr) = ArgList(args.map(f))
   }
 
   sealed trait PairElem extends AssignLHS with AssignRHS {
