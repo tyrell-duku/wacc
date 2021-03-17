@@ -35,7 +35,8 @@ object ConstantFolding {
   }
 
   /* Folds an application of OP on two integer operands, returning the result.
-     The result will be null if a runtime error has occurred. */
+     The result will be null if a runtime error has occurred.
+     PRE: no identifiers. */
   def foldIntOps(op: Expr): Expr = op match {
     // Base case
     case n: IntLiter => n
@@ -55,8 +56,7 @@ object ConstantFolding {
       evalConditionally(n1, n2, (_ - _), p)
     case Mod(IntLiter(n1, p), IntLiter(n2, _), _) =>
       evalConditionally(n1, n2, (_ % _), p)
-    case BitwiseAnd(IntLiter(n1, p), IntLiter(n2, _), _) =>
-      evalConditionally(n1, n2, (_ & _), p)
+    case BitwiseAnd(IntLiter(n1, p), IntLiter(n2, _), _) => IntLiter(n1 & n2, p)
     case BitwiseOr(IntLiter(n1, p), IntLiter(n2, _), _) =>
       evalConditionally(n1, n2, (_ | _), p)
     case BitwiseXor(IntLiter(n1, p), IntLiter(n2, _), _) =>
@@ -66,7 +66,25 @@ object ConstantFolding {
     case LogicalShiftRight(IntLiter(n1, p), IntLiter(n2, _), _) =>
       if (n1 < 0 || n2 < 0) null else evalConditionally(n1, n2, (_ >> _), p)
     // Recursive case (ArithOps & BitwiseOps)
-    case _: ArithOps | _: BitwiseOps | _: UnOp => foldIntOps(op.map(foldIntOps))
+    case _: ArithOps | _: BitwiseOps | _: BitwiseNot => foldIntOps(op.map(foldIntOps))
     case e                                     => e
   }
+
+   /* Folds an expression that will evaulate to a boolean. This function fold 
+      attempt to fold everything and return the result. */
+  private def foldBoolOps(op: Expr): Expr = op match {
+    // Base case
+    case b : BoolLiter => b
+    // UnOp folding
+    case Not(BoolLiter(b, _), pos) => BoolLiter(!b, pos)
+    // BinOp folding
+    case And(BoolLiter(b1, pos), BoolLiter(b2, pos2)) => BoolLiter(b1 && b2, pos)
+    case Or(BoolLiter(b1, pos), BoolLiter(b2, pos2)) => BoolLiter(b1 || b2, pos)
+    // ComparOps folding
+    case GT(CharLiter(c1, pos), CharLiter(c2, _)) => BoolLiter(c1 < c2, pos)
+    case GT(IntLiter(n1, pos), IntLiter(n2, _)) => BoolLiter(n1 < n2, pos)
+    case gt: GT => foldBoolOps(gt.map(foldIntOps))
+    case e => e
+  }
+  
 }
