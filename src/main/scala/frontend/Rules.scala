@@ -384,8 +384,8 @@ object Rules {
 
     val containsNoIdent: Boolean = {
       e match {
-        case _: Ident => false
-        case _        => true
+        case _: Ident | _: ArrayElem => false
+        case _                       => true
       }
     }
 
@@ -502,13 +502,13 @@ object Rules {
 
     val containsNoIdent: Boolean = {
       val r = rExpr match {
-        case _: Ident => false
-        case _        => true
+        case _: Ident | _: ArrayElem => false
+        case _                       => true
       }
       lExpr match {
-        case op: BinOp => op.containsNoIdent && r
-        case _: Ident  => false
-        case _         => true && r
+        case op: BinOp               => op.containsNoIdent && r
+        case _: Ident | _: ArrayElem => false
+        case _                       => true && r
       }
     }
   }
@@ -765,6 +765,11 @@ object Rules {
   sealed case class IntLiter(n: Int, pos: (Int, Int)) extends Expr {
     override def toString: String = n.toString
     override def getType(sTable: SymbolTable): Type = IntT
+    override def equals(x: Any): Boolean =
+      x match {
+        case IntLiter(n, _) => this.n == n
+        case _              => false
+      }
   }
   object IntLiter {
     def apply(n: Parsley[Int]): Parsley[IntLiter] =
@@ -779,6 +784,11 @@ object Rules {
   sealed case class BoolLiter(b: Boolean, pos: (Int, Int)) extends Expr {
     override def toString: String = b.toString
     override def getType(sTable: SymbolTable): Type = BoolT
+    override def equals(x: Any): Boolean =
+      x match {
+        case BoolLiter(b, _) => this.b == b
+        case _               => false
+      }
   }
   object BoolLiter {
     def apply(b: Boolean): Parsley[BoolLiter] =
@@ -788,6 +798,11 @@ object Rules {
   sealed case class CharLiter(c: Character, pos: (Int, Int)) extends Expr {
     override def toString: String = "'" + c.toString + "'"
     override def getType(sTable: SymbolTable): Type = CharT
+    override def equals(x: Any): Boolean =
+      x match {
+        case CharLiter(c, _) => this.c == c
+        case _               => false
+      }
   }
   object CharLiter {
     def apply(c: Parsley[Character]): Parsley[CharLiter] =
@@ -807,6 +822,11 @@ object Rules {
       extends Expr {
     override def toString: String = str.mkString("")
     override def getType(sTable: SymbolTable): Type = StringT
+    override def equals(x: Any): Boolean =
+      x match {
+        case StrLiter(str, _) => this.str == str
+        case _                => false
+      }
   }
   object StrLiter {
     def apply(str: Parsley[List[Character]]): Parsley[StrLiter] =
