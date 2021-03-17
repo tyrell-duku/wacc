@@ -4,7 +4,7 @@ import Rules._
 import scala.collection.immutable.HashMap
 import scala.collection.mutable.ListBuffer
 import scala.collection.mutable.Map
-import backend.CodeGenerator.getExprType
+import backend.CodeGenerator.{getExprType, getBaseTypeSize}
 import frontend.Semantics.SymbolTable
 import frontend.ConstantFolding.fold
 
@@ -18,6 +18,7 @@ case class SSA(sTable: SymbolTable) {
   val Undefined_Map = null
   val Is_Fst = true
   val Not_Fst = false
+  var stackSize = 0
 
   /* If the hashmap doesn't contain the identifier STR, then it is added to
      the hashmap with initial values (1, 1). If the hashmap contains the
@@ -192,7 +193,9 @@ case class SSA(sTable: SymbolTable) {
       case _ =>
         // add to dict but not kvs
         val v = Ident(addToDict(varName), Undefined_Value)
-        ListBuffer(EqIdent(getExprType(e), v, e), Read(v))
+        val t = getExprType(e)
+        stackSize += getBaseTypeSize(t)
+        ListBuffer(EqIdent(t, v, e), Read(v))
     }
   }
 
@@ -260,6 +263,7 @@ case class SSA(sTable: SymbolTable) {
     // Get previously defined value from kvs
     val rhs = kvs.getOrElse(varName, Ident(varName, Undefined_Value))
     val originalType = Ident(s, Undefined_Pos).getType(sTable)
+    stackSize += getBaseTypeSize(originalType)
     EqIdent(originalType, Ident((n + y).toString + s, Undefined_Pos), rhs)
   }
 
@@ -430,6 +434,7 @@ case class SSA(sTable: SymbolTable) {
             // Get latest ident as it may be updated
             id2 = updateIdent(id)
             val t = sTable.lookupAllType(id)
+            stackSize += getBaseTypeSize(t)
             buf += EqIdent(t, id2, rhsUpdated)
             buf += pf(id2)
         }
@@ -520,8 +525,9 @@ case class SSA(sTable: SymbolTable) {
   }
 
   /* Transforms a given program AST into SSA form. */
-  def toSSA(ast: Program): Program = {
+  def toSSA(ast: Program): (Program, Int) = {
     val Program(fs, s) = ast
-    Program(fs.map(f => transformFunc(f)), Seq(transformStat(s).toList))
+    val p = Program(fs.map(f => transformFunc(f)), Seq(transformStat(s).toList))
+    (p, stackSize)
   }
 }
