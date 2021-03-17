@@ -12,11 +12,11 @@ case class SSA(sTable: SymbolTable) {
   /* Type aliases */
   type StackSize = Int
   type UniqueNum = Int
-  type AssignmentNum = Int
+  type CurrentAssignmentNum = Int
   type NumOfAssigns = Int
   // hash map for unique identifying
   private var dict =
-    new HashMap[String, (UniqueNum, AssignmentNum, NumOfAssigns)]
+    new HashMap[String, (UniqueNum, CurrentAssignmentNum, NumOfAssigns)]
   // (key, values) hash map for constant propagation
   private var kvs = new HashMap[String, AssignRHS]
   private var currSTable = sTable
@@ -70,12 +70,14 @@ case class SSA(sTable: SymbolTable) {
       pairelem: PairElem,
       originalStr: String
   ): String = {
-    uniqueId = addToDict(originalStr)
+    val uniqueId = addToDict(originalStr)
     pairelem match {
       case Fst(Ident(s, _), _) =>
         kvs += ((uniqueId, getLatestHeapExpr(pairElemIdentifier(s, Is_Fst))))
       case Snd(Ident(s, _), _) =>
         kvs += ((uniqueId, getLatestHeapExpr(pairElemIdentifier(s, Not_Fst))))
+      // Semantically incorrect
+      case _ => ???
     }
     uniqueId
   }
@@ -175,17 +177,16 @@ case class SSA(sTable: SymbolTable) {
 
   /* Transforms an expression E for the condition of a while loop. */
   private def transformExpr(e: Expr, map: Map[String, Int]): Expr = e match {
-    case sizeof: SizeOf => sizeof
+    case sizeof: SizeOf   => sizeof
     case id @ Ident(s, p) =>
-      val v = map.getOrElse(s, 0)
       // If ident not present in map, it is not changed in while loop so,
       // transformExpr as usual
-      if (v == 0) {
-        transformExpr(id)
-      } else {
-        // Update id to use phi var
-        val (_, y, _) = dict(s)
-        Ident((v + y).toString + s, p)
+      map.get(s) match {
+        case Some(assignmentNum) =>
+          // Update id to use phi var
+          val (_, curId, _) = dict(s)
+          Ident((assignmentNum + curId).toString + s, p)
+        case None => transformExpr(id)
       }
     case ae: ArrayElem => transformExpr(ae)
     case x: IntLiter   => x
