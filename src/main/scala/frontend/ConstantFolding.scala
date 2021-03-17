@@ -37,7 +37,7 @@ object ConstantFolding {
   /* Folds an application of OP on two integer operands, returning the result.
      The result will be null if a runtime error has occurred.
      PRE: no identifiers. */
-  def foldIntOps(op: Expr): Expr = op match {
+  private def foldIntOps: PartialFunction[Expr, Expr] = {
     // Base case
     case n: IntLiter => n
     // UnOp folding
@@ -66,14 +66,17 @@ object ConstantFolding {
     case LogicalShiftRight(IntLiter(n1, p), IntLiter(n2, _), _) =>
       if (n1 < 0 || n2 < 0) null else evalConditionally(n1, n2, (_ >> _), p)
     // Recursive case (ArithOps & BitwiseOps)
-    case _: ArithOps | _: BitwiseOps | _: BitwiseNot =>
+    case op: ArithOps =>
       foldIntOps(op.map(foldIntOps))
-    case e => e
+    case op: BitwiseOps =>
+      foldIntOps(op.map(foldIntOps))
+    case op: BitwiseNot =>
+      foldIntOps(op.map(foldIntOps))
   }
 
   /* Folds an expression that will evaulate to a boolean. This function fold
       attempt to fold everything and return the result. */
-  private def foldBoolOps(op: Expr): Expr = op match {
+  private def foldBoolOps: PartialFunction[Expr, Expr] = {
     // Base case
     case b: BoolLiter => b
     // UnOp folding
@@ -88,7 +91,14 @@ object ConstantFolding {
       BoolLiter(c1 < c2, pos)
     case GT(IntLiter(n1, pos), IntLiter(n2, _), _) => BoolLiter(n1 < n2, pos)
     case gt: GT                                    => foldBoolOps(gt.map(foldIntOps))
-    case e                                         => e
   }
+
+
+  /* If unable to fold, return original Expr */
+  private def id: PartialFunction[Expr, Expr] = {
+    case e =>  e
+  }
+
+  val fold = (foldIntOps :: foldBoolOps :: id :: Nil).reduceLeft(_ orElse _)
 
 }
