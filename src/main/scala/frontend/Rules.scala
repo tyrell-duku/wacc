@@ -813,7 +813,9 @@ object Rules {
       )
   }
 
-  sealed case class IntLiter(n: Int, pos: (Int, Int)) extends Expr {
+  sealed trait Liter extends Expr
+
+  sealed case class IntLiter(n: Int, pos: (Int, Int)) extends Liter {
     override def toString: String = n.toString
     override def getType(sTable: SymbolTable): Type = IntT
     override def equals(x: Any): Boolean =
@@ -832,7 +834,7 @@ object Rules {
   case object Pos extends IntSign
   case object Neg extends IntSign
 
-  sealed case class BoolLiter(b: Boolean, pos: (Int, Int)) extends Expr {
+  sealed case class BoolLiter(b: Boolean, pos: (Int, Int)) extends Liter {
     override def toString: String = b.toString
     override def getType(sTable: SymbolTable): Type = BoolT
     override def equals(x: Any): Boolean =
@@ -846,7 +848,7 @@ object Rules {
       pos.map((p: (Int, Int)) => BoolLiter(b, p))
   }
 
-  sealed case class CharLiter(c: Character, pos: (Int, Int)) extends Expr {
+  sealed case class CharLiter(c: Character, pos: (Int, Int)) extends Liter {
     override def toString: String = "'" + c.toString + "'"
     override def getType(sTable: SymbolTable): Type = CharT
     override def equals(x: Any): Boolean =
@@ -870,7 +872,7 @@ object Rules {
   }
 
   sealed case class StrLiter(str: List[Character], pos: (Int, Int))
-      extends Expr {
+      extends Liter {
     override def toString: String = str.mkString("")
     override def getType(sTable: SymbolTable): Type = StringT
     override def equals(x: Any): Boolean =
@@ -906,7 +908,7 @@ object Rules {
       )
   }
 
-  sealed case class PairLiter(pos: (Int, Int)) extends Expr {
+  sealed case class PairLiter(pos: (Int, Int)) extends Liter {
     override def toString: String = "null"
     override def getType(sTable: SymbolTable): Type =
       Pair(null, null)

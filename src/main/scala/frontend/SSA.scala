@@ -166,11 +166,7 @@ case class SSA(sTable: SymbolTable) {
     case sizeof: SizeOf => sizeof
     case id: Ident      => transformExprId(id)
     case ae: ArrayElem  => transformExprArrayElem(ae)
-    case x: IntLiter    => x
-    case b: BoolLiter   => b
-    case c: CharLiter   => c
-    case s: StrLiter    => s
-    case p: PairLiter   => p
+    case liter: Liter   => liter
     // All operators
     case _ => fold(e.map(transformExpr))
   }
@@ -189,11 +185,7 @@ case class SSA(sTable: SymbolTable) {
         case None => transformExpr(id)
       }
     case ae: ArrayElem => transformExpr(ae)
-    case x: IntLiter   => x
-    case b: BoolLiter  => b
-    case c: CharLiter  => c
-    case s: StrLiter   => s
-    case p: PairLiter  => p
+    case liter: Liter  => liter
     // All operators
     case _ => fold(e.map(exp => transformExpr(exp, map)))
   }
@@ -274,17 +266,17 @@ case class SSA(sTable: SymbolTable) {
       case EqAssign(ArrayElem(Ident(s, _), elems, _), _) =>
         incrementMap(arrayElemIdentifier(s, elems), map, mapScope)
       case EqAssign(Fst(Ident(s, _), _), _) =>
-        incrementMap(pairElemIdentifier(s, true), map, mapScope)
+        incrementMap(pairElemIdentifier(s, Is_Fst), map, mapScope)
       case EqAssign(Snd(Ident(s, _), _), _) =>
-        incrementMap(pairElemIdentifier(s, false), map, mapScope)
+        incrementMap(pairElemIdentifier(s, Not_Fst), map, mapScope)
       case Read(Ident(s, _)) =>
         incrementMap(s, map, mapScope)
       case Read(ArrayElem(Ident(s, _), elems, _)) =>
         incrementMap(arrayElemIdentifier(s, elems), map, mapScope)
       case Read(Fst(Ident(s, _), _)) =>
-        incrementMap(pairElemIdentifier(s, true), map, mapScope)
+        incrementMap(pairElemIdentifier(s, Is_Fst), map, mapScope)
       case Read(Snd(Ident(s, _), _)) =>
-        incrementMap(pairElemIdentifier(s, false), map, mapScope)
+        incrementMap(pairElemIdentifier(s, Not_Fst), map, mapScope)
       case Seq(stats) =>
         for (s <- stats) {
           countVariables(s, map, mapScope)
@@ -367,8 +359,10 @@ case class SSA(sTable: SymbolTable) {
     val e = transformExpr(cond)
 
     e match {
+      // control flow analysis
       case BoolLiter(true, _)  => transformStat(s1)
       case BoolLiter(false, _) => transformStat(s2)
+      // unable to determine condition value
       case _ =>
         currSTable = currSTable.getNextScopeSSA
         val ssa1 =
