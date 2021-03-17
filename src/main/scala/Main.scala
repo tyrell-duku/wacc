@@ -3,6 +3,7 @@ import java.io.File
 import frontend.Rules.Program
 import frontend.Semantics._
 import frontend._
+import frontend.SSA
 import parsley.Failure
 import parsley.Success
 
@@ -58,7 +59,10 @@ object Main {
       case Failure(msg) => syntaxExit(msg)
       case Success(ast) =>
         val sTable = semanticAnalysis(ast)
-        val (data, instrs) = CodeGenerator.transProg(ast, sTable)
+        val ssa = SSA(sTable)
+        val (prunedAst, stackSize) = ssa.toSSA(ast)
+        val (data, instrs) =
+          CodeGenerator.transProg(prunedAst, sTable, stackSize)
         ARMPrinter.execute(
           file.getName(),
           data,
