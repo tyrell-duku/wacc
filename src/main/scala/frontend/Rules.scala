@@ -11,7 +11,7 @@ object Rules {
   /* EXTENSION */
 
   // For runtime errors detected at compile time.
-  sealed trait RuntimeErr extends Expr
+  sealed trait RuntimeErr extends Expr with Stat
   // Integer overflow/underflow
   case object Overflow extends RuntimeErr {
     override val pos = null
