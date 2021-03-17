@@ -9,16 +9,19 @@ import frontend.Semantics.SymbolTable
 import frontend.ConstantFolding.fold
 
 case class SSA(sTable: SymbolTable) {
+  /* Type aliases */
   type StackSize = Int
   type UniqueNum = Int
   type AssignmentNum = Int
   type NumOfAssigns = Int
   // hash map for unique identifying
-  private var dict = new HashMap[String, (UniqueNum, AssignmentNum, NumOfAssigns)]
+  private var dict =
+    new HashMap[String, (UniqueNum, AssignmentNum, NumOfAssigns)]
   // (key, values) hash map for constant propagation
   private var kvs = new HashMap[String, AssignRHS]
-  var currSTable = sTable
-  val INITIAL_DICT = 0
+  private var currSTable = sTable
+  /* Constants */
+  val Initial_Id_Num = 0
   val Undefined_Value = null
   val Undefined_Pos = null
   val Undefined_Map = null
@@ -26,50 +29,80 @@ case class SSA(sTable: SymbolTable) {
   val Not_Fst = false
   var stackSize = 0
 
+  /* Adds the NewPair NEWPAIR to the key value hash map. */
+  private def addNewPairToHashMap(
+      newpair: Newpair,
+      originalStr: String
+  ): String = {
+    val uniqueId = addToDict(originalStr)
+    kvs += ((uniqueId, newpair))
+    val Newpair(fst, snd, _) = newpair
+    // Fst elem
+    val fstName = addToDict(pairElemIdentifier(originalStr, Is_Fst))
+    kvs += ((fstName, transformExpr(fst)))
+    // Snd elem
+    val sndName = addToDict(pairElemIdentifier(originalStr, Not_Fst))
+    kvs += ((sndName, transformExpr(snd)))
+    uniqueId
+  }
+
+  /* Adds the arrayLiter ARR to the key value hash map. Additionally adds each
+     array element to the dict and key value hash map. */
+  private def addArrayLiterToHashMap(
+      arr: ArrayLiter,
+      originalStr: String
+  ): String = {
+    val uniqueId = addToDict(originalStr)
+    kvs += ((uniqueId, arr))
+    arr match {
+      case ArrayLiter(Some(es), _) =>
+        for (i <- es.indices) {
+          val aeName = addToDict(originalStr + "-" + i)
+          kvs += ((aeName, transformExpr(es(i))))
+        }
+      case _ =>
+    }
+    uniqueId
+  }
+
+  /* Updates the value for a PairElem PAIRELEM in the key value hashmap. */
+  private def addPairElemToHashMap(
+      pairelem: PairElem,
+      originalStr: String
+  ): String = {
+    uniqueId = addToDict(originalStr)
+    pairelem match {
+      case Fst(Ident(s, _), _) =>
+        kvs += ((uniqueId, getLatestHeapExpr(pairElemIdentifier(s, Is_Fst))))
+      case Snd(Ident(s, _), _) =>
+        kvs += ((uniqueId, getLatestHeapExpr(pairElemIdentifier(s, Not_Fst))))
+    }
+    uniqueId
+  }
+
   /* If the hashmap doesn't contain the identifier STR, then it is added to
      the hashmap with initial values (1, 1). If the hashmap contains the
      identifier STR, then the values are updated for unique identifying. */
   private def addToHashMap(id: Ident, rhs: AssignRHS): (Ident, AssignRHS) = {
-    val Ident(str, pos) = id
-    var v: String = null
+    val Ident(originalStr, pos) = id
+    var uniqueId: String = null
     var updatedRhs = rhs
     rhs match {
       case e: Expr =>
         val transEx = transformExpr(e)
-        v = addToDict(str)
-        kvs += ((v, transEx))
+        uniqueId = addToDict(originalStr)
+        kvs += ((uniqueId, transEx))
       case arr: ArrayLiter =>
-        v = addToDict(str)
-        kvs += ((v, arr))
-        arr match {
-          case ArrayLiter(Some(es), _) =>
-            for (i <- es.indices) {
-              val aeName = addToDict(str + "-" + i)
-              kvs += ((aeName, transformExpr(es(i))))
-            }
-          case _ =>
-        }
+        uniqueId = addArrayLiterToHashMap(arr, originalStr)
       case newpair: Newpair =>
-        v = addToDict(str)
-        kvs += ((v, newpair))
-        val Newpair(fst, snd, _) = newpair
-        val fstName = addToDict(pairElemIdentifier(str, Is_Fst))
-        kvs += ((fstName, transformExpr(fst)))
-        val sndName = addToDict(pairElemIdentifier(str, Not_Fst))
-        kvs += ((sndName, transformExpr(snd)))
-      case Fst(Ident(s, _), _) =>
-        v = addToDict(str)
-        kvs += ((v, getLatestHeapExpr(s + "-fst")))
-      case Snd(Ident(s, _), _) =>
-        v = addToDict(str)
-        kvs += ((v, getLatestHeapExpr(s + "-snd")))
+        uniqueId = addNewPairToHashMap(newpair, originalStr)
+      case pairelem: PairElem => addPairElemToHashMap(pairelem, originalStr)
       case call: Call =>
         updatedRhs = call.map(transformExpr)
-        v = addToDict(str)
+        uniqueId = addToDict(originalStr)
       case _ =>
-
     }
-    (Ident(v, pos), updatedRhs)
+    (Ident(uniqueId, pos), updatedRhs)
   }
 
   /* Add the string s to dict hashmap. If already present then variable counter
@@ -77,7 +110,7 @@ case class SSA(sTable: SymbolTable) {
      identifier is returned. */
   private def addToDict(s: String): String = {
     var (x, y, z) =
-      dict.getOrElse(s, (INITIAL_DICT, INITIAL_DICT, INITIAL_DICT))
+      dict.getOrElse(s, (Initial_Id_Num, Initial_Id_Num, Initial_Id_Num))
     x += 1
     y += 1
     z += 1
@@ -88,9 +121,9 @@ case class SSA(sTable: SymbolTable) {
   /* Updates an identifier, prepending the RHS unique ID.
      PRE: the identifier is already in the hashmap DICT. */
   private def updateIdent(id: Ident): Ident = {
-    val Ident(str, pos) = id
-    val (_, y, _) = dict(str)
-    Ident(y.toString + str, pos)
+    val Ident(originalStr, pos) = id
+    val (_, y, _) = dict(originalStr)
+    Ident(y.toString + originalStr, pos)
   }
 
   /* Transforms an ident ID into SSA form and applies constant propagation. */
@@ -503,10 +536,10 @@ case class SSA(sTable: SymbolTable) {
       curStat match {
         case _ if (curStat.isEmpty) =>
         case nonEmptyList =>
-        nonEmptyList.last match {
-          case _: Return | _: Exit => stop = true
-          case _ =>
-        }
+          nonEmptyList.last match {
+            case _: Return | _: Exit => stop = true
+            case _                   =>
+          }
       }
       i += 1
       buf ++= curStat
@@ -539,16 +572,16 @@ case class SSA(sTable: SymbolTable) {
           addToHashMap(Ident(pairElemIdentifier(str, Not_Fst), pos), r)
         deadCodeElimination(rhs, snd.getType(currSTable), v, buf)
       // TODO: EqAssign, deref ptr case
-      case Read(lhs)  => transformRead(lhs)
-      case Free(e)    => transExpArray(e, Free)
-      case Return(e)  => transExpArray(e, Return)
-      case Exit(e)    => buf += Exit(transformExpr(e))
-      case Print(e)   => transExpArray(e, Print)
-      case PrintLn(e) => transExpArray(e, PrintLn)
+      case Read(lhs)        => transformRead(lhs)
+      case Free(e)          => transExpArray(e, Free)
+      case Return(e)        => transExpArray(e, Return)
+      case Exit(e)          => buf += Exit(transformExpr(e))
+      case Print(e)         => transExpArray(e, Print)
+      case PrintLn(e)       => transExpArray(e, PrintLn)
       case If(cond, s1, s2) => transformIf(cond, s1, s2)
-      case Seq(statList) => transformSeqStat(statList)
-      case Skip           => buf += Skip
-      case While(cond, s) => transformWhile(cond, s)
+      case Seq(statList)    => transformSeqStat(statList)
+      case Skip             => buf += Skip
+      case While(cond, s)   => transformWhile(cond, s)
       case Begin(s) =>
         currSTable = currSTable.getNextScopeSSA
         val transformedS = transformStat(s)
@@ -564,14 +597,14 @@ case class SSA(sTable: SymbolTable) {
   def scopeRedefine(id: Ident): Unit = {
     val Ident(s, _) = id
     var (x, y, z) = dict(s)
-    dict += ((s, (x, y, INITIAL_DICT + 1)))
+    dict += ((s, (x, y, Initial_Id_Num + 1)))
   }
 
   /* Update the current var number to correct value when leaving scope.
      Reset the scope counter to 0 when leaving scope. */
   def leavingScope(kv: (String, (Int, Int, Int))): (String, (Int, Int, Int)) = {
     val (s, (x, y, z)) = kv
-    (s, (x, y - z, INITIAL_DICT))
+    (s, (x, y - z, Initial_Id_Num))
   }
 
   /* Transforms a given function F into SSA form. */
