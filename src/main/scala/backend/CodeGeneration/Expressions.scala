@@ -10,19 +10,14 @@ import backend.DefinedFuncs.PreDefinedFuncs.{
   DivideByZero,
   NegativeShift
 }
-import backend.DefinedFuncs.RuntimeErrors.{
-  addInstantRuntimeError,
-  addRuntimeError,
-  Get_First
-}
+import backend.DefinedFuncs.RuntimeErrors.addRuntimeError
 import backend.IR
 import backend.IR.Condition.{Condition, VS}
 import IR.InstructionSet._
 import backend.IR.Operand._
+import frontend.Rules
 import frontend.Rules._
 import scala.collection.mutable.ListBuffer
-import backend.DefinedFuncs.PreDefinedFuncs
-import frontend.Rules
 
 object Expressions {
   /* Moves the value to register R0 for the branch to the predefined function
@@ -202,26 +197,6 @@ object Expressions {
     ListBuffer(Ldr(rd, DataLabel(curLabel)))
   }
 
-  /* Converts the frontend IR to the backend IR for runtime errors. */
-  private def frontToBackRuntimeErr(err: RuntimeErr): PreDefFunc = err match {
-    case Rules.Overflow => Overflow
-    case ZeroDivision   => DivideByZero
-    case NegShift       => NegativeShift
-  }
-
-  /* Translates a runtime error ERR found at compile time. Instantly throws a
-     runtime error, so no need to add the predefined function for the runtime
-     error ERR. */
-  private def transRuntimeErr(e: RuntimeErr): ListBuffer[Instruction] = {
-    val instructions = ListBuffer.empty[Instruction]
-    val err = frontToBackRuntimeErr(e)
-    addInstantRuntimeError(err)
-    // Load & branch instantly to the run time error
-    instructions += Ldr(resultReg, DataLabel(Label(err.msgName(Get_First))))
-    instructions += BranchLink(RuntimeError.funcLabel)
-    instructions
-  }
-
   /* Translates an expression operator to the internal representation. */
   def transExp(e: Expr, rd: Reg): ListBuffer[Instruction] = {
     val instructions = ListBuffer.empty[Instruction]
@@ -245,7 +220,7 @@ object Expressions {
       case e: UnOp              => instructions ++= transUnOp(e, rd)
       case e: BinOp =>
         instructions ++= transBinOp(e, rd)
-      case err: RuntimeErr => instructions ++= transRuntimeErr(err)
+      case _ => ???
     }
     instructions
   }

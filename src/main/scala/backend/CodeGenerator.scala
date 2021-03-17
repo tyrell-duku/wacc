@@ -11,8 +11,17 @@ import frontend.Rules._
 import frontend.Semantics.SymbolTable
 import scala.collection.mutable.ListBuffer
 import backend.DataTypes.{DataTable, FuncTable}
+import backend.DefinedFuncs.PreDefinedFuncs.{
+  Overflow,
+  DivideByZero,
+  NegativeShift,
+  PreDefFunc,
+  RuntimeError
+}
+import backend.DefinedFuncs.RuntimeErrors.{Get_First, addInstantRuntimeError}
 import backend.IR.InstructionSet._
 import backend.IR.Operand._
+import frontend.Rules
 
 object CodeGenerator {
   /* Registers. */
@@ -88,6 +97,26 @@ object CodeGenerator {
     (dataTable.table.toList, funcList.toList)
   }
 
+  /* Converts the frontend IR to the backend IR for runtime errors. */
+  private def frontToBackRuntimeErr(err: RuntimeErr): PreDefFunc = err match {
+    case Rules.Overflow => Overflow
+    case ZeroDivision   => DivideByZero
+    case NegShift       => NegativeShift
+  }
+
+  /* Translates a runtime error ERR found at compile time. Instantly throws a
+     runtime error, so no need to add the predefined function for the runtime
+     error ERR. */
+  def transRuntimeErr(e: RuntimeErr): ListBuffer[Instruction] = {
+    val instructions = ListBuffer.empty[Instruction]
+    val err = frontToBackRuntimeErr(e)
+    addInstantRuntimeError(err)
+    // Load & branch instantly to the run time error
+    instructions += Ldr(resultReg, DataLabel(Label(err.msgName(Get_First))))
+    instructions += BranchLink(RuntimeError.funcLabel)
+    instructions
+  }
+
   /* Translates statements into our internal representation. */
   def transStat(
       stat: Stat,
@@ -110,8 +139,9 @@ object CodeGenerator {
           nextInstructions = transStat(s, nextInstructions)
         }
         nextInstructions
-      case Begin(s) => transBegin(s, instructions)
-      case _        => instructions
+      case Begin(s)        => transBegin(s, instructions)
+      case err: RuntimeErr => instructions ++= transRuntimeErr(err)
+      case _               => instructions
     }
   }
 
