@@ -61,7 +61,7 @@ object CodeGenerator {
      by ARMPrinter to generate .s file*/
   def transProg(
       prog: Program,
-      sTable: SymbolTable
+      sTable: SymbolTable, stackSize: Int
   ): (List[Data], List[(Label, List[Instruction])]) = {
     this.sTable = sTable
     val Program(funcs, stat) = prog
@@ -70,7 +70,7 @@ object CodeGenerator {
     }
     currentLabel = Label("main")
     scopeSP = currentSP
-    val curScopeMaxSPDepth = sTable.spMaxDepth
+    val curScopeMaxSPDepth = stackSize
     currentSP += curScopeMaxSPDepth
     val instructions = transStat(
       stat,
