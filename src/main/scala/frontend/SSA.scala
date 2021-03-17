@@ -303,6 +303,13 @@ case class SSA(sTable: SymbolTable) {
     }
   }
 
+  private def getPhiVar(x: (String, Int)): (String, Ident) = {
+    val (s, n) = x
+    // y is the current number of assignments for the given variable
+    val (_, y) = dict(s)
+    (s, Ident((n + y).toString + s, Undefined_Pos))
+  }
+
   private def transformWhile(cond: Expr, s: Stat): ListBuffer[Stat] = {
     val stats = ListBuffer.empty[Stat]
     // Number of re-assignments of pre-declared vars within WHILE
@@ -317,6 +324,15 @@ case class SSA(sTable: SymbolTable) {
     // Transform the while condition, updating with the phi vars if necessary
     // Transform the inner of the while, updating phi vars if necessary
     val e = transformExpr(cond, map)
+
+    // Updates variables in kvs to phi variables
+    map
+      .map(getPhiVar)
+      .foreach(tup => {
+        val (v, i) = tup
+        val (_, y) = dict(v)
+        kvs += ((y.toString + v, i))
+      })
 
     val ssa =
       transformStat(s) ++ mapList.map(x => updatePhiVar(x, Undefined_Map))
@@ -444,14 +460,27 @@ case class SSA(sTable: SymbolTable) {
     }
   }
 
+  /* Removes any dead code after a return statement in STATS. */
+  private def removeReturnDeadCode(stats: ListBuffer[Stat]): List[Stat] = {
+    val x = stats.takeWhile(s =>
+      s match {
+        case _: Return => false
+        case _         => true
+      }
+    )
+    x += stats(x.length)
+    x.toList
+  }
+
   /* Transforms a given function F into SSA form. */
   def transformFunc(f: Func): Func = {
     val Func(t, id, params, s) = f
+    val stat = transformStat(s)
     Func(
       t,
       id,
       params.map(pList => pList.map(i => addToHashMap(i, Undefined_Value))),
-      Seq(transformStat(s).toList)
+      Seq(removeReturnDeadCode(stat))
     )
   }
 
