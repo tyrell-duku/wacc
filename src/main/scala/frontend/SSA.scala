@@ -46,9 +46,9 @@ case class SSA(sTable: SymbolTable) {
         v = addToDict(str)
         kvs += ((v, newpair))
         val Newpair(fst, snd, _) = newpair
-        val fstName = addToDict(pairElemIdentifier(str, true))
+        val fstName = addToDict(pairElemIdentifier(str, Is_Fst))
         kvs += ((fstName, transformExpr(fst)))
-        val sndName = addToDict(pairElemIdentifier(str, false))
+        val sndName = addToDict(pairElemIdentifier(str, Not_Fst))
         kvs += ((sndName, transformExpr(snd)))
       case Fst(Ident(s, _), _) =>
         v = addToDict(str)
@@ -56,6 +56,8 @@ case class SSA(sTable: SymbolTable) {
       case Snd(Ident(s, _), _) =>
         v = addToDict(str)
         kvs += ((v, getLatestHeapExpr(s + "-snd")))
+      case call: Call =>
+        v = addToDict(str)
       case _ =>
 
     }
@@ -94,7 +96,8 @@ case class SSA(sTable: SymbolTable) {
         // update, otherwise return prev updated ident
         case Ident(str, _) =>
           if (str.endsWith(s)) toExpr(v) else id2
-        case _ => toExpr(v)
+        case Call(id, args, pos) => id2
+        case _                   => toExpr(v)
       }
     case ArrayElem(id @ Ident(s, _), es, pos) =>
       val arrayElemName = arrayElemIdentifier(s, es)
@@ -140,12 +143,15 @@ case class SSA(sTable: SymbolTable) {
 
   private def deadCodeElimination(
       rhs: AssignRHS,
-      stat: Stat,
+      t: Type,
+      ident: Ident,
       buf: ListBuffer[Stat]
   ): ListBuffer[Stat] =
     rhs match {
       case _: Expr | _: ArrayLiter | _: Newpair | _: PairElem => buf
-      case _                                                  => buf += stat
+      case _ =>
+        stackSize += getBaseTypeSize(t)
+        buf += EqIdent(t, ident, rhs)
     }
 
   private def toExpr(rhs: AssignRHS): Expr = rhs match {
@@ -428,13 +434,14 @@ case class SSA(sTable: SymbolTable) {
           case _: Expr => buf += pf(toExpr(rhs))
           // Heap variable has not been defined in current ast then add to list
           // of statements
-          case rhs =>
-            val rhsUpdated = rhs match {
+          case r =>
+            val rhsUpdated = r match {
               case ArrayLiter(Some(es), pos) => updateArrayLiter(es, pos, s)
               // Empty arrayLiter case, nothing to update
-              case ArrayLiter(None, pos) => ArrayLiter(None, pos)
-              case pair: Newpair         => updateNewpair(s, pair)
-              case _                     => ???
+              case ArrayLiter(None, pos)          => ArrayLiter(None, pos)
+              case pair: Newpair                  => updateNewpair(s, pair)
+              case call @ Call(funcId, args, pos) => call
+              case _                              => ???
             }
             // Get latest ident as it may be updated
             id2 = updateIdent(id)
@@ -449,6 +456,13 @@ case class SSA(sTable: SymbolTable) {
     buf
   }
 
+  private def updateCallParams(rhs: AssignRHS): AssignRHS = {
+    rhs match {
+      case call: Call => call.map(transformExpr)
+      case _          => rhs
+    }
+  }
+
   /* Transforms a given statement S into SSA form. */
   private def transformStat(s: Stat): ListBuffer[Stat] = {
     val buf = ListBuffer.empty[Stat]
@@ -456,21 +470,22 @@ case class SSA(sTable: SymbolTable) {
       case EqIdent(t, id, r) =>
         val v = addToHashMap(id, r)
         scopeRedefine(id)
-        deadCodeElimination(r, EqIdent(t, v, r), buf)
+        deadCodeElimination(r, t, v, buf)
       case EqAssign(id: Ident, r) =>
+        val c = updateCallParams(r)
         val v = addToHashMap(id, r)
-        deadCodeElimination(r, EqAssign(v, r), buf)
-      case EqAssign(ArrayElem(Ident(str, pos), es, _), r) =>
+        deadCodeElimination(c, id.getType(sTable), v, buf)
+      case EqAssign(ae @ ArrayElem(Ident(str, pos), es, _), r) =>
         // foldIntOps(e) > es.length -> exit 255
         // TODO: Array out of bounds check
         val v = addToHashMap(Ident(arrayElemIdentifier(str, es), pos), r)
-        deadCodeElimination(r, EqAssign(v, r), buf)
-      case EqAssign(Fst(Ident(str, pos), _), r) =>
+        deadCodeElimination(r, ae.getType(sTable), v, buf)
+      case EqAssign(fst @ Fst(Ident(str, pos), _), r) =>
         val v = addToHashMap(Ident(pairElemIdentifier(str, true), pos), r)
-        deadCodeElimination(r, EqAssign(v, r), buf)
-      case EqAssign(Snd(Ident(str, pos), _), r) =>
+        deadCodeElimination(r, fst.getType(sTable), v, buf)
+      case EqAssign(snd @ Snd(Ident(str, pos), _), r) =>
         val v = addToHashMap(Ident(pairElemIdentifier(str, false), pos), r)
-        deadCodeElimination(r, EqAssign(v, r), buf)
+        deadCodeElimination(r, snd.getType(sTable), v, buf)
       //TODO: EqAssign, deref ptr case
       case Read(lhs)        => buf ++= transformRead(lhs)
       case Free(e)          => buf ++= transExpArray(e, Free)
@@ -520,11 +535,18 @@ case class SSA(sTable: SymbolTable) {
   /* Transforms a given function F into SSA form. */
   def transformFunc(f: Func): Func = {
     val Func(t, id, params, s) = f
+    val newParams =
+      params.map(pList =>
+        pList.map(i => {
+          val Ident(v, pos) = i
+          Ident(addToDict(v), pos)
+        })
+      )
     val stat = transformStat(s)
     Func(
       t,
       id,
-      params.map(pList => pList.map(i => addToHashMap(i, Undefined_Value))),
+      newParams,
       Seq(removeReturnDeadCode(stat))
     )
   }
