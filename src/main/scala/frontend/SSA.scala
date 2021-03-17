@@ -9,10 +9,9 @@ import frontend.Semantics.SymbolTable
 
 case class SSA(sTable: SymbolTable) {
   // <Identifier's name, (LHS unique identifier, RHS unique identifier)>
-  private var dict = new HashMap[String, (Int, Int)]
+  private var dict = new HashMap[String, (Int, Int, Int)]
   private var kvs = new HashMap[String, AssignRHS]
-  val INITIAL_LHS = 0
-  val INITIAL_RHS = 0
+  val INITIAL_DICT = 0
   val Undefined_Value = null
   val Undefined_Pos = null
   val Undefined_Map = null
@@ -58,10 +57,12 @@ case class SSA(sTable: SymbolTable) {
      is incremented by 1 and updated in dict. The string for the next unique
      identifier is returned. */
   private def addToDict(s: String): String = {
-    var (x, y) = dict.getOrElse(s, (INITIAL_LHS, INITIAL_RHS))
+    var (x, y, z) =
+      dict.getOrElse(s, (INITIAL_DICT, INITIAL_DICT, INITIAL_DICT))
     x += 1
     y += 1
-    dict += ((s, (x, y)))
+    z += 1
+    dict += ((s, (x, y, z)))
     x.toString + s
   }
 
@@ -69,7 +70,7 @@ case class SSA(sTable: SymbolTable) {
      PRE: the identifier is already in the hashmap DICT. */
   private def updateIdent(id: Ident): Ident = {
     val Ident(str, pos) = id
-    val (_, y) = dict(str)
+    val (_, y, _) = dict(str)
     Ident(y.toString + str, pos)
   }
 
@@ -88,7 +89,7 @@ case class SSA(sTable: SymbolTable) {
       }
     case ArrayElem(id @ Ident(s, _), es, pos) =>
       val arrayElemName = arrayElemIdentifier(s, es)
-      val (_, y) = dict(arrayElemName)
+      val (_, y, _) = dict(arrayElemName)
       toExpr(
         kvs.getOrElse(
           y.toString + arrayElemName,
@@ -115,7 +116,7 @@ case class SSA(sTable: SymbolTable) {
         transformExpr(id)
       } else {
         // Update id to use phi var
-        val (_, y) = dict(s)
+        val (_, y, _) = dict(s)
         Ident((v + y).toString + s, p)
       }
     case ae: ArrayElem => transformExpr(ae)
@@ -247,7 +248,7 @@ case class SSA(sTable: SymbolTable) {
     // n is the number of assignments in both if and else branches
     val (s, n) = x
     // y is the current number of assignments for the given variable
-    val (_, y) = dict(s)
+    val (_, y, _) = dict(s)
     val varName = y.toString + s
     // Get previously defined value from kvs
     val rhs = kvs.getOrElse(varName, Ident(varName, Undefined_Value))
@@ -258,7 +259,7 @@ case class SSA(sTable: SymbolTable) {
   /* Updates the PHI variable, given the map of the condition branch */
   private def updatePhiVar(x: (String, Int), map: Map[String, Int]): Stat = {
     val (s, _) = x
-    val (_, y) = dict(s)
+    val (_, y, _) = dict(s)
     val varName = y.toString + s
     val rhs = kvs.getOrElse(varName, Ident(varName, Undefined_Pos))
     if (map != Undefined_Map) {
@@ -300,7 +301,7 @@ case class SSA(sTable: SymbolTable) {
 
     // Remove phi var from kvs so if called upon later, ident is used
     mapList.foreach((x: (String, Int)) => {
-      val (_, y) = dict(x._1)
+      val (_, y, _) = dict(x._1)
       kvs -= y.toString + x._1
     })
 
@@ -313,7 +314,7 @@ case class SSA(sTable: SymbolTable) {
   private def getPhiVar(x: (String, Int)): (String, Ident) = {
     val (s, n) = x
     // y is the current number of assignments for the given variable
-    val (_, y) = dict(s)
+    val (_, y, _) = dict(s)
     (s, Ident((n + y).toString + s, Undefined_Pos))
   }
 
@@ -337,7 +338,7 @@ case class SSA(sTable: SymbolTable) {
       .map(getPhiVar)
       .foreach(tup => {
         val (v, i) = tup
-        val (_, y) = dict(v)
+        val (_, y, _) = dict(v)
         kvs += ((y.toString + v, i))
       })
 
@@ -347,7 +348,7 @@ case class SSA(sTable: SymbolTable) {
     // Remove phi var from kvs so if called upon later, ident is used
     mapList.foreach((x: (String, Int)) => {
       val (s, _) = x
-      val (_, y) = dict(s)
+      val (_, y, _) = dict(s)
       kvs -= y.toString + s
     })
 
@@ -359,7 +360,7 @@ case class SSA(sTable: SymbolTable) {
      If not present in kvs then it returns the most recent ident associated
      with the given heap variable. */
   private def getLatestHeapExpr(elemName: String): Expr = {
-    val (_, y) = dict(elemName)
+    val (_, y, _) = dict(elemName)
     val elemIdent = y.toString + elemName
     toExpr(kvs.getOrElse(elemIdent, Ident(elemIdent, Undefined_Pos)))
   }
@@ -437,6 +438,7 @@ case class SSA(sTable: SymbolTable) {
     s match {
       case EqIdent(t, id, r) =>
         val v = addToHashMap(id, r)
+        scopeRedefine(id)
         deadCodeElimination(r, EqIdent(t, v, r), buf)
       case EqAssign(id: Ident, r) =>
         val v = addToHashMap(id, r)
@@ -463,8 +465,27 @@ case class SSA(sTable: SymbolTable) {
       case Seq(statList)    => statList.flatMap(transformStat).to(ListBuffer)
       case Skip             => buf += Skip
       case While(cond, s)   => buf ++= transformWhile(cond, s)
-      case s                => buf += s
+      case Begin(s) =>
+        val transformedS = transformStat(s)
+        dict = dict.map(leavingScope)
+        buf ++= transformedS
+      case s => buf += s
     }
+  }
+
+  /* Update the scope assignment counter to 1 if variable is redeclared
+     (eqIdent) in scope  */
+  def scopeRedefine(id: Ident): Unit = {
+    val Ident(s, _) = id
+    var (x, y, z) = dict(s)
+    dict += ((s, (x, y, INITIAL_DICT + 1)))
+  }
+
+  /* Update the current var number to correct value when leaving scope.
+     Reset the scope counter to 0 when leaving scope. */
+  def leavingScope(kv: (String, (Int, Int, Int))): (String, (Int, Int, Int)) = {
+    val (s, (x, y, z)) = kv
+    (s, (x, y - z, INITIAL_DICT))
   }
 
   /* Removes any dead code after a return statement in STATS. */
