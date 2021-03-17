@@ -146,7 +146,32 @@ object Rules {
 
   /* FRONTEND */
 
-  sealed case class Program(fs: List[Func], s: Stat)
+  sealed case class Program(fs: List[Func], s: Stat) {
+    def printStats(s: Stat, str: String): StringBuilder = {
+      val sb = new StringBuilder()
+      s match {
+        case Seq(stats) =>
+          for (k <- stats) {
+            sb.append(s"$str $k\n")
+          }
+        case _ => sb.append(s)
+      }
+      sb
+    }
+    override def toString: String = {
+      val sb = new StringBuilder()
+      for (f <- fs) {
+        val Func(t, id, ps, stats) = f
+        sb.append(s"FUNCTION $id $ps \n")
+        sb.append(printStats(stats, "\t"))
+        sb.append(s"END OF FUNCTION\n")
+      }
+      sb.append("MAIN\n")
+      sb.append(printStats(s, ""))
+      sb.append("END MAIN\n")
+      sb.toString()
+    }
+  }
 
   sealed case class Func(
       t: Type,
