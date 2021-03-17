@@ -12,16 +12,24 @@ object Rules {
 
   // For runtime errors detected at compile time.
   sealed trait RuntimeErr extends Expr
+  // Integer overflow/underflow
   case object Overflow extends RuntimeErr {
-    override val pos: (Int, Int) = null
+    override val pos = null
     override def getType(sTable: SymbolTable) = null
   }
+  // Divide by zero
   case object ZeroDivision extends RuntimeErr {
-    override val pos: (Int, Int) = null
+    override val pos = null
     override def getType(sTable: SymbolTable) = null
   }
+  // Shifting with negative numbers
   case object NegShift extends RuntimeErr {
-    override val pos: (Int, Int) = null
+    override val pos = null
+    override def getType(sTable: SymbolTable) = null
+  }
+  // Arrary out of bounds check
+  case object Bounds extends RuntimeErr {
+    override val pos = null
     override def getType(sTable: SymbolTable) = null
   }
 
