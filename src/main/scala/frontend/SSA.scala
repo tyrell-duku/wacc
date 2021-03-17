@@ -344,6 +344,11 @@ case class SSA(sTable: SymbolTable) {
     // Transform the inner of the while, updating phi vars if necessary
     val e = transformExpr(cond, map)
 
+    e match {
+      case BoolLiter(false, _) => return stats
+      case _                   =>
+    }
+
     // Updates variables in kvs to phi variables
     map
       .map(getPhiVar)
