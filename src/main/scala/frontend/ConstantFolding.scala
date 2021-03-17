@@ -66,11 +66,11 @@ object ConstantFolding {
     case LogicalShiftRight(IntLiter(n1, p), IntLiter(n2, _), _) =>
       if (n1 < 0 || n2 < 0) null else evalConditionally(n1, n2, (_ >> _), p)
     // Recursive case (ArithOps & BitwiseOps)
-    case op: ArithOps =>
+    case op: ArithOps if op.containsNoIdent =>
       foldIntOps(op.map(foldIntOps))
-    case op: BitwiseOps =>
+    case op: BitwiseOps if op.containsNoIdent =>
       foldIntOps(op.map(foldIntOps))
-    case op: BitwiseNot =>
+    case op: BitwiseNot if op.containsNoIdent =>
       foldIntOps(op.map(foldIntOps))
   }
 
@@ -90,13 +90,12 @@ object ConstantFolding {
     case GT(CharLiter(NormalChar(c1), pos), CharLiter(NormalChar(c2), _), _) =>
       BoolLiter(c1 < c2, pos)
     case GT(IntLiter(n1, pos), IntLiter(n2, _), _) => BoolLiter(n1 < n2, pos)
-    case gt: GT                                    => foldBoolOps(gt.map(foldIntOps))
+    case gt: GT if gt.containsNoIdent              => foldBoolOps(gt.map(foldIntOps))
   }
 
-
   /* If unable to fold, return original Expr */
-  private def id: PartialFunction[Expr, Expr] = {
-    case e =>  e
+  private def id: PartialFunction[Expr, Expr] = { case e =>
+    e
   }
 
   val fold = (foldIntOps :: foldBoolOps :: id :: Nil).reduceLeft(_ orElse _)
