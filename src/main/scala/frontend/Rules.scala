@@ -382,6 +382,13 @@ object Rules {
       expected._2
     }
 
+    val containsNoIdent: Boolean = {
+      e match {
+        case _: Ident => false
+        case _        => true
+      }
+    }
+
     override def toString: String = unOperatorStr + e.toString
   }
 
@@ -491,6 +498,18 @@ object Rules {
     def isPtrArithmetic(leftT: Type, rightT: Type): Boolean = this match {
       case Plus(_, _, _) | Sub(_, _, _) => leftT.isPtr && (rightT == IntT)
       case _                            => false
+    }
+
+    val containsNoIdent: Boolean = {
+      val r = rExpr match {
+        case _: Ident => false
+        case _        => true
+      }
+      lExpr match {
+        case op: BinOp => op.containsNoIdent && r
+        case _: Ident  => false
+        case _         => true && r
+      }
     }
   }
 
