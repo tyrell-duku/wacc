@@ -23,10 +23,14 @@ case class SSA(sTable: SymbolTable) {
      identifier STR, then the values are updated for unique identifying. */
   private def addToHashMap(id: Ident, rhs: AssignRHS): Ident = {
     val Ident(str, pos) = id
-    val v = addToDict(str)
+    var v: String = null
     rhs match {
-      case e: Expr => kvs += ((v, transformExpr(e)))
+      case e: Expr =>
+        val transEx = transformExpr(e)
+        v = addToDict(str)
+        kvs += ((v, transEx))
       case arr: ArrayLiter =>
+        v = addToDict(str)
         kvs += ((v, arr))
         arr match {
           case ArrayLiter(Some(es), _) =>
@@ -37,6 +41,7 @@ case class SSA(sTable: SymbolTable) {
           case _ =>
         }
       case newpair: Newpair =>
+        v = addToDict(str)
         kvs += ((v, newpair))
         val Newpair(fst, snd, _) = newpair
         val fstName = addToDict(pairElemIdentifier(str, true))
@@ -44,8 +49,10 @@ case class SSA(sTable: SymbolTable) {
         val sndName = addToDict(pairElemIdentifier(str, false))
         kvs += ((sndName, transformExpr(snd)))
       case Fst(Ident(s, _), _) =>
+        v = addToDict(str)
         kvs += ((v, getLatestHeapExpr(s + "-fst")))
       case Snd(Ident(s, _), _) =>
+        v = addToDict(str)
         kvs += ((v, getLatestHeapExpr(s + "-snd")))
       case _ =>
 
