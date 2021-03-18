@@ -198,7 +198,16 @@ object Expressions {
       case e: BinOp =>
         instructions ++= transBinOp(e, rd)
       case Addr(ptr, _) =>
-        instructions ++= transExp(ptr, rd)
+        ptr match {
+          case id: Ident =>
+            val (index, t) = sTable.lookupAllCodeGen(id)
+            val spOffset = currentSP - index
+            instructions += Add(rd, SP, ImmInt(spOffset))
+          case DerefPtr(inner, _) =>
+            // Semantically invalid
+            instructions ++= transExp(inner, rd)
+          case _ => ???
+        }
       case DerefPtr(ptr, _) =>
         instructions ++= transExp(ptr, rd)
         instructions += Ldr(rd, RegAdd(rd))
