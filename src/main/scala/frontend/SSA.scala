@@ -267,14 +267,21 @@ case class SSA(sTable: SymbolTable) {
     }
     e match {
       // If lhs evaluates to an ident then use that var for read
-      case id: Ident => ListBuffer(Read(id))
+      case id: Ident =>
+        val (_, curAssignmentNum, _) = dict(varName)
+        // If read occurs within while loop and phi var is involved, increment
+        // dict
+        if (curAssignmentNum.toString + varName != id.s) {
+          addToDict(varName)
+        }
+        ListBuffer(Read(id))
       // Otherwise introduce next variable in dict for read
       case _ =>
         // add to dict but not kvs
-        val v = Ident(addToDict(varName), Undefined_Value)
+        val uniqueId = Ident(addToDict(varName), Undefined_Value)
         val t = getExprType(e)
         stackSize += getBaseTypeSize(t)
-        ListBuffer(EqIdent(t, v, e), Read(v))
+        ListBuffer(EqIdent(t, uniqueId, e), Read(uniqueId))
     }
   }
 
@@ -364,7 +371,7 @@ case class SSA(sTable: SymbolTable) {
         rhs
       )
     } else {
-      EqAssign(Ident(curAssignmentNum.toString + varName, Undefined_Pos), rhs)
+      EqAssign(Ident(uniqueId, Undefined_Pos), rhs)
     }
   }
 
