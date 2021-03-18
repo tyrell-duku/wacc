@@ -454,7 +454,7 @@ case class SSA(sTable: SymbolTable) {
         mapList.foreach(x => {
           val (varName, _) = x
           val (_, curAssignmentNum, _) = dict(varName)
-          kvs -= curAssignmentNum.toString + s
+          kvs -= curAssignmentNum.toString + varName
         })
         stats += While(e, Seq(ssa.toList))
         stats
