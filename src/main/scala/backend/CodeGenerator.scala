@@ -15,6 +15,7 @@ import backend.DefinedFuncs.PreDefinedFuncs.{
   Overflow,
   DivideByZero,
   NegativeShift,
+  ArrayBounds,
   PreDefFunc,
   RuntimeError
 }
@@ -98,16 +99,17 @@ object CodeGenerator {
   }
 
   /* Converts the frontend IR to the backend IR for runtime errors. */
-  private def frontToBackRuntimeErr(err: RuntimeErr): PreDefFunc = err match {
+  private def frontToBackRuntimeErr(err: Runtime): PreDefFunc = err match {
     case Rules.Overflow => Overflow
     case ZeroDivision   => DivideByZero
     case NegShift       => NegativeShift
+    case Bounds         => ArrayBounds
   }
 
   /* Translates a runtime error ERR found at compile time. Instantly throws a
      runtime error, so no need to add the predefined function for the runtime
      error ERR. */
-  def transRuntimeErr(e: RuntimeErr): ListBuffer[Instruction] = {
+  def transRuntimeErr(e: Runtime): ListBuffer[Instruction] = {
     val instructions = ListBuffer.empty[Instruction]
     val err = frontToBackRuntimeErr(e)
     addInstantRuntimeError(err)
@@ -140,7 +142,7 @@ object CodeGenerator {
         }
         nextInstructions
       case Begin(s)        => transBegin(s, instructions)
-      case err: RuntimeErr => instructions ++= transRuntimeErr(err)
+      case RuntimeErr(err) => instructions ++= transRuntimeErr(err)
       case _               => instructions
     }
   }
@@ -177,7 +179,7 @@ object CodeGenerator {
       case _: EqOps      => BoolT
       case _: LogicalOps => BoolT
       case _: BitwiseOps => IntT
-      case _: RuntimeErr => ???
+      case _: Runtime    => ???
     }
   }
 
