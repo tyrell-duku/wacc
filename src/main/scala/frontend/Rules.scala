@@ -907,7 +907,7 @@ object Rules {
       }
       ArrayT(null)
     }
-    def size(): Int = {
+    def len(): Int = {
       arr match {
         case Some(es) => es.size
         // empty

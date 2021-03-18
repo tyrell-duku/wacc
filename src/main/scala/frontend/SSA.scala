@@ -204,8 +204,8 @@ case class SSA(sTable: SymbolTable) {
         case id @ Ident(str, _) =>
           val Ident(varName, _) = transformExpr(id)
           kvs(varName) match {
-            case ArrayLiter(elems, _) => IntLiter(elems.size, pos)
-            case _                    => ???
+            case arrayLiter: ArrayLiter => IntLiter(arrayLiter.len, pos)
+            case _                      => ???
           }
         case ArrayElem(id, exprs, _) => fold(e.map(transformExpr))
         // Semantically incorrect
