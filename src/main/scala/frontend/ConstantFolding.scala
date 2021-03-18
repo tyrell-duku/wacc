@@ -43,7 +43,7 @@ object ConstantFolding {
     case n: IntLiter => n
     // UnOp folding
     // TODO: overflow
-    case Negation(IntLiter(n, _), pos)   => IntLiter(-n, pos)
+    case Negation(IntLiter(n, _), p) => evalConditionally(0, n, (_ - _), p)
     case od @ Ord(e, pos) if od.containsNoIdent =>
       val CharLiter(NormalChar(c), _) = fold(e)
       IntLiter(c.toInt, pos)
@@ -107,7 +107,7 @@ object ConstantFolding {
       BoolLiter(fold(l) == fold(r), pos)
     case neq @ NotEqual(l, r, pos) if neq.containsNoIdent =>
       BoolLiter(fold(l) != fold(r), pos)
-    case op: Not if op.containsNoIdent => foldBoolOps(op.map(foldBoolOps))
+    case op: Not if op.containsNoIdent       => foldBoolOps(op.map(foldBoolOps))
     case op: ComparOps if op.containsNoIdent => foldBoolOps(op.map(fold))
     case op: EqOps if op.containsNoIdent     => foldBoolOps(op.map(fold))
     case op: LogicalOps if op.containsNoIdent =>
