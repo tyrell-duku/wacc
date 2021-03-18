@@ -1,6 +1,7 @@
 package backend.CodeGeneration
 
 import backend.CodeGenerator._
+import backend.CodeGeneration.MemoryAllocs.freePointer
 import backend.DefinedFuncs.PreDefinedFuncs.{FreePair, FreeArray}
 import backend.DefinedFuncs.RuntimeErrors.addRuntimeError
 import backend.IR.InstructionSet._
@@ -24,8 +25,10 @@ object Free {
     t match {
       case _: Pair =>
         instructions += BranchLink(addRuntimeError(FreePair))
-      case _: ArrayT | _: PtrT =>
+      case _: ArrayT =>
         instructions += BranchLink(addRuntimeError(FreeArray))
+      case _: PtrT =>
+        instructions ++= freePointer(id)
       // Semantically incorrect
       case _ => ???
     }
