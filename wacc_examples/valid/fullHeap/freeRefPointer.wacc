@@ -1,0 +1,15 @@
+# Output:
+# true
+# false
+
+# Program:
+
+begin
+  bool *a = malloc(2);
+  *a = true;
+  *(a + 1) = false;
+  bool *b = a;
+  println *b;
+  println *(b + 1);
+  free b
+end

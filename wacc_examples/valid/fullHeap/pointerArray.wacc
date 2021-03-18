@@ -1,0 +1,16 @@
+# Output:
+# (pointer-address)
+# (array-address)
+
+# Program:
+
+begin
+  int[] *ptr = malloc(16);
+  *(ptr) = [1, 2, 4, 5];
+  *(ptr + 1) = [5, 3, 4];
+  *(ptr + 2) = [7, 8, 3, 1];
+  *(ptr + 3) = [3, 5, 0, 2];
+  println ptr;
+  println *ptr;
+  free ptr
+end
