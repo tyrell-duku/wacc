@@ -235,19 +235,19 @@ case class SSA(sTable: SymbolTable) {
         buf += EqIdent(t, ident, rhs)
     }
 
-  /* TODO */
+  /* Changes a given assign-rhs RHS into an Expr. */
   private def toExpr(rhs: AssignRHS): Expr = rhs match {
     case e: Expr => e
     // invalid
     case _ => ???
   }
 
-  /* TODO */
+  /* Creates a unique identifier for the element at position ES of array VARNAME */
   private def arrayElemIdentifier(varName: VarName, es: List[Expr]): VarName = {
     varName + "-" + es.map(transformExpr).mkString("-")
   }
 
-  /* TODO */
+  /* Creates a unique identifier for an element of pair VARNAME*/
   private def pairElemIdentifier(varName: VarName, isFst: Boolean): VarName = {
     val pairElemType = if (isFst) "fst" else "snd"
     varName + "-" + pairElemType
@@ -538,15 +538,17 @@ case class SSA(sTable: SymbolTable) {
     updatedPair
   }
 
-  private def updateRHS(r: AssignRHS, varName: String): AssignRHS = r match {
-    case ArrayLiter(Some(es), pos) =>
-      updateArrayLiter(es, pos, varName)
-    // Empty arrayLiter case, nothing to update
-    case ArrayLiter(None, pos) => ArrayLiter(None, pos)
-    case pair: Newpair         => updateNewpair(varName, pair)
-    case call: Call            => call
-    case _                     => ???
-  }
+  /* TODO */
+  private def updateRHS(rhs: AssignRHS, varName: VarName): AssignRHS =
+    rhs match {
+      case ArrayLiter(Some(es), pos) =>
+        updateArrayLiter(es, pos, varName)
+      // Empty arrayLiter case, nothing to update
+      case ArrayLiter(None, pos) => ArrayLiter(None, pos)
+      case pair: Newpair         => updateNewpair(varName, pair)
+      case call: Call            => call
+      case _                     => ???
+    }
 
   /* TODO */
   private def transExpArray(e: Expr, pf: (Expr => Stat)): ListBuffer[Stat] = {
@@ -666,6 +668,19 @@ case class SSA(sTable: SymbolTable) {
     buf
   }
 
+  /* Transforms a free statement into SSA form and checks for null runtime
+     errors.*/
+  private def transformFreeStat(stat: Stat): ListBuffer[Stat] = {
+    val Free(e) = stat
+    // Null reference runtime error
+    transExpArray(e, Free).map(s =>
+      s match {
+        case Free(_: PairLiter) => RuntimeErr(NullRef)
+        case _                  => s
+      }
+    )
+  }
+
   /* Transforms a given statement S into SSA form. */
   private def transformStat(stat: Stat): ListBuffer[Stat] = {
     val buf = ListBuffer.empty[Stat]
@@ -677,7 +692,7 @@ case class SSA(sTable: SymbolTable) {
       // TODO: EqAssign, deref ptr case
       case eqAssign: EqAssign => transformEqAssignStat(eqAssign)
       case Read(lhs)          => transformRead(lhs)
-      case Free(e)            => transExpArray(e, Free)
+      case _: Free            => transformFreeStat(stat)
       case Return(e)          => transExpArray(e, Return)
       case Exit(e)            => buf += Exit(transformExpr(e))
       case Print(e)           => transExpArray(e, Print)
