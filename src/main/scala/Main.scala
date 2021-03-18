@@ -23,12 +23,12 @@ object Main {
   }
 
   /* Exit with code 200 & print all semantic errors returned by
-     SemanticChecker. */
-  private def semanticExit(
-      errorMessages: ListBuffer[SemanticError]
+     SemanticChecker and Runtime errors detected at compile time. */
+  private def semanticExit[A](
+      errorMessages: ListBuffer[A]
   ): Nothing = {
     println("Semantic Error")
-    errorMessages.foreach((semErr: SemanticError) => println(semErr))
+    errorMessages.foreach(semErr => println(semErr))
     sys.exit(semanticError)
   }
 
@@ -60,7 +60,10 @@ object Main {
       case Success(ast) =>
         val sTable = semanticAnalysis(ast)
         val ssa = SSA(sTable)
-        val (prunedAst, stackSize) = ssa.toSSA(ast)
+        val (prunedAst, runtimes, stackSize) = ssa.toSSA(ast)
+        if (runtimes.nonEmpty) {
+          semanticExit(runtimes)
+        }
         val (data, instrs) =
           CodeGenerator.transProg(prunedAst, sTable, stackSize)
         ARMPrinter.execute(
