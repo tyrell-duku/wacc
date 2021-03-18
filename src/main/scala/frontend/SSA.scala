@@ -787,11 +787,23 @@ case class SSA(sTable: SymbolTable) {
   }
 
   /* Transforms a given program AST into SSA form. */
-  def toSSA(ast: Program): (Program, List[VarStackSize]) = {
+  def toSSA(
+      ast: Program
+  ): (Program, ListBuffer[Stat], List[VarStackSize]) = {
     val Program(fs, stat) = ast
     val (funcs, funcStackSizes) = fs.map(transformFunc).unzip
-    val p = Program(funcs, Seq(transformStat(stat).toList))
+    val transformedStats = transformStat(stat)
+    val p = Program(funcs, Seq(transformedStats.toList))
     val stackSizes = funcStackSizes :+ stackSize
-    (p, stackSizes)
+    (
+      p,
+      transformedStats.filter(s =>
+        s match {
+          case _: RuntimeErr => true
+          case _             => false
+        }
+      ),
+      stackSizes
+    )
   }
 }
