@@ -290,18 +290,18 @@ case class SSA(sTable: SymbolTable) {
       case id @ Ident(s, _) =>
         e = toExpr(kvs(updateIdent(id).s))
         s
-      case ae @ ArrayElem(id @ Ident(s, _), es, pos) =>
+      case ae @ ArrayElem(Ident(s, _), es, pos) =>
         if (transformExprArrayElem(ae) == Bounds) {
           return ListBuffer(RuntimeErr(Bounds))
         }
         val aeName = arrayElemIdentifier(s, es)
         e = getLatestHeapExpr(aeName)
         aeName
-      case Fst(id @ Ident(s, _), _) =>
+      case Fst(Ident(s, _), _) =>
         val fstName = pairElemIdentifier(s, Is_Fst)
         e = getLatestHeapExpr(fstName)
         fstName
-      case Snd(id @ Ident(s, _), _) =>
+      case Snd(Ident(s, _), _) =>
         val sndName = pairElemIdentifier(s, Not_Fst)
         e = getLatestHeapExpr(sndName)
         sndName
@@ -310,6 +310,7 @@ case class SSA(sTable: SymbolTable) {
       case _ => ???
     }
     e match {
+      case NullRef => ListBuffer(RuntimeErr(NullRef))
       // If lhs evaluates to an ident then use that var for read
       case id: Ident =>
         val (_, curAssignmentNum, _) = dict(varName)
@@ -527,9 +528,13 @@ case class SSA(sTable: SymbolTable) {
      If not present in kvs then it returns the most recent ident associated
      with the given heap variable. */
   private def getLatestHeapExpr(elemName: VarName): Expr = {
-    val (_, curAssignmentNum, _) = dict(elemName)
-    val elemIdent = curAssignmentNum.toString + elemName
-    toExpr(kvs.getOrElse(elemIdent, Ident(elemIdent, Undefined_Pos)))
+    if (!dict.contains(elemName)) {
+      NullRef
+    } else {
+      val (_, curAssignmentNum, _) = dict(elemName)
+      val elemIdent = curAssignmentNum.toString + elemName
+      toExpr(kvs.getOrElse(elemIdent, Ident(elemIdent, Undefined_Pos)))
+    }
   }
 
   /* Updates the elements of an arrayLiter using the updated arrayElem values
