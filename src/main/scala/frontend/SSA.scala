@@ -69,6 +69,28 @@ case class SSA(sTable: SymbolTable) {
     uniqueId
   }
 
+  /* Adds the pair-elem to the kvs hash map or NullRef if a null pointer runtime
+     error. */
+  private def addPairElemOrNull(
+      uniqueId: VarName,
+      rhsId: Ident,
+      isFst: Boolean
+  ): Unit = {
+    val Ident(varName, _) = rhsId
+    val Ident(rhsUniqueId, _) = kvs(varName)
+    kvs(rhsUniqueId) match {
+      // Derefencing a null pointer runtime error
+      case _: PairLiter => kvs += ((uniqueId, NullRef))
+      case _ =>
+        kvs += (
+          (
+            uniqueId,
+            getLatestHeapExpr(pairElemIdentifier(varName, isFst))
+          )
+        )
+    }
+  }
+
   /* Updates the value for a PairElem PAIRELEM in the key value hashmap. */
   private def addPairElemToHashMap(
       pairelem: PairElem,
@@ -76,21 +98,10 @@ case class SSA(sTable: SymbolTable) {
   ): VarName = {
     val uniqueId = addToDict(originalStr)
     pairelem match {
-      case Fst(Ident(varName, _), _) =>
-        kvs += (
-          (
-            uniqueId,
-            getLatestHeapExpr(pairElemIdentifier(varName, Is_Fst))
-          )
-        )
-      case Snd(Ident(varName, _), _) =>
-        kvs += (
-          (
-            uniqueId,
-            getLatestHeapExpr(pairElemIdentifier(varName, Not_Fst))
-          )
-        )
-      // Semantically incorrect
+      case Fst(rhsId @ Ident(varName, _), _) =>
+        addPairElemOrNull(uniqueId, rhsId, Is_Fst)
+      case Snd(rhsId @ Ident(varName, _), _) =>
+        addPairElemOrNull(uniqueId, rhsId, Not_Fst)
       case _ => ???
     }
     uniqueId
@@ -112,7 +123,9 @@ case class SSA(sTable: SymbolTable) {
         uniqueId = addArrayLiterToHashMap(arr, originalStr)
       case newpair: Newpair =>
         uniqueId = addNewPairToHashMap(newpair, originalStr)
-      case pairelem: PairElem => addPairElemToHashMap(pairelem, originalStr)
+      case pairelem: PairElem =>
+        uniqueId = addPairElemToHashMap(pairelem, originalStr)
+        updatedRhs = kvs(uniqueId)
       case call: Call =>
         updatedRhs = call.map(transformExpr)
         uniqueId = addToDict(originalStr)
