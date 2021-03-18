@@ -362,16 +362,19 @@ case class SSA(sTable: SymbolTable) {
     val (_, curAssignmentNum, _) = dict(varName)
     val uniqueId = curAssignmentNum.toString + varName
     val rhs = kvs.getOrElse(uniqueId, Ident(uniqueId, Undefined_Pos))
+    var lhs = Ident(uniqueId, Undefined_Pos)
     if (map != Undefined_Map) {
-      EqAssign(
-        Ident(
-          (map.getOrElse(varName, 0) + curAssignmentNum).toString + varName,
-          Undefined_Pos
-        ),
-        rhs
+      lhs = Ident(
+        (map.getOrElse(varName, 0) + curAssignmentNum).toString + varName,
+        Undefined_Pos
       )
+    }
+    // LHS = RHS if the phi var is used for a read, therefore EqAssign is
+    // redundant
+    if (lhs != rhs) {
+      EqAssign(lhs, rhs)
     } else {
-      EqAssign(Ident(uniqueId, Undefined_Pos), rhs)
+      null
     }
   }
 
@@ -400,13 +403,13 @@ case class SSA(sTable: SymbolTable) {
       case _ =>
         currSTable = currSTable.getNextScopeSSA
         val ssa1 =
-          transformStat(s1) ++ mapIf.toList.map(x => updatePhiVar(x, mapElse))
+          transformStat(s1) ++ mapIf.toList.map(x => updatePhiVar(x, mapElse)).filter(x => x != null)
         currSTable = currSTable.getPrevScope
         currSTable = currSTable.getNextScopeSSA
         val ssa2 =
           transformStat(s2) ++ mapElse.toList.map(x =>
             updatePhiVar(x, Undefined_Map)
-          )
+          ).filter(x => x != null)
         currSTable = currSTable.getPrevScope
         val ifStat = If(e, Seq(ssa1.toList), Seq(ssa2.toList))
         // Remove phi var from kvs so if called upon later, ident is used
@@ -455,7 +458,7 @@ case class SSA(sTable: SymbolTable) {
 
         currSTable = currSTable.getNextScopeSSA
         val ssa =
-          transformStat(s) ++ mapList.map(x => updatePhiVar(x, Undefined_Map))
+          transformStat(s) ++ mapList.map(x => updatePhiVar(x, Undefined_Map)).filter(x => x != null)
         currSTable = currSTable.getPrevScope
         // Remove phi var from kvs so if called upon later, ident is used
         mapList.foreach(x => {
