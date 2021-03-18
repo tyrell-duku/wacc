@@ -669,8 +669,8 @@ case class SSA(sTable: SymbolTable) {
   }
 
   /* Transforms a free statement into SSA form and checks for null runtime
-     errors.*/
-  private def transformFreeStat(stat: Stat): ListBuffer[Stat] = {
+     errors. */
+  private def transformFree(stat: Stat): ListBuffer[Stat] = {
     val Free(e) = stat
     // Null reference runtime error
     transExpArray(e, Free).map(s =>
@@ -692,7 +692,7 @@ case class SSA(sTable: SymbolTable) {
       // TODO: EqAssign, deref ptr case
       case eqAssign: EqAssign => transformEqAssignStat(eqAssign)
       case Read(lhs)          => transformRead(lhs)
-      case _: Free            => transformFreeStat(stat)
+      case _: Free            => transformFree(stat)
       case Return(e)          => transExpArray(e, Return)
       case Exit(e)            => buf += Exit(transformExpr(e))
       case Print(e)           => transExpArray(e, Print)
@@ -752,13 +752,5 @@ case class SSA(sTable: SymbolTable) {
     val stackSizes = funcStackSizes :+ stackSize
     println(p)
     (p, stackSizes)
-  }
-
-  def printHash(): Unit = {
-    println("\n\nKVS IS COMING")
-    for (e <- kvs) {
-      println(e)
-    }
-    println("END\n\n")
   }
 }
