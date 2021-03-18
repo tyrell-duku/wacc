@@ -30,6 +30,8 @@ case class SSA(sTable: SymbolTable) {
   val Undefined_Map = null
   val Is_Fst = true
   val Not_Fst = false
+  val Empty_Array_Szie = 0
+
   var stackSize = 0
 
   /* Adds the NewPair NEWPAIR to the key value hash map. */
@@ -197,16 +199,16 @@ case class SSA(sTable: SymbolTable) {
     case Len(exp, pos) =>
       exp match {
         case id @ Ident(str, _) =>
-          val newId @ Ident(varName, _) = transformExpr(id)
+          val Ident(varName, _) = transformExpr(id)
           kvs(varName) match {
-            case ArrayLiter(Some(elems), _) => IntLiter(elems.size, pos)
-            case ArrayLiter(None, _)        => IntLiter(0, pos)
-            case _                          => ???
+            case ArrayLiter(elems, _) => IntLiter(elems.size, pos)
+            case _                    => ???
           }
         case ArrayElem(id, exprs, _) => fold(e.map(transformExpr))
-        case _                       => ???
+        // Semantically incorrect
+        case _ => ???
       }
-    // All operators
+    // All other operators
     case _ => fold(e.map(transformExpr))
   }
 
