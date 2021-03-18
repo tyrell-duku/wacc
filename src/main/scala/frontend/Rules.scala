@@ -16,29 +16,40 @@ object Rules {
   case object Overflow extends Runtime {
     override val pos = null
     override def getType(sTable: SymbolTable) = null
+    override def toString = s"Integer overflow at $pos."
   }
   // Divide by zero
   case object ZeroDivision extends Runtime {
     override val pos = null
     override def getType(sTable: SymbolTable) = null
+    override def toString = s"Divide by zero error at $pos. Cannot divide by 0."
   }
   // Shifting with negative numbers
   case object NegShift extends Runtime {
     override val pos = null
     override def getType(sTable: SymbolTable) = null
+    override def toString =
+      s"Invalid operation at $pos: Operands of shifts must be positive."
   }
   // Arrary out of bounds check
   case object Bounds extends Runtime {
     override val pos = null
     override def getType(sTable: SymbolTable) = null
+    override def toString =
+      s"Array out of bounds error at $pos: Cannot access negative index/" +
+        "index larger than array size"
   }
   // Reference to null
   case object NullRef extends Runtime {
     override val pos = null
     override def getType(sTable: SymbolTable) = null
+    override def toString =
+      s"Attempt to dereference a null reference at $pos."
   }
 
-  case class RuntimeErr(err: Runtime) extends Stat
+  case class RuntimeErr(err: Runtime) extends Stat {
+    override def toString = err.toString()
+  }
 
   sealed trait MemoryAlloc extends AssignRHS
   case class Malloc(size: Expr, pos: (Int, Int)) extends MemoryAlloc {
@@ -907,7 +918,8 @@ object Rules {
       }
       ArrayT(null)
     }
-    def len(): Int = {
+    // length of the list of expressions arr
+    def len: Int = {
       arr match {
         case Some(es) => es.size
         // empty
