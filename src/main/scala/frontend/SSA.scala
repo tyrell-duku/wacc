@@ -104,9 +104,9 @@ case class SSA(sTable: SymbolTable) {
     var updatedRhs = rhs
     rhs match {
       case e: Expr =>
-        val transEx = transformExpr(e)
+        updatedRhs = transformExpr(e)
         uniqueId = addToDict(originalStr)
-        kvs += ((uniqueId, transEx))
+        kvs += ((uniqueId, updatedRhs))
       case arr: ArrayLiter =>
         uniqueId = addArrayLiterToHashMap(arr, originalStr)
       case newpair: Newpair =>
@@ -213,6 +213,8 @@ case class SSA(sTable: SymbolTable) {
       buf: ListBuffer[Stat]
   ): ListBuffer[Stat] =
     rhs match {
+      case err: Runtime =>
+        buf += RuntimeErr(err)
       case _: Expr | _: ArrayLiter | _: Newpair | _: PairElem => buf
       case _ =>
         stackSize += getBaseTypeSize(t)
@@ -615,18 +617,18 @@ case class SSA(sTable: SymbolTable) {
         val (v, rhs) = addToHashMap(id, r)
         scopeRedefine(id)
         deadCodeElimination(rhs, t, v, buf)
-      case assign: EqAssign => transformEqAssignStat(assign)
       // TODO: EqAssign, deref ptr case
-      case Read(lhs)         => transformRead(lhs)
-      case Free(e)           => transExpArray(e, Free)
-      case Return(e)         => transExpArray(e, Return)
-      case Exit(e)           => buf += Exit(transformExpr(e))
-      case Print(e)          => transExpArray(e, Print)
-      case PrintLn(e)        => transExpArray(e, PrintLn)
-      case If(cond, s1, s2)  => transformIf(cond, s1, s2)
-      case Seq(statList)     => transformSeqStat(statList)
-      case Skip              => buf += Skip
-      case While(cond, stat) => transformWhile(cond, stat)
+      case eqAssign: EqAssign => transformEqAssignStat(eqAssign)
+      case Read(lhs)          => transformRead(lhs)
+      case Free(e)            => transExpArray(e, Free)
+      case Return(e)          => transExpArray(e, Return)
+      case Exit(e)            => buf += Exit(transformExpr(e))
+      case Print(e)           => transExpArray(e, Print)
+      case PrintLn(e)         => transExpArray(e, PrintLn)
+      case If(cond, s1, s2)   => transformIf(cond, s1, s2)
+      case Seq(statList)      => transformSeqStat(statList)
+      case Skip               => buf += Skip
+      case While(cond, stat)  => transformWhile(cond, stat)
       case Begin(stat) =>
         currSTable = currSTable.getNextScopeSSA
         val transformedS = transformStat(stat)
