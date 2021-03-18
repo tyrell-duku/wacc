@@ -1,6 +1,7 @@
 package backend.CodeGeneration
 
 import backend.CodeGeneration.Expressions.transExp
+import backend.CodeGeneration.MemoryAllocs.transPointerElem
 import backend.CodeGenerator._
 import backend.CodeGenerator
 import backend.DefinedFuncs.PreDefinedFuncs.ArrayBounds
@@ -53,9 +54,7 @@ object Arrays {
     // Handles nested array elems
     for (exp <- es) {
       if (t.isPtr) {
-        instructions ++= transExp(exp, nextReg)
-        instructions += Add(reg, reg, nextReg)
-        instructions += Ldr(reg, RegAdd(reg))
+        instructions ++= transPointerElem(exp, reg, nextReg)
       } else {
         // Gets type of array elem at current depth
         t = getInnerType(t)

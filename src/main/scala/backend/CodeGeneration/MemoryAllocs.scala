@@ -82,6 +82,14 @@ object MemoryAllocs {
     instructions
   }
 
+  def transPointerElem(elemExp: Expr, reg: Reg, nextReg: Reg) = {
+    val instructions = ListBuffer.empty[Instruction]
+    instructions ++= transExp(elemExp, nextReg)
+    // TODO: Pointer arithmetic
+    instructions += Add(reg, reg, nextReg)
+    instructions += Ldr(reg, RegAdd(reg))
+  }
+
   /* Returns the next unique psuedo address to use and increments the
      counter. */
   private def getNextAddress: Int = {
