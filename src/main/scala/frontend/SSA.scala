@@ -12,14 +12,16 @@ case class SSA(sTable: SymbolTable) {
   // Stack depth needed to store all variables in scope
   type VarStackSize = Int
   /* Type aliases */
+  type VarName = String
   type UniqueNum = Int
   type CurrentAssignmentNum = Int
   type NumOfAssigns = Int
+  type IdNums = (UniqueNum, CurrentAssignmentNum, NumOfAssigns)
   // hash map for unique identifying
   private var dict =
-    new HashMap[String, (UniqueNum, CurrentAssignmentNum, NumOfAssigns)]
+    new HashMap[VarName, IdNums]
   // (key, values) hash map for constant propagation
-  private var kvs = new HashMap[String, AssignRHS]
+  private var kvs = new HashMap[VarName, AssignRHS]
   private var currSTable = sTable
   /* Constants */
   val Initial_Id_Num = 0
@@ -33,8 +35,8 @@ case class SSA(sTable: SymbolTable) {
   /* Adds the NewPair NEWPAIR to the key value hash map. */
   private def addNewPairToHashMap(
       newpair: Newpair,
-      originalStr: String
-  ): String = {
+      originalStr: VarName
+  ): VarName = {
     val uniqueId = addToDict(originalStr)
     kvs += ((uniqueId, newpair))
     val Newpair(fst, snd, _) = newpair
@@ -51,8 +53,8 @@ case class SSA(sTable: SymbolTable) {
      array element to the dict and key value hash map. */
   private def addArrayLiterToHashMap(
       arr: ArrayLiter,
-      originalStr: String
-  ): String = {
+      originalStr: VarName
+  ): VarName = {
     val uniqueId = addToDict(originalStr)
     kvs += ((uniqueId, arr))
     arr match {
@@ -69,14 +71,24 @@ case class SSA(sTable: SymbolTable) {
   /* Updates the value for a PairElem PAIRELEM in the key value hashmap. */
   private def addPairElemToHashMap(
       pairelem: PairElem,
-      originalStr: String
-  ): String = {
+      originalStr: VarName
+  ): VarName = {
     val uniqueId = addToDict(originalStr)
     pairelem match {
-      case Fst(Ident(s, _), _) =>
-        kvs += ((uniqueId, getLatestHeapExpr(pairElemIdentifier(s, Is_Fst))))
-      case Snd(Ident(s, _), _) =>
-        kvs += ((uniqueId, getLatestHeapExpr(pairElemIdentifier(s, Not_Fst))))
+      case Fst(Ident(varName, _), _) =>
+        kvs += (
+          (
+            uniqueId,
+            getLatestHeapExpr(pairElemIdentifier(varName, Is_Fst))
+          )
+        )
+      case Snd(Ident(varName, _), _) =>
+        kvs += (
+          (
+            uniqueId,
+            getLatestHeapExpr(pairElemIdentifier(varName, Not_Fst))
+          )
+        )
       // Semantically incorrect
       case _ => ???
     }
@@ -88,7 +100,7 @@ case class SSA(sTable: SymbolTable) {
      identifier STR, then the values are updated for unique identifying. */
   private def addToHashMap(id: Ident, rhs: AssignRHS): (Ident, AssignRHS) = {
     val Ident(originalStr, pos) = id
-    var uniqueId: String = null
+    var uniqueId: VarName = null
     var updatedRhs = rhs
     rhs match {
       case e: Expr =>
@@ -111,7 +123,7 @@ case class SSA(sTable: SymbolTable) {
   /* Add the string s to dict hashmap. If already present then variable counter
      is incremented by 1 and updated in dict. The string for the next unique
      identifier is returned. */
-  private def addToDict(s: String): String = {
+  private def addToDict(s: VarName): VarName = {
     var (x, y, z) =
       dict.getOrElse(s, (Initial_Id_Num, Initial_Id_Num, Initial_Id_Num))
     x += 1
@@ -125,8 +137,8 @@ case class SSA(sTable: SymbolTable) {
      PRE: the identifier is already in the hashmap DICT. */
   private def updateIdent(id: Ident): Ident = {
     val Ident(originalStr, pos) = id
-    val (_, y, _) = dict(originalStr)
-    Ident(y.toString + originalStr, pos)
+    val (_, curAssignmentNum, _) = dict(originalStr)
+    Ident(curAssignmentNum.toString + originalStr, pos)
   }
 
   /* Transforms an ident ID into SSA form and applies constant propagation. */
@@ -137,8 +149,8 @@ case class SSA(sTable: SymbolTable) {
     rhs match {
       // If kvs returns a different updated ident name (while case) then
       // update, otherwise return prev updated ident
-      case Ident(str, _) =>
-        if (str.endsWith(s)) toExpr(rhs) else id2
+      case Ident(varName, _) =>
+        if (varName.endsWith(s)) toExpr(rhs) else id2
       case _: Call => id2
       case _       => toExpr(rhs)
     }
@@ -150,11 +162,11 @@ case class SSA(sTable: SymbolTable) {
     val arrayElemName = arrayElemIdentifier(s, es)
     // If elem not in dict then out of bounds
     dict.get(arrayElemName) match {
-      case Some((_, y, _)) =>
+      case Some((_, curAssignmentNum, _)) =>
         toExpr(
           kvs.getOrElse(
-            y.toString + arrayElemName,
-            Ident(y.toString + arrayElemName, Undefined_Pos)
+            curAssignmentNum.toString + arrayElemName,
+            Ident(curAssignmentNum.toString + arrayElemName, Undefined_Pos)
           )
         )
       case None => Bounds
@@ -173,25 +185,26 @@ case class SSA(sTable: SymbolTable) {
   }
 
   /* Transforms an expression E for the condition of a while loop. */
-  private def transformExpr(e: Expr, map: Map[String, Int]): Expr = e match {
-    case sizeof: SizeOf   => sizeof
-    case id @ Ident(s, p) =>
-      // If ident not present in map, it is not changed in while loop so,
-      // transformExpr as usual
-      map.get(s) match {
-        case Some(assignmentNum) =>
-          // Update id to use phi var
-          val (_, curId, _) = dict(s)
-          Ident((assignmentNum + curId).toString + s, p)
-        case None => transformExpr(id)
-      }
-    case ae: ArrayElem => transformExpr(ae)
-    case liter: Liter  => liter
-    // All operators
-    case _ => fold(e.map(exp => transformExpr(exp, map)))
-  }
+  private def transformExpr(e: Expr, map: Map[VarName, NumOfAssigns]): Expr =
+    e match {
+      case sizeof: SizeOf   => sizeof
+      case id @ Ident(s, p) =>
+        // If ident not present in map, it is not changed in while loop so,
+        // transformExpr as usual
+        map.get(s) match {
+          case Some(assignmentNum) =>
+            // Update id to use phi var
+            val (_, curId, _) = dict(s)
+            Ident((assignmentNum + curId).toString + s, p)
+          case None => transformExpr(id)
+        }
+      case ae: ArrayElem => transformExpr(ae)
+      case liter: Liter  => liter
+      // All operators
+      case _ => fold(e.map(exp => transformExpr(exp, map)))
+    }
 
-  /* Potentially removes identifiers that are no longer required due future 
+  /* Potentially removes identifiers that are no longer required due future
      constant propagation. */
   private def deadCodeElimination(
       rhs: AssignRHS,
@@ -205,7 +218,7 @@ case class SSA(sTable: SymbolTable) {
         stackSize += getBaseTypeSize(t)
         buf += EqIdent(t, ident, rhs)
     }
-  
+
   /* TODO */
   private def toExpr(rhs: AssignRHS): Expr = rhs match {
     case e: Expr => e
@@ -214,12 +227,12 @@ case class SSA(sTable: SymbolTable) {
   }
 
   /* TODO */
-  private def arrayElemIdentifier(varName: String, es: List[Expr]): String = {
+  private def arrayElemIdentifier(varName: VarName, es: List[Expr]): VarName = {
     varName + "-" + es.map(transformExpr).mkString("-")
   }
 
   /* TODO */
-  private def pairElemIdentifier(varName: String, isFst: Boolean): String = {
+  private def pairElemIdentifier(varName: VarName, isFst: Boolean): VarName = {
     val pairElemType = if (isFst) "fst" else "snd"
     varName + "-" + pairElemType
   }
@@ -231,7 +244,10 @@ case class SSA(sTable: SymbolTable) {
       case id @ Ident(s, _) =>
         e = toExpr(kvs(updateIdent(id).s))
         s
-      case ArrayElem(id @ Ident(s, _), es, pos) =>
+      case ae @ ArrayElem(id @ Ident(s, _), es, pos) =>
+        if (transformExprArrayElem(ae) == Bounds) {
+          return ListBuffer(RuntimeErr(Bounds))
+        }
         val aeName = arrayElemIdentifier(s, es)
         e = getLatestHeapExpr(aeName)
         aeName
@@ -264,8 +280,8 @@ case class SSA(sTable: SymbolTable) {
      scope has within an IF, ELSE or WHILE statement. */
   private def countVariables(
       stat: Stat,
-      map: Map[String, NumOfAssigns],
-      mapScope: Map[String, NumOfAssigns]
+      map: Map[VarName, NumOfAssigns],
+      mapScope: Map[VarName, NumOfAssigns]
   ): Unit = {
     stat match {
       case EqAssign(Ident(s, _), _) => incrementMap(s, map, mapScope)
@@ -294,9 +310,9 @@ case class SSA(sTable: SymbolTable) {
   /* Function called by countVariables to increment the number for each
      variable if and only if it has been declared in higher scope. */
   private def incrementMap(
-      s: String,
-      map: Map[String, NumOfAssigns],
-      mapScope: Map[String, NumOfAssigns]
+      s: VarName,
+      map: Map[VarName, NumOfAssigns],
+      mapScope: Map[VarName, NumOfAssigns]
   ): Unit = {
     // Only add to map if already declared in higher scope
     if (dict.contains(s)) {
@@ -309,10 +325,9 @@ case class SSA(sTable: SymbolTable) {
     }
   }
 
-
   /* If a variable from higher scope is changed within an if or else branch,
      introduce new variable before if statement to account for phi. */
-  private def createPhiVar(x: (String, NumOfAssigns)): Stat = {
+  private def createPhiVar(x: (VarName, NumOfAssigns)): Stat = {
     // n is the number of assignments in both if and else branches
     val (s, numOfAssigns) = x
     // y is the current number of assignments for the given variable
@@ -331,23 +346,23 @@ case class SSA(sTable: SymbolTable) {
 
   /* Updates the PHI variable, given the map of the condition branch */
   private def updatePhiVar(
-      x: (String, NumOfAssigns),
-      map: Map[String, NumOfAssigns]
+      x: (VarName, NumOfAssigns),
+      map: Map[VarName, NumOfAssigns]
   ): Stat = {
-    val (str, _) = x
-    val (_, curAssignmentNum, _) = dict(str)
-    val varName = curAssignmentNum.toString + str
-    val rhs = kvs.getOrElse(varName, Ident(varName, Undefined_Pos))
+    val (varName, _) = x
+    val (_, curAssignmentNum, _) = dict(varName)
+    val uniqueId = curAssignmentNum.toString + varName
+    val rhs = kvs.getOrElse(uniqueId, Ident(uniqueId, Undefined_Pos))
     if (map != Undefined_Map) {
       EqAssign(
         Ident(
-          (map.getOrElse(str, 0) + curAssignmentNum).toString + str,
+          (map.getOrElse(varName, 0) + curAssignmentNum).toString + varName,
           Undefined_Pos
         ),
         rhs
       )
     } else {
-      EqAssign(Ident(curAssignmentNum.toString + str, Undefined_Pos), rhs)
+      EqAssign(Ident(curAssignmentNum.toString + varName, Undefined_Pos), rhs)
     }
   }
 
@@ -355,11 +370,11 @@ case class SSA(sTable: SymbolTable) {
   private def transformIf(cond: Expr, s1: Stat, s2: Stat): ListBuffer[Stat] = {
     val stats = ListBuffer.empty[Stat]
     // Number of re-assignments of pre-declared vars in IF and ELSE branches
-    val map = Map.empty[String, NumOfAssigns]
+    val map = Map.empty[VarName, NumOfAssigns]
     // Number of re-assignments of pre-declared vars in IF branch
-    val mapIf = Map.empty[String, NumOfAssigns]
+    val mapIf = Map.empty[VarName, NumOfAssigns]
     // Number of re-assignments of pre-declared vars in ELSE branch
-    val mapElse = Map.empty[String, NumOfAssigns]
+    val mapElse = Map.empty[VarName, NumOfAssigns]
     // Count var re-assignments into map, mapIf & mapElse
     countVariables(s1, map, mapIf)
     countVariables(s2, map, mapElse)
@@ -396,19 +411,19 @@ case class SSA(sTable: SymbolTable) {
   }
 
   /* TODO */
-  private def getPhiVar(x: (String, NumOfAssigns)): (String, Ident) = {
-    val (str, numOfAssigns) = x
-    val (_, curAssignmentNum, _) = dict(str)
+  private def getPhiVar(x: (VarName, NumOfAssigns)): (VarName, Ident) = {
+    val (varName, numOfAssigns) = x
+    val (_, curAssignmentNum, _) = dict(varName)
     (
-      str,
-      Ident((numOfAssigns + curAssignmentNum).toString + str, Undefined_Pos)
+      varName,
+      Ident((numOfAssigns + curAssignmentNum).toString + varName, Undefined_Pos)
     )
   }
 
   private def transformWhile(cond: Expr, s: Stat): ListBuffer[Stat] = {
     val stats = ListBuffer.empty[Stat]
     // Number of re-assignments of pre-declared vars within WHILE
-    val map = Map.empty[String, NumOfAssigns]
+    val map = Map.empty[VarName, NumOfAssigns]
     // Count var re-assignments into map
     countVariables(s, map, Undefined_Map)
     // Create the PHI variables if necessary
@@ -435,8 +450,8 @@ case class SSA(sTable: SymbolTable) {
         currSTable = currSTable.getPrevScope
         // Remove phi var from kvs so if called upon later, ident is used
         mapList.foreach(x => {
-          val (str, _) = x
-          val (_, curAssignmentNum, _) = dict(str)
+          val (varName, _) = x
+          val (_, curAssignmentNum, _) = dict(varName)
           kvs -= curAssignmentNum.toString + s
         })
         stats += While(e, Seq(ssa.toList))
@@ -447,7 +462,7 @@ case class SSA(sTable: SymbolTable) {
   /* Function used to retrieve the latest value of a heap variable in kvs.
      If not present in kvs then it returns the most recent ident associated
      with the given heap variable. */
-  private def getLatestHeapExpr(elemName: String): Expr = {
+  private def getLatestHeapExpr(elemName: VarName): Expr = {
     val (_, curAssignmentNum, _) = dict(elemName)
     val elemIdent = curAssignmentNum.toString + elemName
     toExpr(kvs.getOrElse(elemIdent, Ident(elemIdent, Undefined_Pos)))
@@ -458,7 +473,7 @@ case class SSA(sTable: SymbolTable) {
   private def updateArrayLiter(
       elems: List[Expr],
       pos: (Int, Int),
-      arrName: String
+      arrName: VarName
   ): AssignRHS = {
     val updatedElems = ListBuffer.empty[Expr]
     // Gets most up to date array elem values from kvs or its corresponding
@@ -476,7 +491,7 @@ case class SSA(sTable: SymbolTable) {
 
   /* Updates the elements of a Newpair using the updated fst and snd values
      from the kvs. */
-  private def updateNewpair(pairName: String, oldPair: Newpair): AssignRHS = {
+  private def updateNewpair(pairName: VarName, oldPair: Newpair): AssignRHS = {
     val Newpair(_, _, pos) = oldPair
     // Gets most up to date values for fst and snd from kvs
     val updatedFst = getLatestHeapExpr(pairName + "-fst")
@@ -489,10 +504,11 @@ case class SSA(sTable: SymbolTable) {
     updatedPair
   }
 
+  /* TODO */
   private def transExpArray(e: Expr, pf: (Expr => Stat)): ListBuffer[Stat] = {
     val buf = ListBuffer.empty[Stat]
     e match {
-      case id @ Ident(s, _) =>
+      case id @ Ident(varName, _) =>
         var id2 @ Ident(x, _) = updateIdent(id)
         val rhs = kvs.getOrElse(x, id2)
         rhs match {
@@ -502,10 +518,11 @@ case class SSA(sTable: SymbolTable) {
           // of statements
           case r =>
             val rhsUpdated = r match {
-              case ArrayLiter(Some(es), pos) => updateArrayLiter(es, pos, s)
+              case ArrayLiter(Some(es), pos) =>
+                updateArrayLiter(es, pos, varName)
               // Empty arrayLiter case, nothing to update
               case ArrayLiter(None, pos)          => ArrayLiter(None, pos)
-              case pair: Newpair                  => updateNewpair(s, pair)
+              case pair: Newpair                  => updateNewpair(varName, pair)
               case call @ Call(funcId, args, pos) => call
               case _                              => ???
             }
@@ -523,16 +540,47 @@ case class SSA(sTable: SymbolTable) {
   }
 
   /* Partial function to retrieve runtime expression from inside a statement. */
-  private def getRuntimeExpr: PartialFunction[Stat, Runtime] = {
-    case EqIdent(_, _, err: Runtime) => err
-    case EqAssign(_, err: Runtime)   => err
-    case Free(err: Runtime)          => err
-    case Return(err: Runtime)        => err
-    case Exit(err: Runtime)          => err
-    case Print(err: Runtime)         => err
-    case PrintLn(err: Runtime)       => err
-    case If(err: Runtime, _, _)      => err
-    case While(err: Runtime, _)      => err
+  private def getRuntimeErr: PartialFunction[Stat, Stat] = {
+    case EqIdent(_, _, err: Runtime) => RuntimeErr(err)
+    case EqAssign(_, err: Runtime)   => RuntimeErr(err)
+    case Free(err: Runtime)          => RuntimeErr(err)
+    case Return(err: Runtime)        => RuntimeErr(err)
+    case Exit(err: Runtime)          => RuntimeErr(err)
+    case Print(err: Runtime)         => RuntimeErr(err)
+    case PrintLn(err: Runtime)       => RuntimeErr(err)
+    case If(err: Runtime, _, _)      => RuntimeErr(err)
+    case While(err: Runtime, _)      => RuntimeErr(err)
+    case runtimeErr: RuntimeErr      => runtimeErr
+  }
+
+  /* Transforms an equal assignemnt stat to SSA form & removes dead code. */
+  private def transformEqAssignStat(assign: EqAssign): ListBuffer[Stat] = {
+    val buf = ListBuffer.empty[Stat]
+    assign match {
+      case EqAssign(id: Ident, r) =>
+        val (v, rhs) = addToHashMap(id, r)
+        deadCodeElimination(rhs, id.getType(currSTable), v, buf)
+      case EqAssign(ae @ ArrayElem(Ident(varName, pos), es, _), r) =>
+        // Array out of bounds check, if out of bounds return runtime error
+        transformExprArrayElem(ae) match {
+          case Bounds =>
+            buf += RuntimeErr(Bounds)
+          case _ =>
+            val (v, rhs) =
+              addToHashMap(Ident(arrayElemIdentifier(varName, es), pos), r)
+            deadCodeElimination(rhs, ae.getType(currSTable), v, buf)
+        }
+      case EqAssign(fst @ Fst(Ident(varName, pos), _), r) =>
+        val (v, rhs) =
+          addToHashMap(Ident(pairElemIdentifier(varName, Is_Fst), pos), r)
+        deadCodeElimination(rhs, fst.getType(currSTable), v, buf)
+      case EqAssign(snd @ Snd(Ident(varName, pos), _), r) =>
+        val (v, rhs) =
+          addToHashMap(Ident(pairElemIdentifier(varName, Not_Fst), pos), r)
+        deadCodeElimination(rhs, snd.getType(currSTable), v, buf)
+      // Semantically incorrect
+      case _ => ???
+    }
   }
 
   /* Transforms a sequential statement to SSA form and removes any dead code
@@ -545,9 +593,9 @@ case class SSA(sTable: SymbolTable) {
       var curStat = transformStat(stats(i))
       if (!curStat.isEmpty) {
         curStat.last match {
-          case s if getRuntimeExpr.isDefinedAt(s) =>
+          case stat if getRuntimeErr.isDefinedAt(stat) =>
             stop = true
-            curStat = ListBuffer(RuntimeErr(getRuntimeExpr(s)))
+            curStat = ListBuffer(getRuntimeErr(stat))
           // dead code elimination
           case _: Return | _: Exit => stop = true
           case _                   => // otherwise continue
@@ -560,68 +608,53 @@ case class SSA(sTable: SymbolTable) {
   }
 
   /* Transforms a given statement S into SSA form. */
-  private def transformStat(s: Stat): ListBuffer[Stat] = {
+  private def transformStat(stat: Stat): ListBuffer[Stat] = {
     val buf = ListBuffer.empty[Stat]
-    s match {
+    stat match {
       case EqIdent(t, id, r) =>
         val (v, rhs) = addToHashMap(id, r)
         scopeRedefine(id)
         deadCodeElimination(rhs, t, v, buf)
-      case EqAssign(id: Ident, r) =>
-        val (v, rhs) = addToHashMap(id, r)
-        deadCodeElimination(rhs, id.getType(currSTable), v, buf)
-      case EqAssign(ae @ ArrayElem(Ident(str, pos), es, _), r) =>
-        // foldIntOps(e) > es.length -> exit 255
-        // TODO: Array out of bounds check
-        val (v, rhs) = addToHashMap(Ident(arrayElemIdentifier(str, es), pos), r)
-        deadCodeElimination(rhs, ae.getType(currSTable), v, buf)
-      case EqAssign(fst @ Fst(Ident(str, pos), _), r) =>
-        val (v, rhs) =
-          addToHashMap(Ident(pairElemIdentifier(str, Is_Fst), pos), r)
-        deadCodeElimination(rhs, fst.getType(currSTable), v, buf)
-      case EqAssign(snd @ Snd(Ident(str, pos), _), r) =>
-        val (v, rhs) =
-          addToHashMap(Ident(pairElemIdentifier(str, Not_Fst), pos), r)
-        deadCodeElimination(rhs, snd.getType(currSTable), v, buf)
+      case assign: EqAssign => transformEqAssignStat(assign)
       // TODO: EqAssign, deref ptr case
-      case Read(lhs)        => transformRead(lhs)
-      case Free(e)          => transExpArray(e, Free)
-      case Return(e)        => transExpArray(e, Return)
-      case Exit(e)          => buf += Exit(transformExpr(e))
-      case Print(e)         => transExpArray(e, Print)
-      case PrintLn(e)       => transExpArray(e, PrintLn)
-      case If(cond, s1, s2) => transformIf(cond, s1, s2)
-      case Seq(statList)    => transformSeqStat(statList)
-      case Skip             => buf += Skip
-      case While(cond, s)   => transformWhile(cond, s)
-      case Begin(s) =>
+      case Read(lhs)         => transformRead(lhs)
+      case Free(e)           => transExpArray(e, Free)
+      case Return(e)         => transExpArray(e, Return)
+      case Exit(e)           => buf += Exit(transformExpr(e))
+      case Print(e)          => transExpArray(e, Print)
+      case PrintLn(e)        => transExpArray(e, PrintLn)
+      case If(cond, s1, s2)  => transformIf(cond, s1, s2)
+      case Seq(statList)     => transformSeqStat(statList)
+      case Skip              => buf += Skip
+      case While(cond, stat) => transformWhile(cond, stat)
+      case Begin(stat) =>
         currSTable = currSTable.getNextScopeSSA
-        val transformedS = transformStat(s)
+        val transformedS = transformStat(stat)
         currSTable = currSTable.getPrevScope
         dict = dict.map(leavingScope)
         transformedS
-      case s => buf += s
+      case stat => buf += stat
     }
   }
 
   /* Update the scope assignment counter to 1 if variable is redeclared
      (eqIdent) in scope  */
   def scopeRedefine(id: Ident): Unit = {
-    val Ident(s, _) = id
-    var (x, y, z) = dict(s)
-    dict += ((s, (x, y, Initial_Id_Num + 1)))
+    val Ident(varName, _) = id
+    var (uniqueId, curAssignmentNum, _) = dict(varName)
+    dict += ((varName, (uniqueId, curAssignmentNum, Initial_Id_Num + 1)))
   }
 
   /* Update the current var number to correct value when leaving scope.
      Reset the scope counter to 0 when leaving scope. */
-  def leavingScope(kv: (String, (Int, Int, Int))): (String, (Int, Int, Int)) = {
-    val (s, (x, y, z)) = kv
-    (s, (x, y - z, Initial_Id_Num))
+  def leavingScope(kv: (VarName, IdNums)): (VarName, IdNums) = {
+    val (varName, (uniqueId, curAssignmentNum, numOfAssigns)) = kv
+    (varName, (uniqueId, curAssignmentNum - numOfAssigns, Initial_Id_Num))
   }
 
   /* Transforms a given function F into SSA form. */
   def transformFunc(f: Func): (Func, VarStackSize) = {
-    val Func(t, id, params, s) = f
+    val Func(t, id, params, stat) = f
     val newParams =
       params.map(pList =>
         pList.map(i => {
@@ -630,18 +663,18 @@ case class SSA(sTable: SymbolTable) {
         })
       )
     currSTable = currSTable.getNextScopeSSA
-    val stat = transformStat(s)
+    val ssaStat = transformStat(stat)
     currSTable = currSTable.getPrevScope
     val funcStackSize = stackSize
     stackSize = 0
-    (Func(t, id, newParams, Seq(stat.toList)), funcStackSize)
+    (Func(t, id, newParams, Seq(ssaStat.toList)), funcStackSize)
   }
 
   /* Transforms a given program AST into SSA form. */
   def toSSA(ast: Program): (Program, List[VarStackSize]) = {
-    val Program(fs, s) = ast
+    val Program(fs, stat) = ast
     val (funcs, funcStackSizes) = fs.map(transformFunc).unzip
-    val p = Program(funcs, Seq(transformStat(s).toList))
+    val p = Program(funcs, Seq(transformStat(stat).toList))
     val stackSizes = funcStackSizes :+ stackSize
     (p, stackSizes)
   }
