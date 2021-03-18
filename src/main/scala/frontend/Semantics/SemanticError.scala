@@ -41,6 +41,10 @@ sealed trait SemanticError {
     case InvalidAddressOperator(e) =>
       "Invalid call to '&', expected an ident" +
         "or DerefPtr, not " + e + " at " + printPos(e.pos)
+    case InvalidFree(e) =>
+      "Invalid free of unallocated memory with expression " + e + " at " + printPos(
+        e.pos
+      )
   }
 
   def printPos(pos: (Int, Int)): String = pos match {
@@ -63,3 +67,4 @@ case class InvalidPairElem(pe: PairElem) extends SemanticError
 case class IdentDeclared(id: Ident) extends SemanticError
 case class IdentNotDeclared(t: String, id: Ident) extends SemanticError
 case class InvalidAddressOperator(e: Expr) extends SemanticError
+case class InvalidFree(e: Expr) extends SemanticError
