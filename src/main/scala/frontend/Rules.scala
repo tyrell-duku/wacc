@@ -907,6 +907,13 @@ object Rules {
       }
       ArrayT(null)
     }
+    def size(): Int = {
+      arr match {
+        case Some(es) => es.size
+        // empty
+        case None => 0
+      }
+    }
   }
   object ArrayLiter {
     def apply(exprs: Parsley[Option[List[Expr]]]): Parsley[ArrayLiter] =
