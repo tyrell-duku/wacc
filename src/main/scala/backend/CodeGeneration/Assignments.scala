@@ -29,6 +29,9 @@ object Assignments {
     val spOffset = currentSP - scopeSP
     val freeReg = getFreeReg()
     val (isByte, instrs) = assignRHS(t, aRHS, freeReg)
+    if (t.isPtr) {
+      addToHeap(id, aRHS)
+    }
     instructions ++= instrs
     instructions += Str(isByte, freeReg, SP, spOffset)
     addUnusedReg(freeReg)
@@ -51,6 +54,9 @@ object Assignments {
       case id: Ident =>
         val (index, t) = sTable(id)
         val (isByte, instrs) = assignRHS(t, aRHS, freeReg)
+        if (t.isPtr) {
+          addToHeap(id, aRHS)
+        }
         instructions ++= instrs
         val spOffset = currentSP - index
         instructions += Str(isByte, freeReg, SP, spOffset)
