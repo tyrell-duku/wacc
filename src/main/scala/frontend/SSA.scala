@@ -786,6 +786,13 @@ case class SSA(sTable: SymbolTable) {
     (Func(t, id, newParams, Seq(ssaStat.toList)), funcStackSize)
   }
 
+  /* Function used to filter for all the RuntimeErrs detected at compile
+     time. */
+  private def isRuntimeErr(s: Stat): Boolean = s match {
+    case _: RuntimeErr => true
+    case _             => false
+  }
+
   /* Transforms a given program AST into SSA form. */
   def toSSA(
       ast: Program
@@ -795,15 +802,6 @@ case class SSA(sTable: SymbolTable) {
     val transformedStats = transformStat(stat)
     val p = Program(funcs, Seq(transformedStats.toList))
     val stackSizes = funcStackSizes :+ stackSize
-    (
-      p,
-      transformedStats.filter(s =>
-        s match {
-          case _: RuntimeErr => true
-          case _             => false
-        }
-      ),
-      stackSizes
-    )
+    (p, transformedStats.filter(isRuntimeErr), stackSizes)
   }
 }
