@@ -403,13 +403,15 @@ case class SSA(sTable: SymbolTable) {
       case _ =>
         currSTable = currSTable.getNextScopeSSA
         val ssa1 =
-          transformStat(s1) ++ mapIf.toList.map(x => updatePhiVar(x, mapElse)).filter(x => x != null)
+          transformStat(s1) ++ mapIf.toList
+            .map(x => updatePhiVar(x, mapElse))
+            .filter(x => x != null)
         currSTable = currSTable.getPrevScope
         currSTable = currSTable.getNextScopeSSA
         val ssa2 =
-          transformStat(s2) ++ mapElse.toList.map(x =>
-            updatePhiVar(x, Undefined_Map)
-          ).filter(x => x != null)
+          transformStat(s2) ++ mapElse.toList
+            .map(x => updatePhiVar(x, Undefined_Map))
+            .filter(x => x != null)
         currSTable = currSTable.getPrevScope
         val ifStat = If(e, Seq(ssa1.toList), Seq(ssa2.toList))
         // Remove phi var from kvs so if called upon later, ident is used
@@ -458,7 +460,9 @@ case class SSA(sTable: SymbolTable) {
 
         currSTable = currSTable.getNextScopeSSA
         val ssa =
-          transformStat(s) ++ mapList.map(x => updatePhiVar(x, Undefined_Map)).filter(x => x != null)
+          transformStat(s) ++ mapList
+            .map(x => updatePhiVar(x, Undefined_Map))
+            .filter(x => x != null)
         currSTable = currSTable.getPrevScope
         // Remove phi var from kvs so if called upon later, ident is used
         mapList.foreach(x => {
@@ -637,7 +641,7 @@ case class SSA(sTable: SymbolTable) {
       case PrintLn(e)         => transExpArray(e, PrintLn)
       case If(cond, s1, s2)   => transformIf(cond, s1, s2)
       case Seq(statList)      => transformSeqStat(statList)
-      case Skip               => buf += Skip
+      case Skip               => buf
       case While(cond, stat)  => transformWhile(cond, stat)
       case Begin(stat) =>
         currSTable = currSTable.getNextScopeSSA
