@@ -28,6 +28,7 @@ case class SSA(sTable: SymbolTable) {
   val Undefined_Value = null
   val Undefined_Pos = null
   val Undefined_Map = null
+  val Dummy_Pos = (0, 0)
   val Is_Fst = true
   val Not_Fst = false
   /* Variables */
@@ -77,7 +78,7 @@ case class SSA(sTable: SymbolTable) {
       isFst: Boolean
   ): Unit = {
     val Ident(varName, _) = rhsId
-    val Ident(rhsUniqueId, _) = kvs(varName)
+    val Ident(rhsUniqueId, _) = updateIdent(rhsId)
     kvs(rhsUniqueId) match {
       // Derefencing a null pointer runtime error
       case _: PairLiter => kvs += ((uniqueId, NullRef))
@@ -175,7 +176,6 @@ case class SSA(sTable: SymbolTable) {
   private def transformExprArrayElem(ae: ArrayElem): Expr = {
     val ArrayElem(id @ Ident(s, _), es, pos) = ae
     // If elem not in dict then out of bounds
-    println(ae)
     var tempId = id
     var Ident(tempStr, _) = id
     var retVal: Expr = id
@@ -649,10 +649,14 @@ case class SSA(sTable: SymbolTable) {
       isFst: Boolean
   ): ListBuffer[Stat] = {
     val stats = ListBuffer.empty[Stat]
-    val (uniqueId, updatedRhs) =
-      addToHashMap(Ident(pairElemIdentifier(varName, isFst), pos), rhs)
-    deadCodeElimination(updatedRhs, pe.getType(currSTable), uniqueId, stats)
-    stats
+    val Ident(pairId, _) = updateIdent(Ident(varName, Dummy_Pos))
+    kvs(pairId) match {
+      case _: PairLiter => stats += RuntimeErr(NullRef)
+      case _ =>
+        val (uniqueId, updatedRhs) =
+          addToHashMap(Ident(pairElemIdentifier(varName, isFst), pos), rhs)
+        deadCodeElimination(updatedRhs, pe.getType(currSTable), uniqueId, stats)
+    }
   }
 
   /* Transforms an equal assignemnt stat to SSA form & removes dead code. */
@@ -788,7 +792,6 @@ case class SSA(sTable: SymbolTable) {
     val (funcs, funcStackSizes) = fs.map(transformFunc).unzip
     val p = Program(funcs, Seq(transformStat(stat).toList))
     val stackSizes = funcStackSizes :+ stackSize
-    println(p)
     (p, stackSizes)
   }
 }
