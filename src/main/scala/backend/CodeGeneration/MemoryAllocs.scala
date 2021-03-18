@@ -56,38 +56,45 @@ object MemoryAllocs {
     instructions
   }
 
-  /* Called upon for any pointer arithmetic in Add or Sub cases. Increments
-     the pointer by the correct amount (1 or 4 bytes) by checking its type
-     and subsequent base type size.  */
+  /* Called upon for any pointer arithmetic in Add or Sub cases. */
   def pointerArith(l: Expr, rd: Reg): ListBuffer[Instruction] = {
-    val instructions = ListBuffer.empty[Instruction]
-    val t = getExprType(l)
     // Pointer arithmetic should only occur in add/subtract if the lhs is a
     // pointer.
-    if (t.isPtr) {
-      val PtrT(inner) = t
-      val varSize = getBaseTypeSize(inner)
-      // If varSize is greater than 1 byte (typically 4 bytes) then add or
-      // subtract by relevant variable size.
-      if (varSize > CHAR_SIZE) {
-        val rm = getFreeReg()
-        instructions += Ldr(rm, ImmMem(varSize))
-        // Runtime error check
-        instructions += SMul(rd, rm, rd, rm)
-        instructions += Cmp(rm, ASR(rd, ImmInt(31)))
-        addUnusedReg(rm)
-        instructions += BranchLinkCond(NE, addRuntimeError(Overflow))
-      }
+    getExprType(l) match {
+      case t: PtrT => pointerArithOffset(t, rd)
+      case _ => ListBuffer.empty[Instruction]
+    }
+  }
+
+  /* Increments the pointer by the correct amount (1 or 4 bytes) by checking
+     its type  and subsequent base type size.  */
+  private def pointerArithOffset(t: Type, rd: Reg) = {
+    val instructions = ListBuffer.empty[Instruction]
+    val PtrT(inner) = t
+    val varSize = getBaseTypeSize(inner)
+    // If varSize is greater than 1 byte (typically 4 bytes) then add or
+    // subtract by relevant variable size.
+    if (varSize > CHAR_SIZE) {
+      val rm = getFreeReg()
+      instructions += Ldr(rm, ImmMem(varSize))
+      // Runtime error check
+      instructions += SMul(rd, rm, rd, rm)
+      instructions += Cmp(rm, ASR(rd, ImmInt(31)))
+      addUnusedReg(rm)
+      instructions += BranchLinkCond(NE, addRuntimeError(Overflow))
     }
     instructions
   }
 
-  def transPointerElem(elemExp: Expr, reg: Reg, nextReg: Reg) = {
+  /* Loads the element from the requested pointer elem into REG.
+     Function is called in transArrayElem and therefore handles nested
+     array or pointer cases. */
+  def transPointerElem(t: Type, elemExp: Expr, reg: Reg, nextReg: Reg) = {
     val instructions = ListBuffer.empty[Instruction]
-    instructions ++= transExp(elemExp, nextReg)
-    // TODO: Pointer arithmetic
-    instructions += Add(reg, reg, nextReg)
     instructions += Ldr(reg, RegAdd(reg))
+    instructions ++= transExp(elemExp, nextReg)
+    instructions ++= pointerArithOffset(t, nextReg)
+    instructions += Add(reg, reg, nextReg)
   }
 
   /* Returns the next unique psuedo address to use and increments the
