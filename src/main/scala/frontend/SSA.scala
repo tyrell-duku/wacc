@@ -326,10 +326,10 @@ case class SSA(sTable: SymbolTable) {
     // Only add to map if already declared in higher scope
     if (dict.contains(s)) {
       // map is for both if and else branches
-      map(s) = map.getOrElseUpdate(s, 0) + 1
+      map(s) = map.getOrElseUpdate(s, Initial_Id_Num) + 1
       // mapScope is map for individual if or else branch
       if (mapScope != Undefined_Map) {
-        mapScope(s) = mapScope.getOrElseUpdate(s, 0) + 1
+        mapScope(s) = mapScope.getOrElseUpdate(s, Initial_Id_Num) + 1
       }
     }
   }
@@ -365,7 +365,10 @@ case class SSA(sTable: SymbolTable) {
     var lhs = Ident(uniqueId, Undefined_Pos)
     if (map != Undefined_Map) {
       lhs = Ident(
-        (map.getOrElse(varName, 0) + curAssignmentNum).toString + varName,
+        (map.getOrElse(
+          varName,
+          Initial_Id_Num
+        ) + curAssignmentNum).toString + varName,
         Undefined_Pos
       )
     }
