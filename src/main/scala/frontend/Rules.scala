@@ -11,27 +11,29 @@ object Rules {
   /* EXTENSION */
 
   // For runtime errors detected at compile time.
-  sealed trait RuntimeErr extends Expr with Stat
+  sealed trait Runtime extends Expr
   // Integer overflow/underflow
-  case object Overflow extends RuntimeErr {
+  case object Overflow extends Runtime {
     override val pos = null
     override def getType(sTable: SymbolTable) = null
   }
   // Divide by zero
-  case object ZeroDivision extends RuntimeErr {
+  case object ZeroDivision extends Runtime {
     override val pos = null
     override def getType(sTable: SymbolTable) = null
   }
   // Shifting with negative numbers
-  case object NegShift extends RuntimeErr {
+  case object NegShift extends Runtime {
     override val pos = null
     override def getType(sTable: SymbolTable) = null
   }
   // Arrary out of bounds check
-  case object Bounds extends RuntimeErr {
+  case object Bounds extends Runtime {
     override val pos = null
     override def getType(sTable: SymbolTable) = null
   }
+
+  case class RuntimeErr(err: Runtime) extends Stat
 
   sealed trait MemoryAlloc extends AssignRHS
   case class Malloc(size: Expr, pos: (Int, Int)) extends MemoryAlloc {
