@@ -144,14 +144,14 @@ case class SSA(sTable: SymbolTable) {
   /* Transforms an ident ID into SSA form and applies constant propagation. */
   private def transformExprId(id: Ident): Expr = {
     val Ident(s, _) = id
-    val id2 @ Ident(x, _) = updateIdent(id)
-    val rhs = kvs.getOrElse(x, id2)
+    val uniqueId @ Ident(x, _) = updateIdent(id)
+    val rhs = kvs.getOrElse(x, uniqueId)
     rhs match {
       // If kvs returns a different updated ident name (while case) then
       // update, otherwise return prev updated ident
       case Ident(varName, _) =>
-        if (varName.endsWith(s)) toExpr(rhs) else id2
-      case _: Call => id2
+        if (varName.endsWith(s)) toExpr(rhs) else uniqueId
+      case _: Call => uniqueId
       case _       => toExpr(rhs)
     }
   }
@@ -437,6 +437,7 @@ case class SSA(sTable: SymbolTable) {
     )
   }
 
+  /* TODO */
   private def transformWhile(cond: Expr, s: Stat): ListBuffer[Stat] = {
     val stats = ListBuffer.empty[Stat]
     // Number of re-assignments of pre-declared vars within WHILE
@@ -456,9 +457,9 @@ case class SSA(sTable: SymbolTable) {
         map
           .map(getPhiVar)
           .foreach(tup => {
-            val (v, i) = tup
-            val (_, y, _) = dict(v)
-            kvs += ((y.toString + v, i))
+            val (varName, id) = tup
+            val (_, curAssignmentNum, _) = dict(varName)
+            kvs += ((curAssignmentNum.toString + varName, id))
           })
 
         currSTable = currSTable.getNextScopeSSA
@@ -528,8 +529,8 @@ case class SSA(sTable: SymbolTable) {
     val buf = ListBuffer.empty[Stat]
     e match {
       case id @ Ident(varName, _) =>
-        var id2 @ Ident(x, _) = updateIdent(id)
-        val rhs = kvs.getOrElse(x, id2)
+        var uniqueId @ Ident(x, _) = updateIdent(id)
+        val rhs = kvs.getOrElse(x, uniqueId)
         rhs match {
           // Not array, transformExpr as usual
           case _: Expr => buf += pf(toExpr(rhs))
@@ -540,17 +541,17 @@ case class SSA(sTable: SymbolTable) {
               case ArrayLiter(Some(es), pos) =>
                 updateArrayLiter(es, pos, varName)
               // Empty arrayLiter case, nothing to update
-              case ArrayLiter(None, pos)          => ArrayLiter(None, pos)
-              case pair: Newpair                  => updateNewpair(varName, pair)
-              case call @ Call(funcId, args, pos) => call
-              case _                              => ???
+              case ArrayLiter(None, pos) => ArrayLiter(None, pos)
+              case pair: Newpair         => updateNewpair(varName, pair)
+              case call: Call            => call
+              case _                     => ???
             }
             // Get latest ident as it may be updated
-            id2 = updateIdent(id)
+            uniqueId = updateIdent(id)
             val t = currSTable.lookupAllType(id)
             stackSize += getBaseTypeSize(t)
-            buf += EqIdent(t, id2, rhsUpdated)
-            buf += pf(id2)
+            buf += EqIdent(t, uniqueId, rhsUpdated)
+            buf += pf(uniqueId)
         }
       // Not ident so not heap variable, transformExpr as usual
       case _ => buf += pf(transformExpr(e))
@@ -572,6 +573,22 @@ case class SSA(sTable: SymbolTable) {
     case runtimeErr: RuntimeErr      => runtimeErr
   }
 
+  /* Transforms and equal assignment pair-elem to SSA form & removes dead
+     code. */
+  private def transformEqAssignPairElem(
+      pe: PairElem,
+      varName: VarName,
+      pos: (Int, Int),
+      rhs: AssignRHS,
+      isFst: Boolean
+  ): ListBuffer[Stat] = {
+    val stats = ListBuffer.empty[Stat]
+    val (uniqueId, updatedRhs) =
+      addToHashMap(Ident(pairElemIdentifier(varName, isFst), pos), rhs)
+    deadCodeElimination(updatedRhs, pe.getType(currSTable), uniqueId, stats)
+    stats
+  }
+
   /* Transforms an equal assignemnt stat to SSA form & removes dead code. */
   private def transformEqAssignStat(assign: EqAssign): ListBuffer[Stat] = {
     val buf = ListBuffer.empty[Stat]
@@ -589,14 +606,11 @@ case class SSA(sTable: SymbolTable) {
               addToHashMap(Ident(arrayElemIdentifier(varName, es), pos), r)
             deadCodeElimination(rhs, ae.getType(currSTable), v, buf)
         }
+      // PairElem cases
       case EqAssign(fst @ Fst(Ident(varName, pos), _), r) =>
-        val (v, rhs) =
-          addToHashMap(Ident(pairElemIdentifier(varName, Is_Fst), pos), r)
-        deadCodeElimination(rhs, fst.getType(currSTable), v, buf)
+        transformEqAssignPairElem(fst, varName, pos, r, Is_Fst)
       case EqAssign(snd @ Snd(Ident(varName, pos), _), r) =>
-        val (v, rhs) =
-          addToHashMap(Ident(pairElemIdentifier(varName, Not_Fst), pos), r)
-        deadCodeElimination(rhs, snd.getType(currSTable), v, buf)
+        transformEqAssignPairElem(snd, varName, pos, r, Not_Fst)
       // Semantically incorrect
       case _ => ???
     }
