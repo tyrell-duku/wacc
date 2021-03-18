@@ -161,19 +161,32 @@ case class SSA(sTable: SymbolTable) {
   /* Transforms an array-elem AE to SSA form. */
   private def transformExprArrayElem(ae: ArrayElem): Expr = {
     val ArrayElem(id @ Ident(s, _), es, pos) = ae
-    val arrayElemName = arrayElemIdentifier(s, es)
     // If elem not in dict then out of bounds
+    println(ae)
     var tempId = id
     var Ident(tempStr, _) = id
     var retVal: Expr = id
-    for (index <- es) {
-      tempStr =
-        arrayElemIdentifier(tempStr, List(index)).dropWhile(c => c.isDigit)
-      val Ident(updatedStr, _) = updateIdent(Ident(tempStr, pos))
-      kvs.get(updatedStr) match {
-        case Some(Ident(sNew, pos)) => tempStr = sNew
-        case None                   => retVal
-        case Some(p)                => retVal = toExpr(p)
+    val transIndices = ListBuffer.empty[Expr]
+
+    for (i <- es.indices) {
+      val index = es(i)
+      val transformedExpr = transformExpr(index)
+      val idents = ListBuffer.empty[Ident]
+      getIdent(transformedExpr, idents)
+      transIndices += transformedExpr
+      if (idents.isEmpty) {
+        tempStr =
+          arrayElemIdentifier(tempStr, List(index)).dropWhile(c => c.isDigit)
+        val Ident(updatedStr, _) = updateIdent(Ident(tempStr, pos))
+        kvs.get(updatedStr) match {
+          case Some(Ident(sNew, pos)) => tempStr = sNew
+          case None                   => retVal
+          case Some(p)                => retVal = toExpr(p)
+        }
+      } else {
+        val (transformed, toTransform) = es.splitAt(i + 1)
+        transIndices ++= toTransform.map(transformExpr)
+        return ArrayElem(updateIdent(id), transIndices.toList, pos)
       }
     }
     retVal
