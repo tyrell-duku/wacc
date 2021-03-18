@@ -32,6 +32,11 @@ object Rules {
     override val pos = null
     override def getType(sTable: SymbolTable) = null
   }
+  // Reference to null
+  case object NullRef extends Runtime {
+    override val pos = null
+    override def getType(sTable: SymbolTable) = null
+  }
 
   case class RuntimeErr(err: Runtime) extends Stat
 
