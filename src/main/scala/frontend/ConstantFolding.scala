@@ -42,7 +42,6 @@ object ConstantFolding {
     // Base case
     case n: IntLiter => n
     // UnOp folding
-    // TODO: overflow
     case Negation(IntLiter(n, _), p) => evalConditionally(0, n, (_ - _), p)
     case od @ Ord(e, pos) if od.containsNoIdent =>
       val CharLiter(NormalChar(c), _) = fold(e)

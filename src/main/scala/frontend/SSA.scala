@@ -151,8 +151,9 @@ case class SSA(sTable: SymbolTable) {
       // update, otherwise return prev updated ident
       case Ident(varName, _) =>
         if (varName.endsWith(s)) toExpr(rhs) else uniqueId
-      case _: Call => uniqueId
-      case _       => toExpr(rhs)
+      case _: Call       => uniqueId
+      case _: ArrayLiter => uniqueId
+      case _             => toExpr(rhs)
     }
   }
 
@@ -170,6 +171,19 @@ case class SSA(sTable: SymbolTable) {
           )
         )
       case None => Bounds
+    }
+  }
+
+  /* Get's Idents used in E. */
+  private def getIdent(e: Expr, ids: ListBuffer[Ident]): ListBuffer[Ident] = {
+    e match {
+      case id: Ident => ids += id
+      case binOp: BinOp =>
+        getIdent(binOp.lExpr, ids)
+        getIdent(binOp.rExpr, ids)
+      case unOp: UnOp =>
+        getIdent(unOp.e, ids)
+      case _ => ids
     }
   }
 
@@ -524,6 +538,16 @@ case class SSA(sTable: SymbolTable) {
     updatedPair
   }
 
+  private def updateRHS(r: AssignRHS, varName: String): AssignRHS = r match {
+    case ArrayLiter(Some(es), pos) =>
+      updateArrayLiter(es, pos, varName)
+    // Empty arrayLiter case, nothing to update
+    case ArrayLiter(None, pos) => ArrayLiter(None, pos)
+    case pair: Newpair         => updateNewpair(varName, pair)
+    case call: Call            => call
+    case _                     => ???
+  }
+
   /* TODO */
   private def transExpArray(e: Expr, pf: (Expr => Stat)): ListBuffer[Stat] = {
     val buf = ListBuffer.empty[Stat]
@@ -537,15 +561,7 @@ case class SSA(sTable: SymbolTable) {
           // Heap variable has not been defined in current ast then add to list
           // of statements
           case r =>
-            val rhsUpdated = r match {
-              case ArrayLiter(Some(es), pos) =>
-                updateArrayLiter(es, pos, varName)
-              // Empty arrayLiter case, nothing to update
-              case ArrayLiter(None, pos) => ArrayLiter(None, pos)
-              case pair: Newpair         => updateNewpair(varName, pair)
-              case call: Call            => call
-              case _                     => ???
-            }
+            val rhsUpdated = updateRHS(r, varName)
             // Get latest ident as it may be updated
             uniqueId = updateIdent(id)
             val t = currSTable.lookupAllType(id)
@@ -554,7 +570,17 @@ case class SSA(sTable: SymbolTable) {
             buf += pf(uniqueId)
         }
       // Not ident so not heap variable, transformExpr as usual
-      case _ => buf += pf(transformExpr(e))
+      case _ =>
+        val ids = ListBuffer.empty[Ident]
+        getIdent(e, ids)
+        for (id <- ids) {
+          val newId @ Ident(str, _) = updateIdent(id)
+          val t = currSTable.lookupAllType(id)
+          stackSize += getBaseTypeSize(t)
+          var rhs = kvs.getOrElse(str, newId)
+          buf += EqIdent(t, newId, rhs)
+        }
+        buf += pf(transformExpr(e))
     }
     buf
   }
@@ -709,6 +735,15 @@ case class SSA(sTable: SymbolTable) {
     val (funcs, funcStackSizes) = fs.map(transformFunc).unzip
     val p = Program(funcs, Seq(transformStat(stat).toList))
     val stackSizes = funcStackSizes :+ stackSize
+    println(p)
     (p, stackSizes)
+  }
+
+  def printHash(): Unit = {
+    println("\n\nKVS IS COMING")
+    for (e <- kvs) {
+      println(e)
+    }
+    println("END\n\n")
   }
 }
