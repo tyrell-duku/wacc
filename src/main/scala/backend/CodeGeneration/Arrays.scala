@@ -54,7 +54,7 @@ object Arrays {
     // Handles nested array elems
     for (exp <- es) {
       if (t.isPtr) {
-        instructions ++= transPointerElem(exp, reg, nextReg)
+        instructions ++= transPointerElem(t, exp, reg, nextReg)
       } else {
         // Gets type of array elem at current depth
         t = getInnerType(t)
