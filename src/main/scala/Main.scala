@@ -9,7 +9,7 @@ import parsley.Success
 import scala.collection.mutable.ListBuffer
 import backend.CodeGenerator.transProg
 import backend.Peephole.optimiseBlocks
-import backend.ARMPrinter.execute
+import backend.ARMPrinter.printARM
 
 object Main {
   // Constants for error codes
@@ -65,7 +65,7 @@ object Main {
           semanticExit(runtimes)
         }
         val (data, instrs) = transProg(prunedAst, sTable, stackSize)
-        execute(file.getName(), data, optimiseBlocks(instrs))
+        printARM(file.getName(), data, optimiseBlocks(instrs))
     }
   }
 }

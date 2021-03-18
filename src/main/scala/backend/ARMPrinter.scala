@@ -10,7 +10,7 @@ object ARMPrinter {
 
   /* Convert the IR returned by CodeGenerator into assembly code.
      Writes assembly to .s file of same name. */
-  def execute(
+  def printARM(
       waccFileName: String,
       data: List[Data],
       instrs: List[(Label, List[Instruction])]
