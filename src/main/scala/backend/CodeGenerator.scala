@@ -16,6 +16,7 @@ import backend.DefinedFuncs.PreDefinedFuncs.{
   DivideByZero,
   NegativeShift,
   ArrayBounds,
+  NullPointer,
   PreDefFunc,
   RuntimeError
 }
@@ -104,6 +105,7 @@ object CodeGenerator {
     case ZeroDivision   => DivideByZero
     case NegShift       => NegativeShift
     case Bounds         => ArrayBounds
+    case NullRef        => NullPointer
   }
 
   /* Translates a runtime error ERR found at compile time. Instantly throws a
