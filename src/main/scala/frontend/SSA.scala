@@ -184,10 +184,8 @@ case class SSA(sTable: SymbolTable) {
     for (i <- es.indices) {
       val index = es(i)
       val transformedExpr = transformExpr(index)
-      val idents = ListBuffer.empty[Ident]
-      getIdent(transformedExpr, idents)
       transIndices += transformedExpr
-      if (idents.isEmpty) {
+      if (containsIdent(transformedExpr)) {
         tempStr =
           arrayElemIdentifier(tempStr, List(index)).dropWhile(c => c.isDigit)
         val Ident(updatedStr, _) = updateIdent(Ident(tempStr, pos))
@@ -203,6 +201,13 @@ case class SSA(sTable: SymbolTable) {
       }
     }
     retVal
+  }
+
+  /* Checks if there is an Ident in the expression E */
+  private def containsIdent(e: Expr): Boolean = {
+    val ids = ListBuffer.empty[Ident]
+    getIdent(e, ids)
+    ids.isEmpty
   }
 
   /* Get's Idents used in E. */
@@ -353,7 +358,7 @@ case class SSA(sTable: SymbolTable) {
     stat match {
       case EqAssign(Ident(s, _), _) => incrementMap(s, map, mapScope)
       case EqAssign(ArrayElem(Ident(s, _), elems, _), _) =>
-        incrementMap(arrayElemIdentifier(s, elems), map, mapScope)
+        incrementMap(s, map, mapScope)
       case EqAssign(Fst(Ident(s, _), _), _) =>
         incrementMap(pairElemIdentifier(s, Is_Fst), map, mapScope)
       case EqAssign(Snd(Ident(s, _), _), _) =>
@@ -361,7 +366,7 @@ case class SSA(sTable: SymbolTable) {
       case Read(Ident(s, _)) =>
         incrementMap(s, map, mapScope)
       case Read(ArrayElem(Ident(s, _), elems, _)) =>
-        incrementMap(arrayElemIdentifier(s, elems), map, mapScope)
+        incrementMap(s, map, mapScope)
       case Read(Fst(Ident(s, _), _)) =>
         incrementMap(pairElemIdentifier(s, Is_Fst), map, mapScope)
       case Read(Snd(Ident(s, _), _)) =>
@@ -566,7 +571,10 @@ case class SSA(sTable: SymbolTable) {
     val updatedArr = ArrayLiter(Some(updatedElems.toList), pos)
     // Only update the arrayLiter in kvs for variable arrStr if necessary
     if (updatedElems.toList != elems) {
-      kvs += ((addToDict(arrName), updatedArr))
+      addToDict(arrName)
+    } else {
+      val (_, curAssignNum, _) = dict(arrName)
+      kvs -= curAssignNum.toString + arrName
     }
     updatedArr
   }
@@ -666,15 +674,20 @@ case class SSA(sTable: SymbolTable) {
       case EqAssign(id: Ident, r) =>
         val (v, rhs) = addToHashMap(id, r)
         deadCodeElimination(rhs, id.getType(currSTable), v, buf)
-      case EqAssign(ae @ ArrayElem(Ident(varName, pos), es, _), r) =>
+      case EqAssign(ae @ ArrayElem(id @ Ident(varName, pos), es, _), r) =>
         // Array out of bounds check, if out of bounds return runtime error
         transformExprArrayElem(ae) match {
           case Bounds =>
             buf += RuntimeErr(Bounds)
-          case _ =>
-            val (v, rhs) =
-              addToHashMap(Ident(arrayElemIdentifier(varName, es), pos), r)
-            deadCodeElimination(rhs, ae.getType(currSTable), v, buf)
+          case expr =>
+            val newIndices = es.map(transformExpr)
+            val newId @ Ident(str, _) = updateIdent(id)
+            val newArrayElem = ArrayElem(newId, newIndices, pos)
+            addToHashMap(Ident(arrayElemIdentifier(varName, es), pos), r)
+            if (!kvs.contains(str)) {
+              buf += EqAssign(newArrayElem, r)
+            }
+            buf
         }
       // PairElem cases
       case EqAssign(fst @ Fst(Ident(varName, pos), _), r) =>
