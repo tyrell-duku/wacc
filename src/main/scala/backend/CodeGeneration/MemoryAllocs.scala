@@ -82,7 +82,7 @@ object MemoryAllocs {
     instructions
   }
 
-  /* Returns the next unique psuedo address to use and increments the 
+  /* Returns the next unique psuedo address to use and increments the
      counter. */
   private def getNextAddress: Int = {
     nextAddress += 1
@@ -121,10 +121,14 @@ object MemoryAllocs {
           addressSet -= addr
           ListBuffer(BranchLink(Label("free")))
         } else {
-          printFreeError("FreeError: unable to free memory that has been previously freed.")
+          val doubleFreeError =
+            "FreeError: unable to free memory that has been previously freed."
+          printFreeError(doubleFreeError)
         }
       case None =>
-        printFreeError("FreeError: unable to free unallocated memory.")
+        val unallocatedMemError =
+          "FreeError: unable to free unallocated memory."
+        printFreeError(unallocatedMemError)
     }
   }
 }
