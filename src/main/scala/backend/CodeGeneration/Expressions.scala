@@ -174,6 +174,23 @@ object Expressions {
     ListBuffer(Ldr(rd, DataLabel(curLabel)))
   }
 
+  /* Translates the address operator into our IR instruction set. */ 
+  private def transAddr(ptr: Expr, rd: reg): ListBuffer[Instruction] = {
+    val instructions = ListBuffer.empty[Instruction]
+    ptr match {
+      case id: Ident =>
+        // Get address of id stored in stack
+        val (index, t) = sTable.lookupAllCodeGen(id)
+        val spOffset = currentSP - index
+        instructions += Add(rd, SP, ImmInt(spOffset))
+      case DerefPtr(inner, _) =>
+        // &* cancel each other out
+        instructions ++= transExp(inner, rd)
+      // Semantically invalid
+      case _ => ???
+    }
+  }
+
   /* Translates an expression operator to the internal representation. */
   def transExp(e: Expr, rd: Reg): ListBuffer[Instruction] = {
     val instructions = ListBuffer.empty[Instruction]
@@ -197,18 +214,10 @@ object Expressions {
       case e: UnOp              => instructions ++= transUnOp(e, rd)
       case e: BinOp =>
         instructions ++= transBinOp(e, rd)
-      case Addr(ptr, _) =>
-        ptr match {
-          case id: Ident =>
-            val (index, t) = sTable.lookupAllCodeGen(id)
-            val spOffset = currentSP - index
-            instructions += Add(rd, SP, ImmInt(spOffset))
-          case DerefPtr(inner, _) =>
-            // Semantically invalid
-            instructions ++= transExp(inner, rd)
-          case _ => ???
-        }
+      case Addr(ptr, _) => instructions ++= transAddr(ptr, rd)
       case DerefPtr(ptr, _) =>
+        // PTR is a pointer so retrieve the address of it by calling transExp
+        // then load in the value stored at that address
         instructions ++= transExp(ptr, rd)
         instructions += Ldr(rd, RegAdd(rd))
       case SizeOf(t, _) =>
