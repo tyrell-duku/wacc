@@ -175,7 +175,7 @@ object Expressions {
   }
 
   /* Translates the address operator into our IR instruction set. */ 
-  private def transAddr(ptr: Expr, rd: reg): ListBuffer[Instruction] = {
+  private def transAddr(ptr: Expr, rd: Reg): ListBuffer[Instruction] = {
     val instructions = ListBuffer.empty[Instruction]
     ptr match {
       case id: Ident =>
