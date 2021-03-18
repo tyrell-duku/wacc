@@ -9,8 +9,9 @@ import frontend.Semantics.SymbolTable
 import frontend.ConstantFolding.fold
 
 case class SSA(sTable: SymbolTable) {
+  // Stack depth needed to store all variables in scope
+  type VarStackSize = Int
   /* Type aliases */
-  type StackSize = Int
   type UniqueNum = Int
   type CurrentAssignmentNum = Int
   type NumOfAssigns = Int
@@ -190,6 +191,8 @@ case class SSA(sTable: SymbolTable) {
     case _ => fold(e.map(exp => transformExpr(exp, map)))
   }
 
+  /* Potentially removes identifiers that are no longer required due future 
+     constant propagation. */
   private def deadCodeElimination(
       rhs: AssignRHS,
       t: Type,
@@ -202,17 +205,20 @@ case class SSA(sTable: SymbolTable) {
         stackSize += getBaseTypeSize(t)
         buf += EqIdent(t, ident, rhs)
     }
-
+  
+  /* TODO */
   private def toExpr(rhs: AssignRHS): Expr = rhs match {
     case e: Expr => e
     // invalid
     case _ => ???
   }
 
+  /* TODO */
   private def arrayElemIdentifier(varName: String, es: List[Expr]): String = {
     varName + "-" + es.map(transformExpr).mkString("-")
   }
 
+  /* TODO */
   private def pairElemIdentifier(varName: String, isFst: Boolean): String = {
     val pairElemType = if (isFst) "fst" else "snd"
     varName + "-" + pairElemType
@@ -258,8 +264,8 @@ case class SSA(sTable: SymbolTable) {
      scope has within an IF, ELSE or WHILE statement. */
   private def countVariables(
       stat: Stat,
-      map: Map[String, Int],
-      mapScope: Map[String, Int]
+      map: Map[String, NumOfAssigns],
+      mapScope: Map[String, NumOfAssigns]
   ): Unit = {
     stat match {
       case EqAssign(Ident(s, _), _) => incrementMap(s, map, mapScope)
@@ -289,8 +295,8 @@ case class SSA(sTable: SymbolTable) {
      variable if and only if it has been declared in higher scope. */
   private def incrementMap(
       s: String,
-      map: Map[String, Int],
-      mapScope: Map[String, Int]
+      map: Map[String, NumOfAssigns],
+      mapScope: Map[String, NumOfAssigns]
   ): Unit = {
     // Only add to map if already declared in higher scope
     if (dict.contains(s)) {
@@ -303,38 +309,45 @@ case class SSA(sTable: SymbolTable) {
     }
   }
 
-  private def pruneIf(ssa: ListBuffer[Stat]): Stat = {
-    if (ssa.isEmpty) Skip else Seq(ssa.toList)
-  }
 
   /* If a variable from higher scope is changed within an if or else branch,
      introduce new variable before if statement to account for phi. */
-  private def createPhiVar(x: (String, Int)): Stat = {
+  private def createPhiVar(x: (String, NumOfAssigns)): Stat = {
     // n is the number of assignments in both if and else branches
-    val (s, n) = x
+    val (s, numOfAssigns) = x
     // y is the current number of assignments for the given variable
-    val (_, y, _) = dict(s)
-    val varName = y.toString + s
+    val (_, curAssignmentNum, _) = dict(s)
+    val varName = curAssignmentNum.toString + s
     // Get previously defined value from kvs
     val rhs = kvs.getOrElse(varName, Ident(varName, Undefined_Value))
     var originalType = currSTable.lookupAllType(Ident(s, Undefined_Pos))
     stackSize += getBaseTypeSize(originalType)
-    EqIdent(originalType, Ident((n + y).toString + s, Undefined_Pos), rhs)
+    EqIdent(
+      originalType,
+      Ident((numOfAssigns + curAssignmentNum).toString + s, Undefined_Pos),
+      rhs
+    )
   }
 
   /* Updates the PHI variable, given the map of the condition branch */
-  private def updatePhiVar(x: (String, Int), map: Map[String, Int]): Stat = {
-    val (s, _) = x
-    val (_, y, _) = dict(s)
-    val varName = y.toString + s
+  private def updatePhiVar(
+      x: (String, NumOfAssigns),
+      map: Map[String, NumOfAssigns]
+  ): Stat = {
+    val (str, _) = x
+    val (_, curAssignmentNum, _) = dict(str)
+    val varName = curAssignmentNum.toString + str
     val rhs = kvs.getOrElse(varName, Ident(varName, Undefined_Pos))
     if (map != Undefined_Map) {
       EqAssign(
-        Ident((map.getOrElse(s, 0) + y).toString + s, Undefined_Pos),
+        Ident(
+          (map.getOrElse(str, 0) + curAssignmentNum).toString + str,
+          Undefined_Pos
+        ),
         rhs
       )
     } else {
-      EqAssign(Ident(y.toString + s, Undefined_Pos), rhs)
+      EqAssign(Ident(curAssignmentNum.toString + str, Undefined_Pos), rhs)
     }
   }
 
@@ -342,22 +355,19 @@ case class SSA(sTable: SymbolTable) {
   private def transformIf(cond: Expr, s1: Stat, s2: Stat): ListBuffer[Stat] = {
     val stats = ListBuffer.empty[Stat]
     // Number of re-assignments of pre-declared vars in IF and ELSE branches
-    val map = Map.empty[String, Int]
+    val map = Map.empty[String, NumOfAssigns]
     // Number of re-assignments of pre-declared vars in IF branch
-    val mapIf = Map.empty[String, Int]
+    val mapIf = Map.empty[String, NumOfAssigns]
     // Number of re-assignments of pre-declared vars in ELSE branch
-    val mapElse = Map.empty[String, Int]
+    val mapElse = Map.empty[String, NumOfAssigns]
     // Count var re-assignments into map, mapIf & mapElse
     countVariables(s1, map, mapIf)
     countVariables(s2, map, mapElse)
-
     // Create the PHI variables if necessary
     val mapList = map.toList
     stats ++= mapList.map(createPhiVar)
-
     // Transform S1 and S2 and updatePhiVar within each branch (if necessary)
     val e = transformExpr(cond)
-
     e match {
       // control flow analysis
       case BoolLiter(true, _)  => transformStat(s1)
@@ -374,80 +384,72 @@ case class SSA(sTable: SymbolTable) {
             updatePhiVar(x, Undefined_Map)
           )
         currSTable = currSTable.getPrevScope
-        val ifStat = If(e, pruneIf(ssa1), pruneIf(ssa2))
-
+        val ifStat = If(e, Seq(ssa1.toList), Seq(ssa2.toList))
         // Remove phi var from kvs so if called upon later, ident is used
-        mapList.foreach((x: (String, Int)) => {
-          val (_, y, _) = dict(x._1)
-          kvs -= y.toString + x._1
+        mapList.foreach(x => {
+          val (_, curAssignmentNum, _) = dict(x._1)
+          kvs -= curAssignmentNum.toString + x._1
         })
-
-        ifStat match {
-          case If(_, Skip, Skip) => stats
-          case _                 => stats += ifStat
-        }
+        // dead code elimination
+        if (ssa1.isEmpty && ssa2.isEmpty) stats else stats += ifStat
     }
-
   }
 
-  private def getPhiVar(x: (String, Int)): (String, Ident) = {
-    val (s, n) = x
-    // y is the current number of assignments for the given variable
-    val (_, y, _) = dict(s)
-    (s, Ident((n + y).toString + s, Undefined_Pos))
+  /* TODO */
+  private def getPhiVar(x: (String, NumOfAssigns)): (String, Ident) = {
+    val (str, numOfAssigns) = x
+    val (_, curAssignmentNum, _) = dict(str)
+    (
+      str,
+      Ident((numOfAssigns + curAssignmentNum).toString + str, Undefined_Pos)
+    )
   }
 
   private def transformWhile(cond: Expr, s: Stat): ListBuffer[Stat] = {
     val stats = ListBuffer.empty[Stat]
     // Number of re-assignments of pre-declared vars within WHILE
-    val map = Map.empty[String, Int]
+    val map = Map.empty[String, NumOfAssigns]
     // Count var re-assignments into map
     countVariables(s, map, Undefined_Map)
-
     // Create the PHI variables if necessary
     val mapList = map.toList
     stats ++= mapList.map(createPhiVar)
-
     // Transform the while condition, updating with the phi vars if necessary
     // Transform the inner of the while, updating phi vars if necessary
     val e = transformExpr(cond, map)
-
     e match {
-      case BoolLiter(false, _) => return stats
+      case BoolLiter(false, _) => stats
       case _                   =>
+        // Updates variables in kvs to phi variables
+        map
+          .map(getPhiVar)
+          .foreach(tup => {
+            val (v, i) = tup
+            val (_, y, _) = dict(v)
+            kvs += ((y.toString + v, i))
+          })
+
+        currSTable = currSTable.getNextScopeSSA
+        val ssa =
+          transformStat(s) ++ mapList.map(x => updatePhiVar(x, Undefined_Map))
+        currSTable = currSTable.getPrevScope
+        // Remove phi var from kvs so if called upon later, ident is used
+        mapList.foreach(x => {
+          val (str, _) = x
+          val (_, curAssignmentNum, _) = dict(str)
+          kvs -= curAssignmentNum.toString + s
+        })
+        stats += While(e, Seq(ssa.toList))
+        stats
     }
-
-    // Updates variables in kvs to phi variables
-    map
-      .map(getPhiVar)
-      .foreach(tup => {
-        val (v, i) = tup
-        val (_, y, _) = dict(v)
-        kvs += ((y.toString + v, i))
-      })
-
-    currSTable = currSTable.getNextScopeSSA
-    val ssa =
-      transformStat(s) ++ mapList.map(x => updatePhiVar(x, Undefined_Map))
-    currSTable = currSTable.getPrevScope
-
-    // Remove phi var from kvs so if called upon later, ident is used
-    mapList.foreach((x: (String, Int)) => {
-      val (s, _) = x
-      val (_, y, _) = dict(s)
-      kvs -= y.toString + s
-    })
-
-    stats += While(e, Seq(ssa.toList))
-    stats
   }
 
   /* Function used to retrieve the latest value of a heap variable in kvs.
      If not present in kvs then it returns the most recent ident associated
      with the given heap variable. */
   private def getLatestHeapExpr(elemName: String): Expr = {
-    val (_, y, _) = dict(elemName)
-    val elemIdent = y.toString + elemName
+    val (_, curAssignmentNum, _) = dict(elemName)
+    val elemIdent = curAssignmentNum.toString + elemName
     toExpr(kvs.getOrElse(elemIdent, Ident(elemIdent, Undefined_Pos)))
   }
 
@@ -520,17 +522,17 @@ case class SSA(sTable: SymbolTable) {
     buf
   }
 
-  /* Partial function to retrieve runtime error from inside a statement. */
-  private def getRuntimeError: PartialFunction[Stat, Stat] = {
-    case EqIdent(_, _, err: RuntimeErr) => err
-    case EqAssign(_, err: RuntimeErr)   => err
-    case Free(err: RuntimeErr)          => err
-    case Return(err: RuntimeErr)        => err
-    case Exit(err: RuntimeErr)          => err
-    case Print(err: RuntimeErr)         => err
-    case PrintLn(err: RuntimeErr)       => err
-    case If(err: RuntimeErr, _, _)      => err
-    case While(err: RuntimeErr, _)      => err
+  /* Partial function to retrieve runtime expression from inside a statement. */
+  private def getRuntimeExpr: PartialFunction[Stat, Runtime] = {
+    case EqIdent(_, _, err: Runtime) => err
+    case EqAssign(_, err: Runtime)   => err
+    case Free(err: Runtime)          => err
+    case Return(err: Runtime)        => err
+    case Exit(err: Runtime)          => err
+    case Print(err: Runtime)         => err
+    case PrintLn(err: Runtime)       => err
+    case If(err: Runtime, _, _)      => err
+    case While(err: Runtime, _)      => err
   }
 
   /* Transforms a sequential statement to SSA form and removes any dead code
@@ -543,9 +545,9 @@ case class SSA(sTable: SymbolTable) {
       var curStat = transformStat(stats(i))
       if (!curStat.isEmpty) {
         curStat.last match {
-          case s if getRuntimeError.isDefinedAt(s) =>
+          case s if getRuntimeExpr.isDefinedAt(s) =>
             stop = true
-            curStat = ListBuffer(getRuntimeError(s))
+            curStat = ListBuffer(RuntimeErr(getRuntimeExpr(s)))
           // dead code elimination
           case _: Return | _: Exit => stop = true
           case _                   => // otherwise continue
@@ -618,7 +620,7 @@ case class SSA(sTable: SymbolTable) {
   }
 
   /* Transforms a given function F into SSA form. */
-  def transformFunc(f: Func): (Func, StackSize) = {
+  def transformFunc(f: Func): (Func, VarStackSize) = {
     val Func(t, id, params, s) = f
     val newParams =
       params.map(pList =>
@@ -636,7 +638,7 @@ case class SSA(sTable: SymbolTable) {
   }
 
   /* Transforms a given program AST into SSA form. */
-  def toSSA(ast: Program): (Program, List[StackSize]) = {
+  def toSSA(ast: Program): (Program, List[VarStackSize]) = {
     val Program(fs, s) = ast
     val (funcs, funcStackSizes) = fs.map(transformFunc).unzip
     val p = Program(funcs, Seq(transformStat(s).toList))
