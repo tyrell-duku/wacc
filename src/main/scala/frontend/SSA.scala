@@ -30,8 +30,7 @@ case class SSA(sTable: SymbolTable) {
   val Undefined_Map = null
   val Is_Fst = true
   val Not_Fst = false
-  val Empty_Array_Szie = 0
-
+  /* Variables */
   var stackSize = 0
 
   /* Adds the NewPair NEWPAIR to the key value hash map. */
@@ -102,7 +101,7 @@ case class SSA(sTable: SymbolTable) {
      identifier STR, then the values are updated for unique identifying. */
   private def addToHashMap(id: Ident, rhs: AssignRHS): (Ident, AssignRHS) = {
     val Ident(originalStr, pos) = id
-    var uniqueId: VarName = null
+    var uniqueId: VarName = ""
     var updatedRhs = rhs
     rhs match {
       case e: Expr =>
@@ -405,7 +404,7 @@ case class SSA(sTable: SymbolTable) {
     if (lhs != rhs) {
       EqAssign(lhs, rhs)
     } else {
-      null
+      Skip
     }
   }
 
@@ -436,13 +435,13 @@ case class SSA(sTable: SymbolTable) {
         val ssa1 =
           transformStat(s1) ++ mapIf.toList
             .map(x => updatePhiVar(x, mapElse))
-            .filter(x => x != null)
+            .filter(x => x != Skip)
         currSTable = currSTable.getPrevScope
         currSTable = currSTable.getNextScopeSSA
         val ssa2 =
           transformStat(s2) ++ mapElse.toList
             .map(x => updatePhiVar(x, Undefined_Map))
-            .filter(x => x != null)
+            .filter(x => x != Skip)
         currSTable = currSTable.getPrevScope
         val ifStat = If(e, Seq(ssa1.toList), Seq(ssa2.toList))
         // Remove phi var from kvs so if called upon later, ident is used
@@ -494,7 +493,7 @@ case class SSA(sTable: SymbolTable) {
         val ssa =
           transformStat(s) ++ mapList
             .map(x => updatePhiVar(x, Undefined_Map))
-            .filter(x => x != null)
+            .filter(x => x != Skip)
         currSTable = currSTable.getPrevScope
         // Remove phi var from kvs so if called upon later, ident is used
         mapList.foreach(x => {
