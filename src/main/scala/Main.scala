@@ -6,9 +6,10 @@ import frontend._
 import frontend.SSA
 import parsley.Failure
 import parsley.Success
-
 import scala.collection.mutable.ListBuffer
-import backend.{ARMPrinter, CodeGenerator, Peephole}
+import backend.CodeGenerator.transProg
+import backend.Peephole.optimiseBlocks
+import backend.ARMPrinter.execute
 
 object Main {
   // Constants for error codes
@@ -54,7 +55,6 @@ object Main {
     }
 
     val parserResult = Parser.waccParser.parseFromFile(file)
-
     parserResult match {
       case Failure(msg) => syntaxExit(msg)
       case Success(ast) =>
@@ -64,13 +64,8 @@ object Main {
         if (runtimes.nonEmpty) {
           semanticExit(runtimes)
         }
-        val (data, instrs) =
-          CodeGenerator.transProg(prunedAst, sTable, stackSize)
-        ARMPrinter.execute(
-          file.getName(),
-          data,
-          Peephole.optimiseBlocks(instrs)
-        )
+        val (data, instrs) = transProg(prunedAst, sTable, stackSize)
+        execute(file.getName(), data, optimiseBlocks(instrs))
     }
   }
 }
