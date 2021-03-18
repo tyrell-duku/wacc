@@ -162,16 +162,20 @@ case class SSA(sTable: SymbolTable) {
     val ArrayElem(id @ Ident(s, _), es, pos) = ae
     val arrayElemName = arrayElemIdentifier(s, es)
     // If elem not in dict then out of bounds
-    dict.get(arrayElemName) match {
-      case Some((_, curAssignmentNum, _)) =>
-        toExpr(
-          kvs.getOrElse(
-            curAssignmentNum.toString + arrayElemName,
-            Ident(curAssignmentNum.toString + arrayElemName, Undefined_Pos)
-          )
-        )
-      case None => Bounds
+    var tempId = id
+    var Ident(tempStr, _) = id
+    var retVal: Expr = id
+    for (index <- es) {
+      tempStr =
+        arrayElemIdentifier(tempStr, List(index)).dropWhile(c => c.isDigit)
+      val Ident(updatedStr, _) = updateIdent(Ident(tempStr, pos))
+      kvs.get(updatedStr) match {
+        case Some(Ident(sNew, pos)) => tempStr = sNew
+        case None                   => retVal
+        case Some(p)                => retVal = toExpr(p)
+      }
     }
+    retVal
   }
 
   /* Get's Idents used in E. */
