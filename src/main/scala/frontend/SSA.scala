@@ -194,6 +194,18 @@ case class SSA(sTable: SymbolTable) {
     case id: Ident      => transformExprId(id)
     case ae: ArrayElem  => transformExprArrayElem(ae)
     case liter: Liter   => liter
+    case Len(exp, pos) =>
+      exp match {
+        case id @ Ident(str, _) =>
+          val newId @ Ident(varName, _) = transformExpr(id)
+          kvs(varName) match {
+            case ArrayLiter(Some(elems), _) => IntLiter(elems.size, pos)
+            case ArrayLiter(None, _)        => IntLiter(0, pos)
+            case _                          => ???
+          }
+        case ArrayElem(id, exprs, _) => fold(e.map(transformExpr))
+        case _                       => ???
+      }
     // All operators
     case _ => fold(e.map(transformExpr))
   }
@@ -225,7 +237,7 @@ case class SSA(sTable: SymbolTable) {
       t: Type,
       ident: Ident,
       buf: ListBuffer[Stat]
-  ): ListBuffer[Stat] =
+  ): ListBuffer[Stat] = {
     rhs match {
       case err: Runtime =>
         buf += RuntimeErr(err)
@@ -234,7 +246,7 @@ case class SSA(sTable: SymbolTable) {
         stackSize += getBaseTypeSize(t)
         buf += EqIdent(t, ident, rhs)
     }
-
+  }
   /* Changes a given assign-rhs RHS into an Expr. */
   private def toExpr(rhs: AssignRHS): Expr = rhs match {
     case e: Expr => e
@@ -572,17 +584,7 @@ case class SSA(sTable: SymbolTable) {
             buf += pf(uniqueId)
         }
       // Not ident so not heap variable, transformExpr as usual
-      case _ =>
-        val ids = ListBuffer.empty[Ident]
-        getIdent(e, ids)
-        for (id <- ids) {
-          val newId @ Ident(str, _) = updateIdent(id)
-          val t = currSTable.lookupAllType(id)
-          stackSize += getBaseTypeSize(t)
-          var rhs = kvs.getOrElse(str, newId)
-          buf += EqIdent(t, newId, rhs)
-        }
-        buf += pf(transformExpr(e))
+      case _ => buf += pf(transformExpr(e))
     }
     buf
   }
