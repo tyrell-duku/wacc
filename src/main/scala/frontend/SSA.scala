@@ -79,14 +79,14 @@ case class SSA(sTable: SymbolTable) {
   ): Unit = {
     val Ident(varName, _) = rhsId
     val Ident(rhsUniqueId, _) = updateIdent(rhsId)
-    kvs(rhsUniqueId) match {
+    kvs.get(rhsUniqueId) match {
       // Derefencing a null pointer runtime error
-      case _: PairLiter => kvs += ((uniqueId, NullRef))
+      case Some(_: PairLiter) => kvs += ((uniqueId, NullRef))
       case _ =>
         kvs += (
           (
             uniqueId,
-            getLatestHeapExpr(pairElemIdentifier(varName, isFst))
+            getLatestHeapExpr(varName, isFst)
           )
         )
     }
@@ -168,6 +168,7 @@ case class SSA(sTable: SymbolTable) {
         if (varName.endsWith(s)) toExpr(rhs) else uniqueId
       case _: Call       => uniqueId
       case _: ArrayLiter => uniqueId
+      case _: Newpair    => uniqueId
       case _             => toExpr(rhs)
     }
   }
@@ -575,6 +576,23 @@ case class SSA(sTable: SymbolTable) {
     }
   }
 
+  private def getLatestHeapExpr(elemName: VarName, is_fst: Boolean): Expr = {
+    val varName = pairElemIdentifier(elemName, is_fst)
+    if (dict.contains(pairElemIdentifier(elemName, is_fst))) {
+      getLatestHeapExpr(varName)
+    } else {
+      val (_, curAssignmentNum, _) = dict(elemName)
+      val lookupName = curAssignmentNum.toString + elemName
+      kvs.get(lookupName) match {
+        case Some(Ident(str, _)) =>
+          val temp = str.dropWhile(c => c.isDigit)
+          getLatestHeapExpr(pairElemIdentifier(temp, is_fst))
+        case _ =>
+          NullRef
+      }
+    }
+  }
+
   /* Updates the elements of an arrayLiter using the updated arrayElem values
      from the kvs. */
   private def updateArrayLiter(
@@ -849,7 +867,6 @@ case class SSA(sTable: SymbolTable) {
     val transformedStats = transformStat(stat)
     val p = Program(funcs, Seq(transformedStats.toList))
     val stackSizes = funcStackSizes :+ stackSize
-    println(p)
     (p, transformedStats.filter(isRuntimeErr), stackSizes)
   }
 }
