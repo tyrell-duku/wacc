@@ -13,6 +13,9 @@ import scala.collection.mutable.ListBuffer
 
 object Peephole {
 
+  val Is_Byte = true
+  val Not_Byte = false
+
   /* Blocks of instructions that should be ignored */
   val ignoreBlocks = mutable.ListBuffer.empty[Label]
 
@@ -75,10 +78,10 @@ object Peephole {
           peepStrong(r1, op1, r2, op2, remainingTail, optimised)
         case (Str(r1, op1), Ldr(r2, op2)) =>
           // Potential useless Load
-          peepStrLdr(r1, op1, r2, op2, remainingTail, optimised, false)
+          peepStrLdr(r1, op1, r2, op2, remainingTail, optimised, Not_Byte)
         case (StrB(r1, op1), LdrSB(r2, op2)) =>
           // Potential useless Load
-          peepStrLdr(r1, op1, r2, op2, remainingTail, optimised, true)
+          peepStrLdr(r1, op1, r2, op2, remainingTail, optimised, Is_Byte)
         case _ =>
           continueOptimise(cur, remainingHead, remainingTail, optimised)
       }

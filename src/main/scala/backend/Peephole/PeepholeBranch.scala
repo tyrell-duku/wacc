@@ -4,6 +4,7 @@ import backend.IR.InstructionSet._
 import backend.IR.Operand._
 import backend.IR.Condition._
 import backend.Peephole._
+import CodeGenerator.{TRUE_INT, FALSE_INT}
 import scala.collection._
 
 object PeepholeBranch {
@@ -20,7 +21,8 @@ object PeepholeBranch {
     if (r1 == rd) {
       (op1, op2) match {
         // Comparison is true
-        case (ImmInt(0), ImmInt(0)) | (ImmInt(1), ImmInt(1)) =>
+        case (ImmInt(FALSE_INT), ImmInt(FALSE_INT)) |
+            (ImmInt(TRUE_INT), ImmInt(TRUE_INT)) =>
           remainingTail.head match {
             case BranchCond(EQ, label) =>
               // Branch to necessary label
@@ -34,7 +36,8 @@ object PeepholeBranch {
               )
           }
         // Comparison is false
-        case (ImmInt(0), ImmInt(1)) | (ImmInt(1), ImmInt(0)) =>
+        case (ImmInt(FALSE_INT), ImmInt(TRUE_INT)) |
+            (ImmInt(TRUE_INT), ImmInt(FALSE_INT)) =>
           remainingTail.head match {
             case BranchCond(EQ, label) =>
               // LABEL will never be required

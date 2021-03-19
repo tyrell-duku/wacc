@@ -5,19 +5,23 @@ import backend.IR.Operand._
 import backend.IR.Condition._
 import backend.DefinedFuncs.PreDefinedFuncs._
 import backend.Peephole._
+import backend.CodeGenerator.resultReg
+import backend.DefinedFuncs.PreDefinedFuncs.DivideByZero
 import scala.collection._
 import scala.math._
 
 object PeepholeStrong {
 
   val LOG_ERROR = -1
+  private val Shift_Factor = 2.0
+  private val Drop_Branch_Insts = 3
 
   /* Get log2 of i, returns LOG_ERROR if I == 0 or value is not an Integer */
   def getShiftAmount(i: Int): Int = {
     if (i <= 0) {
       LOG_ERROR
     } else {
-      val dVal = log(i) / log(2.0)
+      val dVal = log(i) / log(Shift_Factor)
       if (dVal == floor(dVal)) {
         dVal.toInt
       } else {
@@ -42,8 +46,8 @@ object PeepholeStrong {
       case ImmMem(0) =>
         // Call DIVIDE_BY_ZERO runtime error
         optimised += Ldr(
-          R0,
-          DataLabel(Label("msg_divide_by_zero"))
+          resultReg,
+          DataLabel(DivideByZero.funcLabel)
         )
         optimised += BranchLink(RuntimeError.funcLabel)
       case ImmMem(n) =>
@@ -144,7 +148,7 @@ object PeepholeStrong {
       op1: LoadOperand,
       optimised: mutable.ListBuffer[Instruction]
   ): Unit = {
-    var newInstructions = instructions.drop(3)
+    var newInstructions = instructions.drop(Drop_Branch_Insts)
     if (shiftAmount != 0) {
       newInstructions = instructions.tail
       Mov(r1, ASL(r1, ImmInt(shiftAmount))) +=: newInstructions
