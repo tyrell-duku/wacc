@@ -61,6 +61,7 @@ object Rules {
       }
       PtrT(null)
     }
+    override def map[B >: AssignRHS](f: Expr => Expr) = Malloc(f(size), pos)
   }
   object Malloc {
     def apply(size: Parsley[Expr]): Parsley[Malloc] =
@@ -82,6 +83,8 @@ object Rules {
       }
       ptrT
     }
+    override def map[B >: AssignRHS](f: Expr => Expr) =
+      Realloc(ptr, f(size), pos)
   }
   object Realloc {
     def apply(ptr: Parsley[Ident], size: Parsley[Expr]): Parsley[Realloc] =
@@ -105,6 +108,8 @@ object Rules {
       }
       PtrT(null)
     }
+    override def map[B >: AssignRHS](f: Expr => Expr) =
+      Calloc(f(num), f(size), pos)
   }
   object Calloc {
     def apply(num: Parsley[Expr], size: Parsley[Expr]): Parsley[Calloc] =
