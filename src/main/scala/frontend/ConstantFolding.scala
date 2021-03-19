@@ -44,7 +44,7 @@ object ConstantFolding {
     case n: IntLiter => n
     // UnOp folding
     case Negation(IntLiter(n, _), p) => evalConditionally(0, n, (_ - _), p)
-    case od @ Ord(e, pos) if od.containsNoIdent =>
+    case od @ Ord(e, pos) if !od.containsIdent =>
       val CharLiter(NormalChar(c), _) = fold(e)
       IntLiter(c.toInt, pos)
     case BitwiseNot(IntLiter(n, _), pos) => IntLiter(~n, pos)
@@ -75,7 +75,7 @@ object ConstantFolding {
       else evalConditionally(n1, n2, (_ >> _), p)
     // Recursive case (ArithOps & BitwiseOps)
     case op @ (_: ArithOps | _: BitwiseOps | _: BitwiseNot)
-        if op.containsNoIdent =>
+        if !op.containsIdent =>
       foldIntOps(op.map(foldIntOps))
   }
 
@@ -104,18 +104,19 @@ object ConstantFolding {
     case LTE(CharLiter(NormalChar(c1), pos), CharLiter(NormalChar(c2), _), _) =>
       BoolLiter(c1 <= c2, pos)
     case LTE(IntLiter(n1, pos), IntLiter(n2, _), _) => BoolLiter(n1 <= n2, pos)
-    case eq @ Equal(l, r, pos) if eq.containsNoIdent =>
+    case eq @ Equal(l, r, pos) if !eq.containsIdent =>
       BoolLiter(fold(l) == fold(r), pos)
-    case neq @ NotEqual(l, r, pos) if neq.containsNoIdent =>
+    case neq @ NotEqual(l, r, pos) if !neq.containsIdent =>
       BoolLiter(fold(l) != fold(r), pos)
-    case op @ (_: Not | _: LogicalOps) if op.containsNoIdent =>
+    case op @ (_: Not | _: LogicalOps) if !op.containsIdent =>
       foldBoolOps(op.map(foldBoolOps))
-    case op @ (_: ComparOps | _: EqOps) => foldBoolOps(op.map(fold))
+    case op @ (_: ComparOps | _: EqOps) if !op.containsIdent =>
+      foldBoolOps(op.map(fold))
   }
 
   /* Folds an expression that will evaluate to a char literal */
   private def foldCharOps: PartialFunction[Expr, Expr] = {
-    case chr @ Chr(e, pos) if chr.containsNoIdent =>
+    case chr @ Chr(e, pos) if !chr.containsIdent =>
       val IntLiter(n, _) = foldIntOps(e)
       CharLiter(NormalChar(n.toChar), pos)
   }
