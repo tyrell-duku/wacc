@@ -25,9 +25,7 @@ object Main {
 
   /* Exit with code 200 & print all semantic errors returned by
      SemanticChecker and Runtime errors detected at compile time. */
-  private def semanticExit[A](
-      errorMessages: ListBuffer[A]
-  ): Nothing = {
+  private def semanticExit(errorMessages: ListBuffer[_]): Nothing = {
     println("Semantic Error")
     errorMessages.foreach(semErr => println(semErr))
     sys.exit(semanticError)
