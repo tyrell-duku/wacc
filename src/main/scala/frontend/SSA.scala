@@ -156,6 +156,14 @@ case class SSA(sTable: SymbolTable) {
     Ident(curAssignmentNum.toString + originalStr, pos)
   }
 
+  /* Returns true if ID is a heap variable, used to update heap variables with
+     shared reference correctly. */
+  private def isHeapVariable(id: Ident): Boolean =
+    id.getType(currSTable) match {
+      case _: ArrayT | _: Pair => true
+      case _                   => false
+    }
+
   /* Transforms an ident ID into SSA form and applies constant propagation. */
   private def transformExprId(id: Ident): Expr = {
     val Ident(s, _) = id
@@ -164,8 +172,10 @@ case class SSA(sTable: SymbolTable) {
     rhs match {
       // If kvs returns a different updated ident name (while case) then
       // update, otherwise return prev updated ident
+      // If isHeapVariable is true then id is a shared reference so return
+      // ident from kvs (original heap variable)
       case Ident(varName, _) =>
-        if (varName.endsWith(s)) toExpr(rhs) else uniqueId
+        if (varName.endsWith(s) || isHeapVariable(id)) toExpr(rhs) else uniqueId
       case _: Call       => uniqueId
       case _: ArrayLiter => uniqueId
       case _: Newpair    => uniqueId
