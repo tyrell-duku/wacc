@@ -1,7 +1,10 @@
 package backend.CodeGeneration
 
 import backend.CodeGenerator._
-import backend.CodeGeneration.MemoryAllocs.freePointer
+import backend.CodeGeneration.MemoryAllocs.{
+  freePointer,
+  throwUnallocatedMemError
+}
 import backend.DefinedFuncs.PreDefinedFuncs.{FreePair, FreeArray}
 import backend.DefinedFuncs.RuntimeErrors.addRuntimeError
 import backend.IR.InstructionSet._
@@ -13,7 +16,7 @@ object Free {
   /* Translates free statement to our internal representation.
      Can only free a pair or array, semantically only free(Ident)
      is valid. */
-  def transFree(id: Ident): ListBuffer[Instruction] = {
+  def transFreeId(id: Ident): ListBuffer[Instruction] = {
     val instructions = ListBuffer.empty[Instruction]
     val freeReg = getFreeReg()
     val (index, t) = sTable(id)
@@ -33,5 +36,12 @@ object Free {
       case _ => ???
     }
     instructions
+  }
+
+  def transFree(e: Expr): ListBuffer[Instruction] = e match {
+    case id: Ident => transFreeId(id)
+    // Needed due to SSA optimisation, if not Ident then it must be free &x
+    // where x is a normal variable on the stack
+    case _ => throwUnallocatedMemError
   }
 }

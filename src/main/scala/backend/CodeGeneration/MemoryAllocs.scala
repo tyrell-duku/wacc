@@ -146,7 +146,11 @@ object MemoryAllocs {
           printFreeError(doubleFreeError)
         }
       case None =>
-        printFreeError(unallocatedMemError)
+        throwUnallocatedMemError
     }
+  }
+
+  def throwUnallocatedMemError: ListBuffer[Instruction] = {
+    printFreeError(unallocatedMemError)
   }
 }
