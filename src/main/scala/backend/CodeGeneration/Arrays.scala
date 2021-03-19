@@ -3,7 +3,6 @@ package backend.CodeGeneration
 import backend.CodeGeneration.Expressions.transExp
 import backend.CodeGeneration.MemoryAllocs.transPointerElem
 import backend.CodeGenerator._
-import backend.CodeGenerator
 import backend.DefinedFuncs.PreDefinedFuncs.ArrayBounds
 import backend.DefinedFuncs.RuntimeErrors.addRuntimeError
 import backend.IR.InstructionSet._
@@ -65,7 +64,7 @@ object Arrays {
         instructions += Mov(R1, reg)
         instructions += BranchLink(addRuntimeError(ArrayBounds))
         // Add offset to account for array size at start of array in memory
-        instructions += Add(reg, reg, ImmInt(CodeGenerator.INT_SIZE))
+        instructions += Add(reg, reg, ImmInt(INT_SIZE))
         // Gets address of array elem
         if (isByte(t)) {
           instructions += Add(reg, reg, nextReg)
@@ -105,8 +104,8 @@ object Arrays {
     // If array elems are of size byte, offset increments by 1 for each
     // elem, otherwise increments by 4
     val offset: (Int => Int) =
-      if (typeSizeIsByte) (i => i + CodeGenerator.INT_SIZE)
-      else (i => (i + 1) * CodeGenerator.ADDRESS_SIZE)
+      if (typeSizeIsByte) (i => i + INT_SIZE)
+      else (i => (i + 1) * ADDRESS_SIZE)
     // Store all array elements into memory
     for (i <- 0 until listSize) {
       instructions ++= transExp(arr(i), nextFreeReg)
