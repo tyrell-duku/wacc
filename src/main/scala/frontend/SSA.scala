@@ -22,6 +22,8 @@ case class SSA(sTable: SymbolTable) {
     new HashMap[VarName, IdNums]
   // (key, values) hash map for constant propagation
   private var kvs = new HashMap[VarName, AssignRHS]
+  // Declared HeapVariables
+  private var declaredHeapVars = ListBuffer.empty[Ident]
   private var currSTable = sTable
   /* Constants */
   val Initial_Id_Num = 0
@@ -40,14 +42,20 @@ case class SSA(sTable: SymbolTable) {
       originalStr: VarName
   ): VarName = {
     val uniqueId = addToDict(originalStr)
-    kvs += ((uniqueId, newpair))
     val Newpair(fst, snd, _) = newpair
+    println(s"newpair $newpair")
     // Fst elem
     val fstName = addToDict(pairElemIdentifier(originalStr, Is_Fst))
     kvs += ((fstName, transformExpr(fst)))
     // Snd elem
     val sndName = addToDict(pairElemIdentifier(originalStr, Not_Fst))
     kvs += ((sndName, transformExpr(snd)))
+    kvs += (
+      (
+        uniqueId,
+        Newpair(transformExpr(fst), transformExpr(snd), Dummy_Pos)
+      )
+    )
     uniqueId
   }
 
@@ -144,6 +152,7 @@ case class SSA(sTable: SymbolTable) {
         updatedRhs = kvs(uniqueId)
       case call: Call =>
         updatedRhs = call.map(transformExpr)
+
         uniqueId = addToDict(originalStr)
       case memAlloc: MemoryAlloc =>
         val (updatedPtrId, updatedPtrRhs) =
@@ -161,7 +170,7 @@ case class SSA(sTable: SymbolTable) {
     var (x, y, z) =
       dict.getOrElse(s, (Initial_Id_Num, Initial_Id_Num, Initial_Id_Num))
     x += 1
-    y += 1
+    y = x
     z += 1
     dict += ((s, (x, y, z)))
     x.toString + s
@@ -171,8 +180,9 @@ case class SSA(sTable: SymbolTable) {
      PRE: the identifier is already in the hashmap DICT. */
   private def updateIdent(id: Ident): Ident = {
     val Ident(originalStr, pos) = id
-    val (_, curAssignmentNum, _) = dict(originalStr)
-    Ident(curAssignmentNum.toString + originalStr, pos)
+    val baseStr = strip(originalStr)
+    val (uniqueNum, curAssignmentNum, _) = dict(baseStr)
+    Ident(curAssignmentNum.toString + baseStr, pos)
   }
 
   /* Returns true if ID is a heap variable, used to update heap variables with
@@ -204,10 +214,21 @@ case class SSA(sTable: SymbolTable) {
 
   /* Gets size of the array the VARNAME is associated with */
   private def getSize(varName: String): Int = {
-    val (_, curAssignmentNum, _) = dict(varName)
-    val lookupStr = curAssignmentNum.toString + varName
+    val (uniqueNum, curAssignmentNum, _) = dict(varName)
+    var lookupStr = varName
+    lookupStr = curAssignmentNum.toString + varName
+
     kvs.get(lookupStr) match {
       case Some(arrayLiter: ArrayLiter) => arrayLiter.len
+      case Some(p) =>
+        updateRHS(p, varName) match {
+          case id @ Ident(str, _) =>
+            if (varName == strip(str)) {
+              return 0
+            }
+            getSize(strip(str))
+          case _ => ???
+        }
       case _ =>
         var length = 0
         while (kvs.contains(lookupStr + "-" + length)) {
@@ -232,14 +253,13 @@ case class SSA(sTable: SymbolTable) {
       val transformedExpr = transformExpr(index)
       transIndices += transformedExpr
       // Check for Out of Bounds errors
-      val arrSize = getSize(tempStr.dropWhile(c => c.isDigit))
+      val arrSize = getSize(strip(tempStr))
       transformedExpr match {
         case IntLiter(n, pos) if n < 0 || n >= arrSize => return Bounds(pos)
         case _                                         =>
       }
       if (containsIdent(transformedExpr)) {
-        tempStr =
-          arrayElemIdentifier(tempStr, List(index)).dropWhile(c => c.isDigit)
+        tempStr = (arrayElemIdentifier(tempStr, List(index)))
         val Ident(updatedStr, _) = updateIdent(Ident(tempStr, pos))
         kvs.get(updatedStr) match {
           case Some(Ident(sNew, _)) => tempStr = sNew
@@ -463,9 +483,55 @@ case class SSA(sTable: SymbolTable) {
     }
   }
 
+  private def getIdentsAssigRHS(
+      rhs: AssignRHS,
+      ids: ListBuffer[Ident]
+  ): ListBuffer[Ident] = {
+    rhs match {
+      case id @ Ident(str, _) =>
+        val updatedId @ Ident(varName, _) = updateIdent(id)
+        kvs.get(varName) match {
+          case Some(assignRHS) =>
+            ids += updatedId
+            getIdentsAssigRHS(assignRHS, ids)
+          case _ =>
+            ids += updatedId
+        }
+      case e: Expr => getIdent(e, ids)
+      case al @ ArrayLiter(Some(elems), _) =>
+        ids ++= elems.flatMap(e => getIdent(e, ids))
+      case Newpair(fst, snd, _) =>
+        getIdentsAssigRHS(fst, ids)
+        getIdentsAssigRHS(snd, ids)
+      case Fst(e, _) => ids ++= getIdentsAssigRHS(e, ids)
+      case Snd(e, _) => ids ++= getIdentsAssigRHS(e, ids)
+      case Call(id, Some(ArgList(params)), pos) =>
+        ids ++= params.flatMap(e => getIdent(e, ids))
+      case _ => ids
+    }
+  }
+
+  private def addUndeclaredVars(rhs: AssignRHS, ids: ListBuffer[Ident]) {
+    val buf = ListBuffer.empty[Stat]
+    getIdentsAssigRHS(rhs, ids)
+    for (id <- ids.reverse) {
+      if (!declaredHeapVars.contains(id)) {
+        val Ident(str, _) = id
+        declaredHeapVars += id
+        if (kvs.contains(str)) {
+          buf += EqIdent(
+            Ident(strip(str), Dummy_Pos).getType(sTable),
+            id,
+            kvs(str)
+          )
+        }
+      }
+    }
+  }
+
   /* If a variable from higher scope is changed within an if or else branch,
      introduce new variable before if statement to account for phi. */
-  private def createPhiVar(x: (VarName, NumOfAssigns)): Stat = {
+  private def createPhiVar(x: (VarName, NumOfAssigns)): ListBuffer[Stat] = {
     // n is the number of assignments in both if and else branches
     val (s, numOfAssigns) = x
     // y is the current number of assignments for the given variable
@@ -475,11 +541,15 @@ case class SSA(sTable: SymbolTable) {
     val rhs = kvs.getOrElse(varName, Ident(varName, Undefined_Value))
     var originalType = currSTable.lookupAllType(Ident(s, Undefined_Pos))
     stackSize += getBaseTypeSize(originalType)
-    EqIdent(
-      originalType,
-      Ident((numOfAssigns + curAssignmentNum).toString + s, Undefined_Pos),
-      rhs
-    )
+    val buf = ListBuffer.empty[Stat]
+    val ids = ListBuffer.empty[Ident]
+    addUndeclaredVars(rhs, ids)
+    buf +=
+      EqIdent(
+        originalType,
+        Ident((numOfAssigns + curAssignmentNum).toString + s, Undefined_Pos),
+        rhs
+      )
   }
 
   /* Updates the PHI variable, given the map of the condition branch */
@@ -524,7 +594,7 @@ case class SSA(sTable: SymbolTable) {
     countVariables(s2, map, mapElse)
     // Create the PHI variables if necessary
     val mapList = map.toList
-    stats ++= mapList.map(createPhiVar)
+    stats ++= mapList.flatMap(createPhiVar)
     // Transform S1 and S2 and updatePhiVar within each branch (if necessary)
     val e = transformExpr(cond)
     e match {
@@ -575,7 +645,7 @@ case class SSA(sTable: SymbolTable) {
     countVariables(s, map, Undefined_Map)
     // Create the PHI variables if necessary
     val mapList = map.toList
-    stats ++= mapList.map(createPhiVar)
+    stats ++= mapList.flatMap(createPhiVar)
     // Transform the while condition, updating with the phi vars if necessary
     // Transform the inner of the while, updating phi vars if necessary
     val e = transformExpr(cond, map)
@@ -608,6 +678,11 @@ case class SSA(sTable: SymbolTable) {
     }
   }
 
+  /* Strips initial Numbers from a string*/
+  private def strip(str: String): String = {
+    str.dropWhile(c => c.isDigit)
+  }
+
   /* Function used to retrieve the latest value of a heap variable in kvs.
      If not present in kvs then it returns the most recent ident associated
      with the given heap variable. */
@@ -615,9 +690,14 @@ case class SSA(sTable: SymbolTable) {
     if (!dict.contains(elemName)) {
       NullRef(Undefined_Pos)
     } else {
-      val (_, curAssignmentNum, _) = dict(elemName)
-      val elemIdent = curAssignmentNum.toString + elemName
-      toExpr(kvs.getOrElse(elemIdent, Ident(elemIdent, Undefined_Pos)))
+      val (uniqueNum, curAssignmentNum, _) = dict(strip(elemName))
+      val lookupName =
+        // if (uniqueNum == 0) {
+        curAssignmentNum.toString + strip(elemName)
+      // } else {
+      //   uniqueNum.toString + strip(elemName)
+      // }
+      toExpr(kvs.getOrElse(lookupName, Ident(lookupName, Undefined_Pos)))
     }
   }
 
@@ -626,12 +706,16 @@ case class SSA(sTable: SymbolTable) {
     if (dict.contains(pairElemIdentifier(elemName, is_fst))) {
       getLatestHeapExpr(varName)
     } else {
-      val (_, curAssignmentNum, _) = dict(elemName)
-      val lookupName = curAssignmentNum.toString + elemName
+      val (uniqueNum, curAssignmentNum, _) = dict(strip(elemName))
+      val lookupName =
+        // if (uniqueNum == 0) {
+        curAssignmentNum.toString + strip(elemName)
+      // } else {
+      // uniqueNum.toString + elemName
+      // }
       kvs.get(lookupName) match {
         case Some(Ident(str, _)) =>
-          val temp = str.dropWhile(c => c.isDigit)
-          getLatestHeapExpr(pairElemIdentifier(temp, is_fst))
+          getLatestHeapExpr(pairElemIdentifier(strip(str), is_fst))
         case _ =>
           NullRef(Undefined_Pos)
       }
@@ -783,11 +867,11 @@ case class SSA(sTable: SymbolTable) {
             val newIndices = es.map(transformExpr)
             if (newIndices.map(containsIdent).reduce((b1, b2) => b1 || b2)) {
               addToHashMap(
-                Ident(arrayElemIdentifier(varName, newIndices), pos),
+                Ident(arrayElemIdentifier(strip(varName), newIndices), pos),
                 r
               )
             } else {
-              addToDict(varName)
+              addToDict(strip(varName))
             }
             val newId @ Ident(str, _) = updateIdent(id)
             val newArrayElem = ArrayElem(newId, newIndices, pos)
@@ -870,10 +954,12 @@ case class SSA(sTable: SymbolTable) {
       case Skip               => buf
       case While(cond, stat)  => transformWhile(cond, stat)
       case Begin(stat) =>
+        val oldScopes = dict.map(enteringScope)
+        dict = dict.map(foo)
         currSTable = currSTable.getNextScopeSSA
         val transformedS = transformStat(stat)
         currSTable = currSTable.getPrevScope
-        dict = dict.map(leavingScope)
+        dict = dict.map(x => leavingScope(x, oldScopes))
         transformedS
       case stat => buf += stat
     }
@@ -887,11 +973,29 @@ case class SSA(sTable: SymbolTable) {
     dict += ((varName, (uniqueId, curAssignmentNum, Initial_Id_Num + 1)))
   }
 
+  /* TODO */
+  def enteringScope(kv: (VarName, IdNums)): (VarName, Int) = {
+    val (varName, (uniqueId, curAssignmentNum, numOfAssigns)) = kv
+    (varName, numOfAssigns)
+  }
+
+  def foo(kv: (VarName, IdNums)): (VarName, IdNums) = {
+    val (varName, (uniqueId, curAssignmentNum, numOfAssigns)) = kv
+    (varName, (uniqueId, curAssignmentNum, Initial_Id_Num))
+  }
+
   /* Update the current var number to correct value when leaving scope.
      Reset the scope counter to 0 when leaving scope. */
-  def leavingScope(kv: (VarName, IdNums)): (VarName, IdNums) = {
+  def leavingScope(
+      kv: (VarName, IdNums),
+      oldScopes: HashMap[VarName, Int]
+  ): (VarName, IdNums) = {
     val (varName, (uniqueId, curAssignmentNum, numOfAssigns)) = kv
-    (varName, (uniqueId, curAssignmentNum - numOfAssigns, Initial_Id_Num))
+    var oldAssignNum = oldScopes.get(varName) match {
+      case Some(n) => n
+      case None    => Initial_Id_Num
+    }
+    (varName, (uniqueId, curAssignmentNum - numOfAssigns, oldAssignNum))
   }
 
   /* Transforms a given function F into SSA form. */
@@ -928,6 +1032,24 @@ case class SSA(sTable: SymbolTable) {
     val transformedStats = transformStat(stat)
     val p = Program(funcs, Seq(transformedStats.toList))
     val stackSizes = funcStackSizes :+ stackSize
+    println(p)
+    // printHash()
     (p, transformedStats.filter(isRuntimeErr), stackSizes)
+  }
+
+  def printHash(): Unit = {
+    println("\n\nKVS IS COMING")
+    for (e <- kvs) {
+      println(e)
+    }
+    println("END\n\n")
+  }
+
+  def printDict(): Unit = {
+    println("\n\nDICT IS COMING")
+    for (e <- dict) {
+      println(e)
+    }
+    println("END\n\n")
   }
 }
