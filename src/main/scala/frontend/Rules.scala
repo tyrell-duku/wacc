@@ -15,31 +15,32 @@ object Rules {
   // Integer overflow/underflow
   case class Overflow(pos: (Int, Int)) extends Runtime {
     override def getType(sTable: SymbolTable) = null
-    override def toString = s"Integer overflow at $pos."
+    override def toString = s"Integer overflow at ${printPos(pos)}."
   }
   // Divide by zero
   case class ZeroDivision(pos: (Int, Int)) extends Runtime {
     override def getType(sTable: SymbolTable) = null
-    override def toString = s"Divide by zero error at $pos. Cannot divide by 0."
+    override def toString =
+      s"Divide by zero error at ${printPos(pos)}. Cannot divide by 0."
   }
   // Shifting with negative numbers
   case class NegShift(pos: (Int, Int)) extends Runtime {
     override def getType(sTable: SymbolTable) = null
     override def toString =
-      s"Invalid operation at $pos: Operands of shifts must be positive."
+      s"Invalid operation at ${printPos(pos)}: Operands of shifts must be positive."
   }
-  // Arrary out of bounds check
+  // Array out of bounds check
   case class Bounds(pos: (Int, Int)) extends Runtime {
     override def getType(sTable: SymbolTable) = null
     override def toString =
-      s"Array out of bounds error at $pos: Cannot access negative index/" +
+      s"Array out of bounds error at ${printPos(pos)}: Cannot access negative index/" +
         "index larger than array size"
   }
   // Reference to null
   case class NullRef(pos: (Int, Int)) extends Runtime {
     override def getType(sTable: SymbolTable) = null
     override def toString =
-      s"Attempt to dereference a null reference at $pos."
+      s"Attempt to dereference a null reference at ${printPos(pos)}."
   }
 
   case class RuntimeErr(err: Runtime) extends Stat {
