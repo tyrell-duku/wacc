@@ -30,7 +30,7 @@ object ConstantFolding {
       n1: Int,
       n2: Int,
       op: (Long, Long) => Long,
-      pos: (Int, Int)
+      pos: (Line, Col)
   ): Expr = {
     if (checkOverflow(n1, n2, op)) Overflow(pos)
     else IntLiter(op(n1, n2).toInt, pos)
@@ -74,7 +74,8 @@ object ConstantFolding {
       if (n1 < 0 || n2 < 0) NegShift(posError)
       else evalConditionally(n1, n2, (_ >> _), p)
     // Recursive case (ArithOps & BitwiseOps)
-    case op @ (_: ArithOps | _: BitwiseOps | _: BitwiseNot) =>
+    case op @ (_: ArithOps | _: BitwiseOps | _: BitwiseNot)
+        if op.containsNoIdent =>
       foldIntOps(op.map(foldIntOps))
   }
 
@@ -107,11 +108,9 @@ object ConstantFolding {
       BoolLiter(fold(l) == fold(r), pos)
     case neq @ NotEqual(l, r, pos) if neq.containsNoIdent =>
       BoolLiter(fold(l) != fold(r), pos)
-    case op: Not if op.containsNoIdent       => foldBoolOps(op.map(foldBoolOps))
-    case op: ComparOps if op.containsNoIdent => foldBoolOps(op.map(fold))
-    case op: EqOps if op.containsNoIdent     => foldBoolOps(op.map(fold))
-    case op: LogicalOps if op.containsNoIdent =>
+    case op @ (_: Not | _: LogicalOps) if op.containsNoIdent =>
       foldBoolOps(op.map(foldBoolOps))
+    case op @ (_: ComparOps | _: EqOps) => foldBoolOps(op.map(fold))
   }
 
   /* Folds an expression that will evaluate to a char literal */
