@@ -43,7 +43,6 @@ case class SSA(sTable: SymbolTable) {
   ): VarName = {
     val uniqueId = addToDict(originalStr)
     val Newpair(fst, snd, _) = newpair
-    println(s"newpair $newpair")
     // Fst elem
     val fstName = addToDict(pairElemIdentifier(originalStr, Is_Fst))
     kvs += ((fstName, transformExpr(fst)))
@@ -511,22 +510,27 @@ case class SSA(sTable: SymbolTable) {
     }
   }
 
-  private def addUndeclaredVars(rhs: AssignRHS, ids: ListBuffer[Ident]) {
+  private def addUndeclaredVars(rhs: AssignRHS): ListBuffer[Stat] = {
     val buf = ListBuffer.empty[Stat]
+    val ids = ListBuffer.empty[Ident]
     getIdentsAssigRHS(rhs, ids)
     for (id <- ids.reverse) {
       if (!declaredHeapVars.contains(id)) {
         val Ident(str, _) = id
         declaredHeapVars += id
         if (kvs.contains(str)) {
+          val t = Ident(strip(str), Dummy_Pos).getType(sTable)
+          stackSize += getBaseTypeSize(t)
           buf += EqIdent(
-            Ident(strip(str), Dummy_Pos).getType(sTable),
+            t,
             id,
             kvs(str)
           )
+
         }
       }
     }
+    buf
   }
 
   /* If a variable from higher scope is changed within an if or else branch,
@@ -542,8 +546,7 @@ case class SSA(sTable: SymbolTable) {
     var originalType = currSTable.lookupAllType(Ident(s, Undefined_Pos))
     stackSize += getBaseTypeSize(originalType)
     val buf = ListBuffer.empty[Stat]
-    val ids = ListBuffer.empty[Ident]
-    addUndeclaredVars(rhs, ids)
+    addUndeclaredVars(rhs)
     buf +=
       EqIdent(
         originalType,
@@ -940,6 +943,10 @@ case class SSA(sTable: SymbolTable) {
     stat match {
       case EqIdent(t, id, r) =>
         val (v, rhs) = addToHashMap(id, r)
+        rhs match {
+          case call: Call => buf ++= addUndeclaredVars(rhs)
+          case _          =>
+        }
         scopeRedefine(id)
         deadCodeElimination(rhs, t, v, buf)
       case eqAssign: EqAssign => transformEqAssignStat(eqAssign)
@@ -1032,24 +1039,6 @@ case class SSA(sTable: SymbolTable) {
     val transformedStats = transformStat(stat)
     val p = Program(funcs, Seq(transformedStats.toList))
     val stackSizes = funcStackSizes :+ stackSize
-    println(p)
-    // printHash()
     (p, transformedStats.filter(isRuntimeErr), stackSizes)
-  }
-
-  def printHash(): Unit = {
-    println("\n\nKVS IS COMING")
-    for (e <- kvs) {
-      println(e)
-    }
-    println("END\n\n")
-  }
-
-  def printDict(): Unit = {
-    println("\n\nDICT IS COMING")
-    for (e <- dict) {
-      println(e)
-    }
-    println("END\n\n")
   }
 }
