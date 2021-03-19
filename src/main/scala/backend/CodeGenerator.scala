@@ -130,7 +130,7 @@ object CodeGenerator {
       case EqIdent(t, i, r) => instructions ++= transEqIdent(t, i, r)
       case EqAssign(l, r)   => instructions ++= transEqAssign(l, r)
       case Read(lhs)        => instructions ++= transRead(lhs)
-      case Free(id: Ident)  => instructions ++= transFree(id)
+      case Free(e)          => instructions ++= transFree(e)
       case Return(e)        => instructions ++= transReturn(e)
       case Exit(e)          => instructions ++= transExit(e)
       case Print(e)         => instructions ++= transPrint(e, NO_NEW_LINE)
