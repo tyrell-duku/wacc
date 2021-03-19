@@ -1,3 +1,0 @@
-begin
-  println 2 * 2147483646
-end

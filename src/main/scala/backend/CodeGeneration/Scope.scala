@@ -25,18 +25,8 @@ object Scope {
       s: Stat,
       curInstrs: ListBuffer[Instruction]
   ): ListBuffer[Instruction] = {
-    val oldScopeSP = scopeSP
     sTable = sTable.getNextScope
-    val curScopeMaxSPDepth = sTable.spMaxDepth
-    curInstrs ++= subSP(curScopeMaxSPDepth)
-    scopeSP = currentSP
-    currentSP += curScopeMaxSPDepth
     val instructions = transStat(s, curInstrs)
-    if (curScopeMaxSPDepth > 0) {
-      instructions ++= addSP(curScopeMaxSPDepth)
-      currentSP -= curScopeMaxSPDepth
-    }
-    scopeSP = oldScopeSP
     sTable = sTable.getPrevScope
     instructions
   }

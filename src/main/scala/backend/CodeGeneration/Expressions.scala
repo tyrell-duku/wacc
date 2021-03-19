@@ -6,6 +6,7 @@ import backend.CodeGenerator
 import backend.CodeGenerator._
 import backend.DefinedFuncs.PreDefinedFuncs.{
   PreDefFunc,
+  RuntimeError,
   Overflow,
   DivideByZero,
   NegativeShift
@@ -15,6 +16,7 @@ import backend.IR
 import backend.IR.Condition.{Condition, VS}
 import IR.InstructionSet._
 import backend.IR.Operand._
+import frontend.Rules
 import frontend.Rules._
 import scala.collection.mutable.ListBuffer
 
@@ -198,7 +200,7 @@ object Expressions {
     ListBuffer(Ldr(rd, DataLabel(curLabel)))
   }
 
-  /* Translates the address operator into our IR instruction set. */ 
+  /* Translates the address operator into our IR instruction set. */
   private def transAddr(ptr: Expr, rd: Reg): ListBuffer[Instruction] = {
     val instructions = ListBuffer.empty[Instruction]
     ptr match {
@@ -238,7 +240,7 @@ object Expressions {
       case e: UnOp              => instructions ++= transUnOp(e, rd)
       case e: BinOp =>
         instructions ++= transBinOp(e, rd)
-      case Addr(ptr, _) => instructions ++= transAddr(ptr, rd)
+      case Addr(ptr, _)     => instructions ++= transAddr(ptr, rd)
       case DerefPtr(ptr, _) =>
         // PTR is a pointer so retrieve the address of it by calling transExp
         // then load in the value stored at that address
@@ -246,6 +248,7 @@ object Expressions {
         instructions += Ldr(rd, RegAdd(rd))
       case SizeOf(t, _) =>
         instructions += Ldr(rd, ImmMem(getBaseTypeSize(t)))
+      case _: Runtime => ???
     }
     instructions
   }

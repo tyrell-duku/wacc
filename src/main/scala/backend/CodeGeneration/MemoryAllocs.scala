@@ -137,16 +137,18 @@ object MemoryAllocs {
      in the heap). Otherwise it throws a runtime error if it has been
      previously freed or is trying to free unallocated memory. */
   def freePointer(id: Ident): ListBuffer[Instruction] = {
-    userHeap.get(id) match {
-      case Some(addr) =>
-        if (addressSet(addr)) {
-          addressSet -= addr
-          ListBuffer(BranchLink(Label("free")))
-        } else {
-          printFreeError(doubleFreeError)
-        }
-      case None =>
-        printFreeError(unallocatedMemError)
+    val addr = userHeap(id)
+    if (addressSet(addr)) {
+      addressSet -= addr
+      ListBuffer(BranchLink(Label("free")))
+    } else {
+      printFreeError(doubleFreeError)
     }
+  }
+
+  /* Called in transFree if free(&x) occurs where x is a variable on the
+     stack.*/
+  def throwUnallocatedMemError: ListBuffer[Instruction] = {
+    printFreeError(unallocatedMemError)
   }
 }

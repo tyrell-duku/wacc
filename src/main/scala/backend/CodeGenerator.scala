@@ -11,8 +11,19 @@ import frontend.Rules._
 import frontend.Semantics.SymbolTable
 import scala.collection.mutable.ListBuffer
 import backend.DataTypes.{DataTable, FuncTable}
+import backend.DefinedFuncs.PreDefinedFuncs.{
+  Overflow,
+  DivideByZero,
+  NegativeShift,
+  ArrayBounds,
+  NullPointer,
+  PreDefFunc,
+  RuntimeError
+}
+import backend.DefinedFuncs.RuntimeErrors.{Get_First, addInstantRuntimeError}
 import backend.IR.InstructionSet._
 import backend.IR.Operand._
+import frontend.Rules
 
 object CodeGenerator {
   /* Registers. */
@@ -61,16 +72,17 @@ object CodeGenerator {
      by ARMPrinter to generate .s file*/
   def transProg(
       prog: Program,
-      sTable: SymbolTable
+      sTable: SymbolTable,
+      stackSizes: List[Int]
   ): (List[Data], List[(Label, List[Instruction])]) = {
     this.sTable = sTable
     val Program(funcs, stat) = prog
-    for (f <- funcs) {
-      transFunc(f)
+    for (i <- funcs.indices) {
+      transFunc(funcs(i), stackSizes(i))
     }
     currentLabel = Label("main")
     scopeSP = currentSP
-    val curScopeMaxSPDepth = sTable.spMaxDepth
+    val curScopeMaxSPDepth = stackSizes.last
     currentSP += curScopeMaxSPDepth
     val instructions = transStat(
       stat,
@@ -87,6 +99,28 @@ object CodeGenerator {
     (dataTable.table.toList, funcList.toList)
   }
 
+  /* Converts the frontend IR to the backend IR for runtime errors. */
+  private def frontToBackRuntimeErr(err: Runtime): PreDefFunc = err match {
+    case _: Rules.Overflow => Overflow
+    case _: ZeroDivision   => DivideByZero
+    case _: NegShift       => NegativeShift
+    case _: Bounds         => ArrayBounds
+    case _: NullRef        => NullPointer
+  }
+
+  /* Translates a runtime error ERR found at compile time. Instantly throws a
+     runtime error, so no need to add the predefined function for the runtime
+     error ERR. */
+  def transRuntimeErr(e: Runtime): ListBuffer[Instruction] = {
+    val instructions = ListBuffer.empty[Instruction]
+    val err = frontToBackRuntimeErr(e)
+    addInstantRuntimeError(err)
+    // Load & branch instantly to the run time error
+    instructions += Ldr(resultReg, DataLabel(Label(err.msgName(Get_First))))
+    instructions += BranchLink(RuntimeError.funcLabel)
+    instructions
+  }
+
   /* Translates statements into our internal representation. */
   def transStat(
       stat: Stat,
@@ -96,7 +130,7 @@ object CodeGenerator {
       case EqIdent(t, i, r) => instructions ++= transEqIdent(t, i, r)
       case EqAssign(l, r)   => instructions ++= transEqAssign(l, r)
       case Read(lhs)        => instructions ++= transRead(lhs)
-      case Free(id: Ident)  => instructions ++= transFree(id)
+      case Free(e)          => instructions ++= transFree(e)
       case Return(e)        => instructions ++= transReturn(e)
       case Exit(e)          => instructions ++= transExit(e)
       case Print(e)         => instructions ++= transPrint(e, NO_NEW_LINE)
@@ -109,8 +143,9 @@ object CodeGenerator {
           nextInstructions = transStat(s, nextInstructions)
         }
         nextInstructions
-      case Begin(s) => transBegin(s, instructions)
-      case _        => instructions
+      case Begin(s)        => transBegin(s, instructions)
+      case RuntimeErr(err) => instructions ++= transRuntimeErr(err)
+      case _               => instructions
     }
   }
 
@@ -151,8 +186,9 @@ object CodeGenerator {
       case DerefPtr(ptr, _) =>
         val PtrT(inner) = ptr.getType(sTable)
         inner
-      case _: SizeOf => IntT
-      case _         => ???
+      case _: SizeOf  => IntT
+      case _: Runtime => ???
+      // case _         => ???
     }
   }
 

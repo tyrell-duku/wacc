@@ -10,6 +10,7 @@ import frontend.Semantics.SemanticChecker
 import scala.collection.mutable.ListBuffer
 import frontend.Semantics.SemanticError
 import Array.concat
+import frontend.SSA
 
 class FrontendSemanticErrorTest extends AnyFunSuite {
   val programWhitespace: Parsley[Program] = lexer.whiteSpace *> program <* eof
@@ -54,6 +55,20 @@ class FrontendSemanticErrorTest extends AnyFunSuite {
         file,
         (x => x.nonEmpty)
       )
+    }
+  }
+
+  for (file <- listAllFiles(new File("wacc_examples/invalid/runtimeErr"))) {
+    if (file.isFile()) {
+      test(s"Runtime: Semantically checks invalid file ${file.getName}") {
+        val checker = new SemanticChecker
+        val ast = programWhitespace.parseFromFile(file).get
+        val (sTable, errors) =
+          checker.progAnalysis(ast)
+        val ssa = new SSA(sTable)
+        val (_, runtimes, _) = ssa.toSSA(ast)
+        assert(runtimes.nonEmpty)
+      }
     }
   }
 

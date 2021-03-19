@@ -17,15 +17,23 @@ import backend.IR.Condition._
 object RuntimeErrors {
 
   private val ERROR_EXIT_CODE = -1
+  val Get_First = 0
+  private val Get_Second = 1
 
-  /* Adds a runtime error ERR to the function table. */
-  def addRuntimeError(err: PreDefFunc): Label = {
+  /* Adds a runtime error ERR to the function & data table without the branch
+     to the runtime error function. */
+  def addInstantRuntimeError(err: PreDefFunc): Unit = {
     funcTable.addEntry(RuntimeError.func)
     funcTable.addEntry(stringPrintInstrs)
     dataTable.addDataEntryWithLabel("msg_string", "%.*s\\0")
     for (i <- 0 until err.msgs.length) {
       dataTable.addDataEntryWithLabel(err.msgName(i), err.msgs(i))
     }
+  }
+
+  /* Adds a runtime error ERR to the function table. */
+  def addRuntimeError(err: PreDefFunc): Label = {
+    addInstantRuntimeError(err)
     funcTable.addEntry(err.func)
     err.funcLabel
   }
@@ -51,11 +59,19 @@ object RuntimeErrors {
       List[Instruction](
         Push(ListBuffer(LR)),
         Cmp(resultReg, ImmInt(FALSE_INT)),
-        LdrCond(LT, resultReg, DataLabel(Label(ArrayBounds.msgName(0)))),
+        LdrCond(
+          LT,
+          resultReg,
+          DataLabel(Label(ArrayBounds.msgName(Get_First)))
+        ),
         BranchLinkCond(LT, RuntimeError.funcLabel),
         Ldr(R1, RegAdd(R1)),
         Cmp(resultReg, R1),
-        LdrCond(CS, resultReg, DataLabel(Label(ArrayBounds.msgName(1)))),
+        LdrCond(
+          CS,
+          resultReg,
+          DataLabel(Label(ArrayBounds.msgName(Get_Second)))
+        ),
         BranchLinkCond(CS, RuntimeError.funcLabel),
         Pop(ListBuffer(PC))
       )
@@ -70,7 +86,11 @@ object RuntimeErrors {
       List[Instruction](
         Push(ListBuffer(LR)),
         Cmp(R1, ImmInt(FALSE_INT)),
-        LdrCond(EQ, resultReg, DataLabel(Label(DivideByZero.msgName(0)))),
+        LdrCond(
+          EQ,
+          resultReg,
+          DataLabel(Label(DivideByZero.msgName(Get_First)))
+        ),
         BranchLinkCond(EQ, RuntimeError.funcLabel),
         Pop(ListBuffer(PC))
       )
@@ -83,7 +103,7 @@ object RuntimeErrors {
     (
       Overflow.funcLabel,
       List[Instruction](
-        Ldr(resultReg, DataLabel(Label(Overflow.msgName(0)))),
+        Ldr(resultReg, DataLabel(Label(Overflow.msgName(Get_First)))),
         BranchLink(RuntimeError.funcLabel)
       )
     )
@@ -96,7 +116,7 @@ object RuntimeErrors {
       List[Instruction](
         Push(ListBuffer(LR)),
         Cmp(resultReg, ImmInt(FALSE_INT)),
-        LdrCond(EQ, resultReg, DataLabel(Label(FreePair.msgName(0)))),
+        LdrCond(EQ, resultReg, DataLabel(Label(FreePair.msgName(Get_First)))),
         BranchCond(EQ, RuntimeError.funcLabel),
         Push(ListBuffer(resultReg)),
         Ldr(resultReg, RegAdd(resultReg)),
@@ -118,7 +138,7 @@ object RuntimeErrors {
       List[Instruction](
         Push(ListBuffer(LR)),
         Cmp(resultReg, ImmInt(FALSE_INT)),
-        LdrCond(EQ, resultReg, DataLabel(Label(FreeArray.msgName(0)))),
+        LdrCond(EQ, resultReg, DataLabel(Label(FreeArray.msgName(Get_First)))),
         BranchCond(EQ, RuntimeError.funcLabel),
         BranchLink(Label("free")),
         Pop(ListBuffer(PC))
@@ -134,7 +154,11 @@ object RuntimeErrors {
       List[Instruction](
         Push(ListBuffer(LR)),
         Cmp(resultReg, ImmInt(FALSE_INT)),
-        LdrCond(EQ, resultReg, DataLabel(Label(NullPointer.msgName(0)))),
+        LdrCond(
+          EQ,
+          resultReg,
+          DataLabel(Label(NullPointer.msgName(Get_First)))
+        ),
         BranchLinkCond(EQ, RuntimeError.funcLabel),
         Pop(ListBuffer(PC))
       )
@@ -148,7 +172,11 @@ object RuntimeErrors {
       List[Instruction](
         Push(ListBuffer(LR)),
         Cmp(resultReg, ImmInt(FALSE_INT)),
-        LdrCond(LT, resultReg, DataLabel(Label(NegativeShift.msgName(0)))),
+        LdrCond(
+          LT,
+          resultReg,
+          DataLabel(Label(NegativeShift.msgName(Get_First)))
+        ),
         BranchLinkCond(LT, RuntimeError.funcLabel),
         Pop(ListBuffer(PC))
       )

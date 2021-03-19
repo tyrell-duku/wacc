@@ -16,6 +16,7 @@ case class SymbolTable(
 
   val varMap = new HashMap[Ident, (Int, Type)]
   val children = mutable.ListBuffer.empty[SymbolTable]
+  var count = 0
 
   def nextScope(nextFunc: Ident): SymbolTable = {
     val next = SymbolTable(this, nextFunc, funcMap)
@@ -32,6 +33,12 @@ case class SymbolTable(
   def getNextScope: SymbolTable = {
     val next = children.head
     children -= next
+    next
+  }
+
+  def getNextScopeSSA: SymbolTable = {
+    val next = children(count)
+    count += 1
     next
   }
 
