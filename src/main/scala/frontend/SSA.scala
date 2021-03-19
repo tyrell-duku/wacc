@@ -172,6 +172,15 @@ case class SSA(sTable: SymbolTable) {
     }
   }
 
+  /* Gets size of the array the VARNAME is associated with */
+  private def getSize(varName: String): Int = {
+    val (_, curAssignmentNum, _) = dict(varName)
+    kvs.get(curAssignmentNum.toString + varName) match {
+      case Some(arrayLiter: ArrayLiter) => arrayLiter.len
+      case _                            => ???
+    }
+  }
+
   /* Transforms an array-elem AE to SSA form. */
   private def transformExprArrayElem(ae: ArrayElem): Expr = {
     val ArrayElem(id @ Ident(s, _), es, pos) = ae
@@ -185,14 +194,19 @@ case class SSA(sTable: SymbolTable) {
       val index = es(i)
       val transformedExpr = transformExpr(index)
       transIndices += transformedExpr
+      val arrSize = getSize(tempStr.dropWhile(c => c.isDigit))
+      transformedExpr match {
+        case IntLiter(n, _) if n < 0 || n >= arrSize => return Bounds
+        case _                                       =>
+      }
       if (containsIdent(transformedExpr)) {
         tempStr =
           arrayElemIdentifier(tempStr, List(index)).dropWhile(c => c.isDigit)
         val Ident(updatedStr, _) = updateIdent(Ident(tempStr, pos))
         kvs.get(updatedStr) match {
-          case Some(Ident(sNew, pos)) => tempStr = sNew
-          case None                   => retVal
-          case Some(p)                => retVal = toExpr(p)
+          case Some(Ident(sNew, _)) => tempStr = sNew
+          case None                 => retVal
+          case Some(p)              => retVal = toExpr(p)
         }
       } else {
         val (transformed, toTransform) = es.splitAt(i + 1)
@@ -829,6 +843,7 @@ case class SSA(sTable: SymbolTable) {
     val transformedStats = transformStat(stat)
     val p = Program(funcs, Seq(transformedStats.toList))
     val stackSizes = funcStackSizes :+ stackSize
+    println(p)
     (p, transformedStats.filter(isRuntimeErr), stackSizes)
   }
 }
