@@ -98,23 +98,28 @@ object Read {
     instructions
   }
 
+  def transReadDerefPtr(derefPtr: DerefPtr): ListBuffer[Instruction] = {
+    val DerefPtr(ptr, _) = derefPtr
+    val instructions = ListBuffer.empty[Instruction]
+    val resReg = getFreeReg()
+    instructions ++= transExp(ptr, resReg)
+    // value must be in R0 for branch
+    instructions += Mov(resultReg, resReg)
+    addUnusedReg(resReg)
+    val t = getExprType(derefPtr)
+    instructions += readBranch(t)
+    instructions
+  }
+
   /* Translates read statements to the internal representation. */
   def transRead(lhs: AssignLHS): ListBuffer[Instruction] = {
     lhs match {
-      case ident: Ident  => transReadIdent(ident)
-      case ae: ArrayElem => transReadArrayElem(ae)
-      case fst: Fst      => transReadPairElem(fst, IS_FST_ELEM)
-      case snd: Snd      => transReadPairElem(snd, IS_SND_ELEM)
-      case derefPtr @ DerefPtr(ptr, _) =>
-        val instructions = ListBuffer.empty[Instruction]
-        val resReg = getFreeReg()
-        instructions ++= transExp(ptr, resReg)
-        // value must be in R0 for branch
-        instructions += Mov(resultReg, resReg)
-        addUnusedReg(resReg)
-        val t = getExprType(derefPtr)
-        instructions += readBranch(t)
-        instructions
+      case ident: Ident       => transReadIdent(ident)
+      case ae: ArrayElem      => transReadArrayElem(ae)
+      case fst: Fst           => transReadPairElem(fst, IS_FST_ELEM)
+      case snd: Snd           => transReadPairElem(snd, IS_SND_ELEM)
+      case derefPtr: DerefPtr => transReadDerefPtr(derefPtr)
+
     }
   }
 
