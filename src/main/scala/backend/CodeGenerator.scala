@@ -101,11 +101,11 @@ object CodeGenerator {
 
   /* Converts the frontend IR to the backend IR for runtime errors. */
   private def frontToBackRuntimeErr(err: Runtime): PreDefFunc = err match {
-    case Rules.Overflow => Overflow
-    case ZeroDivision   => DivideByZero
-    case NegShift       => NegativeShift
-    case Bounds         => ArrayBounds
-    case NullRef        => NullPointer
+    case _: Rules.Overflow => Overflow
+    case _: ZeroDivision   => DivideByZero
+    case _: NegShift       => NegativeShift
+    case _: Bounds         => ArrayBounds
+    case _: NullRef        => NullPointer
   }
 
   /* Translates a runtime error ERR found at compile time. Instantly throws a

@@ -26,7 +26,7 @@ case class SSA(sTable: SymbolTable) {
   /* Constants */
   val Initial_Id_Num = 0
   val Undefined_Value = null
-  val Undefined_Pos = null
+  val Undefined_Pos = (-1, -1)
   val Undefined_Map = null
   val Dummy_Pos = (0, 0)
   val Is_Fst = true
@@ -77,11 +77,11 @@ case class SSA(sTable: SymbolTable) {
       rhsId: Ident,
       isFst: Boolean
   ): Unit = {
-    val Ident(varName, _) = rhsId
+    val Ident(varName, nullRefPos) = rhsId
     val Ident(rhsUniqueId, _) = updateIdent(rhsId)
     kvs.get(rhsUniqueId) match {
       // Derefencing a null pointer runtime error
-      case Some(_: PairLiter) => kvs += ((uniqueId, NullRef))
+      case Some(_: PairLiter) => kvs += ((uniqueId, NullRef(nullRefPos)))
       case _ =>
         kvs += (
           (
@@ -232,8 +232,8 @@ case class SSA(sTable: SymbolTable) {
       // Check for Out of Bounds errors
       val arrSize = getSize(tempStr.dropWhile(c => c.isDigit))
       transformedExpr match {
-        case IntLiter(n, _) if n < 0 || n >= arrSize => return Bounds
-        case _                                       =>
+        case IntLiter(n, pos) if n < 0 || n >= arrSize => return Bounds(pos)
+        case _                                         =>
       }
       if (containsIdent(transformedExpr)) {
         tempStr =
@@ -333,6 +333,7 @@ case class SSA(sTable: SymbolTable) {
         buf += EqIdent(t, ident, rhs)
     }
   }
+
   /* Changes a given assign-rhs RHS into an Expr. */
   private def toExpr(rhs: AssignRHS): Expr = rhs match {
     case e: Expr => e
@@ -358,9 +359,10 @@ case class SSA(sTable: SymbolTable) {
       case id @ Ident(s, _) =>
         e = toExpr(kvs(updateIdent(id).s))
         s
-      case ae @ ArrayElem(Ident(s, _), es, pos) =>
-        if (transformExprArrayElem(ae) == Bounds) {
-          return ListBuffer(RuntimeErr(Bounds))
+      case ae @ ArrayElem(Ident(s, _), es, _) =>
+        transformExprArrayElem(ae) match {
+          case bounds: Bounds => return ListBuffer(RuntimeErr(bounds))
+          case _              =>
         }
         val aeName = arrayElemIdentifier(s, es)
         e = getLatestHeapExpr(aeName)
@@ -378,7 +380,7 @@ case class SSA(sTable: SymbolTable) {
       case _ => ???
     }
     e match {
-      case NullRef => ListBuffer(RuntimeErr(NullRef))
+      case nullRef: NullRef => ListBuffer(RuntimeErr(nullRef))
       // If lhs evaluates to an ident then use that var for read
       case id: Ident =>
         val (_, curAssignmentNum, _) = dict(varName)
@@ -597,7 +599,7 @@ case class SSA(sTable: SymbolTable) {
      with the given heap variable. */
   private def getLatestHeapExpr(elemName: VarName): Expr = {
     if (!dict.contains(elemName)) {
-      NullRef
+      NullRef(Undefined_Pos)
     } else {
       val (_, curAssignmentNum, _) = dict(elemName)
       val elemIdent = curAssignmentNum.toString + elemName
@@ -617,7 +619,7 @@ case class SSA(sTable: SymbolTable) {
           val temp = str.dropWhile(c => c.isDigit)
           getLatestHeapExpr(pairElemIdentifier(temp, is_fst))
         case _ =>
-          NullRef
+          NullRef(Undefined_Pos)
       }
     }
   }
@@ -732,7 +734,7 @@ case class SSA(sTable: SymbolTable) {
     val stats = ListBuffer.empty[Stat]
     val Ident(pairId, _) = updateIdent(Ident(varName, Dummy_Pos))
     kvs(pairId) match {
-      case _: PairLiter => stats += RuntimeErr(NullRef)
+      case PairLiter(pos) => stats += RuntimeErr(NullRef(pos))
       case _ =>
         val (uniqueId, updatedRhs) =
           addToHashMap(Ident(pairElemIdentifier(varName, isFst), pos), rhs)
@@ -750,8 +752,8 @@ case class SSA(sTable: SymbolTable) {
       case EqAssign(ae @ ArrayElem(id @ Ident(varName, pos), es, _), r) =>
         // Array out of bounds check, if out of bounds return runtime error
         transformExprArrayElem(ae) match {
-          case Bounds =>
-            buf += RuntimeErr(Bounds)
+          case bounds: Bounds =>
+            buf += RuntimeErr(bounds)
           case expr =>
             val newIndices = es.map(transformExpr)
             if (newIndices.map(containsIdent).reduce((b1, b2) => b1 || b2)) {
@@ -813,8 +815,8 @@ case class SSA(sTable: SymbolTable) {
     // Null reference runtime error
     transExpArray(e, Free).map(s =>
       s match {
-        case Free(_: PairLiter) => RuntimeErr(NullRef)
-        case _                  => s
+        case Free(PairLiter(pos)) => RuntimeErr(NullRef(pos))
+        case _                    => s
       }
     )
   }

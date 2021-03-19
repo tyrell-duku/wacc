@@ -13,35 +13,30 @@ object Rules {
   // For runtime errors detected at compile time.
   sealed trait Runtime extends Expr
   // Integer overflow/underflow
-  case object Overflow extends Runtime {
-    override val pos = null
+  case class Overflow(pos: (Int, Int)) extends Runtime {
     override def getType(sTable: SymbolTable) = null
     override def toString = s"Integer overflow at $pos."
   }
   // Divide by zero
-  case object ZeroDivision extends Runtime {
-    override val pos = null
+  case class ZeroDivision(pos: (Int, Int)) extends Runtime {
     override def getType(sTable: SymbolTable) = null
     override def toString = s"Divide by zero error at $pos. Cannot divide by 0."
   }
   // Shifting with negative numbers
-  case object NegShift extends Runtime {
-    override val pos = null
+  case class NegShift(pos: (Int, Int)) extends Runtime {
     override def getType(sTable: SymbolTable) = null
     override def toString =
       s"Invalid operation at $pos: Operands of shifts must be positive."
   }
   // Arrary out of bounds check
-  case object Bounds extends Runtime {
-    override val pos = null
+  case class Bounds(pos: (Int, Int)) extends Runtime {
     override def getType(sTable: SymbolTable) = null
     override def toString =
       s"Array out of bounds error at $pos: Cannot access negative index/" +
         "index larger than array size"
   }
   // Reference to null
-  case object NullRef extends Runtime {
-    override val pos = null
+  case class NullRef(pos: (Int, Int)) extends Runtime {
     override def getType(sTable: SymbolTable) = null
     override def toString =
       s"Attempt to dereference a null reference at $pos."
