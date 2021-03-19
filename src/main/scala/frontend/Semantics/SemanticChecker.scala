@@ -148,14 +148,19 @@ class SemanticChecker {
   private def freeStat(e: Expr, sTable: SymbolTable): Unit = {
     val t = checkType(e, sTable)
     if ((t == null) || t.isPair || t.isArray || t.isPtr) {
-      return
+      e match {
+        case _: Ident =>
+        case _ =>
+          semErrors += InvalidFree(e)
+      }
+    } else {
+      // Error case: calling free only permitted for pairs/arrays/pointers
+      semErrors += TypeMismatch(
+        e,
+        t,
+        List(Pair(null, null), ArrayT(null), PtrT(null))
+      )
     }
-    // Error case: calling free only permitted for pairs/arrays/pointers
-    semErrors += TypeMismatch(
-      e,
-      t,
-      List(Pair(null, null), ArrayT(null), PtrT(null))
-    )
   }
 
   private def returnStat(e: Expr, sTable: SymbolTable): Unit = {

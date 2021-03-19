@@ -1,6 +1,7 @@
 package backend.CodeGeneration
 
 import backend.CodeGeneration.Arrays.loadArrayElem
+import backend.CodeGeneration.MemoryAllocs._
 import backend.CodeGenerator
 import backend.CodeGenerator._
 import backend.DefinedFuncs.PreDefinedFuncs.{
@@ -110,9 +111,11 @@ object Expressions {
         instructions += BranchLink(Label("__aeabi_idivmod"))
         instructions += Mov(rd, R1)
       case _: Plus =>
+        instructions ++= pointerArith(op.lExpr, rm)
         instructions += AddS(rd, rd, rm)
         instructions += BranchLinkCond(VS, addRuntimeError(Overflow))
       case _: frontend.Rules.Sub =>
+        instructions ++= pointerArith(op.lExpr, rm)
         instructions += SubS(rd, rd, rm)
         instructions += BranchLinkCond(VS, addRuntimeError(Overflow))
     }
@@ -195,6 +198,23 @@ object Expressions {
     ListBuffer(Ldr(rd, DataLabel(curLabel)))
   }
 
+  /* Translates the address operator into our IR instruction set. */ 
+  private def transAddr(ptr: Expr, rd: Reg): ListBuffer[Instruction] = {
+    val instructions = ListBuffer.empty[Instruction]
+    ptr match {
+      case id: Ident =>
+        // Get address of id stored in stack
+        val (index, t) = sTable.lookupAllCodeGen(id)
+        val spOffset = currentSP - index
+        instructions += Add(rd, SP, ImmInt(spOffset))
+      case DerefPtr(inner, _) =>
+        // &* cancel each other out
+        instructions ++= transExp(inner, rd)
+      // Semantically invalid
+      case _ => ???
+    }
+  }
+
   /* Translates an expression operator to the internal representation. */
   def transExp(e: Expr, rd: Reg): ListBuffer[Instruction] = {
     val instructions = ListBuffer.empty[Instruction]
@@ -218,6 +238,14 @@ object Expressions {
       case e: UnOp              => instructions ++= transUnOp(e, rd)
       case e: BinOp =>
         instructions ++= transBinOp(e, rd)
+      case Addr(ptr, _) => instructions ++= transAddr(ptr, rd)
+      case DerefPtr(ptr, _) =>
+        // PTR is a pointer so retrieve the address of it by calling transExp
+        // then load in the value stored at that address
+        instructions ++= transExp(ptr, rd)
+        instructions += Ldr(rd, RegAdd(rd))
+      case SizeOf(t, _) =>
+        instructions += Ldr(rd, ImmMem(getBaseTypeSize(t)))
     }
     instructions
   }

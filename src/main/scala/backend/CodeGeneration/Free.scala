@@ -1,11 +1,12 @@
 package backend.CodeGeneration
 
 import backend.CodeGenerator._
+import backend.CodeGeneration.MemoryAllocs.freePointer
 import backend.DefinedFuncs.PreDefinedFuncs.{FreePair, FreeArray}
 import backend.DefinedFuncs.RuntimeErrors.addRuntimeError
 import backend.IR.InstructionSet._
 import backend.IR.Operand._
-import frontend.Rules.{ArrayT, Ident, Pair}
+import frontend.Rules.{ArrayT, Ident, Pair, PtrT}
 import scala.collection.mutable.ListBuffer
 
 object Free {
@@ -26,8 +27,10 @@ object Free {
         instructions += BranchLink(addRuntimeError(FreePair))
       case _: ArrayT =>
         instructions += BranchLink(addRuntimeError(FreeArray))
+      case _: PtrT =>
+        instructions ++= freePointer(id)
       // Semantically incorrect
-      case _ => ListBuffer.empty[Instruction]
+      case _ => ???
     }
     instructions
   }

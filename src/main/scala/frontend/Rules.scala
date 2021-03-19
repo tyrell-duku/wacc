@@ -102,6 +102,10 @@ object Rules {
     override def getType(sTable: SymbolTable): Type = {
       val t = ptr.getType(sTable)
       semErrs = ptr.semErrs
+      ptr match {
+        case _: Ident | _: DerefPtr =>
+        case _                      => semErrs += InvalidAddressOperator(ptr)
+      }
       PtrT(t)
     }
   }

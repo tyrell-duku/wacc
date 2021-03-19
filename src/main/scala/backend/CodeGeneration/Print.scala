@@ -15,6 +15,7 @@ import frontend.Rules.{
   StringT,
   Pair,
   ArrayT,
+  PtrT,
   Expr,
   PrintLn => _
 }
@@ -24,12 +25,11 @@ object Print {
      bool, string, pair and array types. */
   private def typeToPreDefFunc(t: Type): PreDefinedFuncs.PreDefFunc = {
     t match {
-      case IntT          => PrintInt
-      case BoolT         => PrintBool
-      case StringT       => PrintString
-      case _: Pair       => PrintReference
-      case ArrayT(CharT) => PrintString
-      case ArrayT(_)     => PrintReference
+      case IntT                             => PrintInt
+      case BoolT                            => PrintBool
+      case StringT                          => PrintString
+      case ArrayT(CharT)                    => PrintString
+      case ArrayT(_) | Pair(_, _) | PtrT(_) => PrintReference
       // CharT does not have a pre defined function
       case _ => ???
     }

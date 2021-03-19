@@ -1,0 +1,31 @@
+# print the contents of a simple pointer array
+
+# Output:
+# #addrs# = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}
+
+# Program:
+
+begin
+  int *a = calloc(10, sizeof(int));
+  int i = 0 ;
+  while i < 10 
+  do 
+    a[i] = i ;
+    i = i + 1
+  done ;
+  print a ;
+  print " = {" ;
+  int j = 0 ;
+  while j < 10 
+  do 
+    print a[j] ;
+    if j < 9
+    then
+      print ", "
+    else
+      skip
+    fi ;
+    j = j + 1
+  done ;
+  println "}"
+end
