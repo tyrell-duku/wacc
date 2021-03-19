@@ -175,16 +175,22 @@ case class SSA(sTable: SymbolTable) {
   /* Gets size of the array the VARNAME is associated with */
   private def getSize(varName: String): Int = {
     val (_, curAssignmentNum, _) = dict(varName)
-    kvs.get(curAssignmentNum.toString + varName) match {
+    val lookupStr = curAssignmentNum.toString + varName
+    kvs.get(lookupStr) match {
       case Some(arrayLiter: ArrayLiter) => arrayLiter.len
-      case _                            => ???
+      case None =>
+        var length = 0
+        while (kvs.contains(lookupStr + "-" + length)) {
+          length += 1
+        }
+        length
+      case _ => ???
     }
   }
 
   /* Transforms an array-elem AE to SSA form. */
   private def transformExprArrayElem(ae: ArrayElem): Expr = {
     val ArrayElem(id @ Ident(s, _), es, pos) = ae
-    // If elem not in dict then out of bounds
     var tempId = id
     var Ident(tempStr, _) = id
     var retVal: Expr = id
@@ -194,6 +200,7 @@ case class SSA(sTable: SymbolTable) {
       val index = es(i)
       val transformedExpr = transformExpr(index)
       transIndices += transformedExpr
+      // Check for Out of Bounds errors
       val arrSize = getSize(tempStr.dropWhile(c => c.isDigit))
       transformedExpr match {
         case IntLiter(n, _) if n < 0 || n >= arrSize => return Bounds
