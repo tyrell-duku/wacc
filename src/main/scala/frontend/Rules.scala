@@ -446,6 +446,7 @@ object Rules {
   // Trait for all possible variations of an expression
   sealed trait Expr extends AssignRHS {
     override def map[B >: AssignRHS](f: Expr => Expr): Expr = this
+    val containsNoIdent: Boolean = false
   }
 
   // Trait for all possible variations of an unary operation
@@ -463,7 +464,7 @@ object Rules {
       expected._2
     }
 
-    val containsNoIdent: Boolean = {
+    override val containsNoIdent: Boolean = {
       e match {
         case _: Ident | _: ArrayElem => false
         case _                       => true
@@ -581,7 +582,7 @@ object Rules {
       case _                            => false
     }
 
-    val containsNoIdent: Boolean = {
+    override val containsNoIdent: Boolean = {
       val r = rExpr match {
         case _: Ident | _: ArrayElem => false
         case _                       => true
