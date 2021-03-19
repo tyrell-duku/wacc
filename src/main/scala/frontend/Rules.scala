@@ -137,6 +137,7 @@ object Rules {
       }
     }
     override def map[B >: AssignRHS](f: Expr => Expr) = DerefPtr(f(ptr), pos)
+    override val containsIdent: Boolean = ptr.containsIdent
   }
   object DerefPtr {
     def apply(op: Parsley[_]): Parsley[Expr => Expr] =
@@ -154,6 +155,7 @@ object Rules {
       PtrT(t)
     }
     override def map[B >: AssignRHS](f: Expr => Expr) = Addr(f(ptr), pos)
+    override val containsIdent: Boolean = ptr.containsIdent
   }
   object Addr {
     def apply(op: Parsley[_]): Parsley[Expr => Expr] =
@@ -446,7 +448,7 @@ object Rules {
   // Trait for all possible variations of an expression
   sealed trait Expr extends AssignRHS {
     override def map[B >: AssignRHS](f: Expr => Expr): Expr = this
-    val containsNoIdent: Boolean = false
+    val containsIdent = false
   }
 
   // Trait for all possible variations of an unary operation
@@ -464,13 +466,7 @@ object Rules {
       expected._2
     }
 
-    override val containsNoIdent: Boolean = {
-      e match {
-        case _: Ident | _: ArrayElem => false
-        case _                       => true
-      }
-    }
-
+    override val containsIdent: Boolean = e.containsIdent
     override def toString: String = unOperatorStr + e.toString
   }
 
@@ -582,17 +578,8 @@ object Rules {
       case _                            => false
     }
 
-    override val containsNoIdent: Boolean = {
-      val r = rExpr match {
-        case _: Ident | _: ArrayElem => false
-        case _                       => true
-      }
-      lExpr match {
-        case op: BinOp               => op.containsNoIdent && r
-        case _: Ident | _: ArrayElem => false
-        case _                       => true && r
-      }
-    }
+    override val containsIdent: Boolean =
+      lExpr.containsIdent || rExpr.containsIdent
   }
 
   // Traits for all possible types of an binary operation
@@ -801,6 +788,7 @@ object Rules {
       with Expr {
 
     override def toString: String = s
+    override val containsIdent = true
 
     override def getType(sTable: SymbolTable): Type = {
       if (!sTable.contains(this)) {
