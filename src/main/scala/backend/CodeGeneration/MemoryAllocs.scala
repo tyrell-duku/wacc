@@ -20,6 +20,13 @@ object MemoryAllocs {
   private var addressSet = Set.empty[Int]
   // Next unique identifer for pseudo addresses
   private var nextAddress = 0
+  // Constant needed for overflow check
+  private val Overflow_Right_Shift = 31
+  // Free runtime error messages
+  private val doubleFreeError =
+    "FreeError: unable to free memory that has been previously freed."
+  private val unallocatedMemError =
+    "FreeError: unable to free unallocated memory."
 
   /* Translates malloc, realloc and calloc memory allocations into our IR
      instruction set. */
@@ -62,7 +69,7 @@ object MemoryAllocs {
     // pointer.
     getExprType(l) match {
       case t: PtrT => pointerArithOffset(t, rd)
-      case _ => ListBuffer.empty[Instruction]
+      case _       => ListBuffer.empty[Instruction]
     }
   }
 
@@ -79,7 +86,7 @@ object MemoryAllocs {
       instructions += Ldr(rm, ImmMem(varSize))
       // Runtime error check
       instructions += SMul(rd, rm, rd, rm)
-      instructions += Cmp(rm, ASR(rd, ImmInt(31)))
+      instructions += Cmp(rm, ASR(rd, ImmInt(Overflow_Right_Shift)))
       addUnusedReg(rm)
       instructions += BranchLinkCond(NE, addRuntimeError(Overflow))
     }
@@ -118,8 +125,8 @@ object MemoryAllocs {
 
   /* Returns IR representation to print free error message and return a runtime
      error. */
-  private def printFreeError(s: String): ListBuffer[Instruction] = {
-    val msgLabel = dataTable.addDataEntry(s)
+  private def printFreeError(msg: String): ListBuffer[Instruction] = {
+    val msgLabel = dataTable.addDataEntry(msg)
     ListBuffer(
       Ldr(resultReg, DataLabel(msgLabel)),
       BranchLink(addRuntimeError(RuntimeError))
@@ -136,13 +143,9 @@ object MemoryAllocs {
           addressSet -= addr
           ListBuffer(BranchLink(Label("free")))
         } else {
-          val doubleFreeError =
-            "FreeError: unable to free memory that has been previously freed."
           printFreeError(doubleFreeError)
         }
       case None =>
-        val unallocatedMemError =
-          "FreeError: unable to free unallocated memory."
         printFreeError(unallocatedMemError)
     }
   }
