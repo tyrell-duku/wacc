@@ -153,14 +153,14 @@ class SemanticChecker {
         case _ =>
           semErrors += InvalidFree(e)
       }
-      return
+    } else {
+      // Error case: calling free only permitted for pairs/arrays/pointers
+      semErrors += TypeMismatch(
+        e,
+        t,
+        List(Pair(null, null), ArrayT(null), PtrT(null))
+      )
     }
-    // Error case: calling free only permitted for pairs/arrays/pointers
-    semErrors += TypeMismatch(
-      e,
-      t,
-      List(Pair(null, null), ArrayT(null), PtrT(null))
-    )
   }
 
   private def returnStat(e: Expr, sTable: SymbolTable): Unit = {
