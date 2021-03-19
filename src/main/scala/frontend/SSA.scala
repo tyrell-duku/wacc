@@ -108,6 +108,21 @@ case class SSA(sTable: SymbolTable) {
     uniqueId
   }
 
+  /* Updates the dict for a new pointer and transforms the arguments for a
+     given memory allocation. */
+  private def addPointerToHashMap(
+      memAlloc: MemoryAlloc,
+      originalStr: VarName
+  ): (VarName, AssignRHS) = {
+    val uniqueId = addToDict(originalStr)
+    val updatedRhs = memAlloc match {
+      case Realloc(ptr, size, pos) =>
+        Realloc(updateIdent(ptr), transformExpr(size), pos)
+      case alloc => alloc.map(transformExpr)
+    }
+    (uniqueId, updatedRhs)
+  }
+
   /* If the hashmap doesn't contain the identifier STR, then it is added to
      the hashmap with initial values (1, 1). If the hashmap contains the
      identifier STR, then the values are updated for unique identifying. */
@@ -130,7 +145,11 @@ case class SSA(sTable: SymbolTable) {
       case call: Call =>
         updatedRhs = call.map(transformExpr)
         uniqueId = addToDict(originalStr)
-      case _ =>
+      case memAlloc: MemoryAlloc =>
+        val (updatedPtrId, updatedPtrRhs) =
+          addPointerToHashMap(memAlloc, originalStr)
+        uniqueId = updatedPtrId
+        updatedRhs = updatedPtrRhs
     }
     (Ident(uniqueId, pos), updatedRhs)
   }
@@ -756,6 +775,8 @@ case class SSA(sTable: SymbolTable) {
         transformEqAssignPairElem(fst, varName, pos, r, Is_Fst)
       case EqAssign(snd @ Snd(Ident(varName, pos), _), r) =>
         transformEqAssignPairElem(snd, varName, pos, r, Not_Fst)
+      case EqAssign(derefPtr: DerefPtr, r) =>
+        buf += EqAssign(derefPtr.map(transformExpr), r)
       // Semantically incorrect
       case _ => ???
     }
@@ -806,7 +827,6 @@ case class SSA(sTable: SymbolTable) {
         val (v, rhs) = addToHashMap(id, r)
         scopeRedefine(id)
         deadCodeElimination(rhs, t, v, buf)
-      // TODO: EqAssign, deref ptr case
       case eqAssign: EqAssign => transformEqAssignStat(eqAssign)
       case Read(lhs)          => transformRead(lhs)
       case _: Free            => transformFree(stat)
