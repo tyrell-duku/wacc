@@ -212,7 +212,7 @@ case class SSA(sTable: SymbolTable) {
   }
 
   /* Gets size of the array the VARNAME is associated with */
-  private def getSize(varName: String): Int = {
+  private def getSize(varName: VarName): Int = {
     val (uniqueNum, curAssignmentNum, _) = dict(varName)
     var lookupStr = varName
     lookupStr = curAssignmentNum.toString + varName
@@ -230,6 +230,7 @@ case class SSA(sTable: SymbolTable) {
         }
       case _ =>
         var length = 0
+        // Check through kvs how large the array is
         while (kvs.contains(lookupStr + "-" + length)) {
           length += 1
         }
@@ -257,6 +258,7 @@ case class SSA(sTable: SymbolTable) {
         case IntLiter(n, pos) if n < 0 || n >= arrSize => return Bounds(pos)
         case _                                         =>
       }
+      // Update ArrayElem indices
       if (containsIdent(transformedExpr)) {
         tempStr = (arrayElemIdentifier(tempStr, List(index)))
         val Ident(updatedStr, _) = updateIdent(Ident(tempStr, pos))
@@ -629,7 +631,7 @@ case class SSA(sTable: SymbolTable) {
     }
   }
 
-  /* TODO */
+  /* Retrieves all PhiVars for while statements (needed for updating the kvs) */
   private def getPhiVar(x: (VarName, NumOfAssigns)): (VarName, Ident) = {
     val (varName, numOfAssigns) = x
     val (_, curAssignmentNum, _) = dict(varName)
@@ -639,7 +641,7 @@ case class SSA(sTable: SymbolTable) {
     )
   }
 
-  /* TODO */
+  /* Transform while statement into SSA using PhiVars */
   private def transformWhile(cond: Expr, s: Stat): ListBuffer[Stat] = {
     val stats = ListBuffer.empty[Stat]
     // Number of re-assignments of pre-declared vars within WHILE
@@ -682,7 +684,7 @@ case class SSA(sTable: SymbolTable) {
   }
 
   /* Strips initial Numbers from a string*/
-  private def strip(str: String): String = {
+  private def strip(str: VarName): VarName = {
     str.dropWhile(c => c.isDigit)
   }
 
@@ -695,11 +697,7 @@ case class SSA(sTable: SymbolTable) {
     } else {
       val (uniqueNum, curAssignmentNum, _) = dict(strip(elemName))
       val lookupName =
-        // if (uniqueNum == 0) {
         curAssignmentNum.toString + strip(elemName)
-      // } else {
-      //   uniqueNum.toString + strip(elemName)
-      // }
       toExpr(kvs.getOrElse(lookupName, Ident(lookupName, Undefined_Pos)))
     }
   }
@@ -711,11 +709,7 @@ case class SSA(sTable: SymbolTable) {
     } else {
       val (uniqueNum, curAssignmentNum, _) = dict(strip(elemName))
       val lookupName =
-        // if (uniqueNum == 0) {
         curAssignmentNum.toString + strip(elemName)
-      // } else {
-      // uniqueNum.toString + elemName
-      // }
       kvs.get(lookupName) match {
         case Some(Ident(str, _)) =>
           getLatestHeapExpr(pairElemIdentifier(strip(str), is_fst))
@@ -764,7 +758,6 @@ case class SSA(sTable: SymbolTable) {
     updatedPair
   }
 
-  /* TODO */
   private def updateRHS(rhs: AssignRHS, varName: VarName): AssignRHS =
     rhs match {
       case ArrayLiter(Some(es), pos) =>
@@ -778,8 +771,9 @@ case class SSA(sTable: SymbolTable) {
       case _                     => ???
     }
 
-  /* TODO */
-  private def transExpArray(e: Expr, pf: (Expr => Stat)): ListBuffer[Stat] = {
+  /* Retrieves an assignRHS from kvs and into a statement if it has not
+     been previously defined in the code. */
+  private def transExpOrRhs(e: Expr, pf: (Expr => Stat)): ListBuffer[Stat] = {
     val buf = ListBuffer.empty[Stat]
     e match {
       case id @ Ident(varName, _) =>
@@ -868,6 +862,7 @@ case class SSA(sTable: SymbolTable) {
             buf += RuntimeErr(bounds)
           case expr =>
             val newIndices = es.map(transformExpr)
+            // Add varName to dict
             if (newIndices.map(containsIdent).reduce((b1, b2) => b1 || b2)) {
               addToHashMap(
                 Ident(arrayElemIdentifier(strip(varName), newIndices), pos),
@@ -929,47 +924,12 @@ case class SSA(sTable: SymbolTable) {
   private def transformFree(stat: Stat): ListBuffer[Stat] = {
     val Free(e) = stat
     // Null reference runtime error
-    transExpArray(e, Free).map(s =>
+    transExpOrRhs(e, Free).map(s =>
       s match {
         case Free(PairLiter(pos)) => RuntimeErr(NullRef(pos))
         case _                    => s
       }
     )
-  }
-
-  /* Transforms a given statement S into SSA form. */
-  private def transformStat(stat: Stat): ListBuffer[Stat] = {
-    val buf = ListBuffer.empty[Stat]
-    stat match {
-      case EqIdent(t, id, r) =>
-        val (v, rhs) = addToHashMap(id, r)
-        rhs match {
-          case call: Call => buf ++= addUndeclaredVars(rhs)
-          case _          =>
-        }
-        scopeRedefine(id)
-        deadCodeElimination(rhs, t, v, buf)
-      case eqAssign: EqAssign => transformEqAssignStat(eqAssign)
-      case Read(lhs)          => transformRead(lhs)
-      case _: Free            => transformFree(stat)
-      case Return(e)          => transExpArray(e, Return)
-      case Exit(e)            => buf += Exit(transformExpr(e))
-      case Print(e)           => transExpArray(e, Print)
-      case PrintLn(e)         => transExpArray(e, PrintLn)
-      case If(cond, s1, s2)   => transformIf(cond, s1, s2)
-      case Seq(statList)      => transformSeqStat(statList)
-      case Skip               => buf
-      case While(cond, stat)  => transformWhile(cond, stat)
-      case Begin(stat) =>
-        val oldScopes = dict.map(enteringScope)
-        dict = dict.map(foo)
-        currSTable = currSTable.getNextScopeSSA
-        val transformedS = transformStat(stat)
-        currSTable = currSTable.getPrevScope
-        dict = dict.map(x => leavingScope(x, oldScopes))
-        transformedS
-      case stat => buf += stat
-    }
   }
 
   /* Update the scope assignment counter to 1 if variable is redeclared
@@ -980,19 +940,22 @@ case class SSA(sTable: SymbolTable) {
     dict += ((varName, (uniqueId, curAssignmentNum, Initial_Id_Num + 1)))
   }
 
-  /* TODO */
+  /* Retrieves the numOfAssigns for old scope and its associated varName.  */
   def enteringScope(kv: (VarName, IdNums)): (VarName, Int) = {
     val (varName, (uniqueId, curAssignmentNum, numOfAssigns)) = kv
     (varName, numOfAssigns)
   }
 
-  def foo(kv: (VarName, IdNums)): (VarName, IdNums) = {
+  /* Resets the numOfAssigns for scope to default (0) when entering a new
+     scope. */
+  def resetScopeNum(kv: (VarName, IdNums)): (VarName, IdNums) = {
     val (varName, (uniqueId, curAssignmentNum, numOfAssigns)) = kv
     (varName, (uniqueId, curAssignmentNum, Initial_Id_Num))
   }
 
   /* Update the current var number to correct value when leaving scope.
-     Reset the scope counter to 0 when leaving scope. */
+     Reset the scope counter to the old scope assignment number when leaving
+     scope. */
   def leavingScope(
       kv: (VarName, IdNums),
       oldScopes: HashMap[VarName, Int]
@@ -1005,6 +968,48 @@ case class SSA(sTable: SymbolTable) {
     (varName, (uniqueId, curAssignmentNum - numOfAssigns, oldAssignNum))
   }
 
+  /* Translates the inside of a begin statement into SSA. Updates the dict
+     accordingly for new scope whilst keeping track of old scope. Reset the
+     scope assignment number to old scope when leaving scope. */
+  private def transformBegin(stat: Stat): ListBuffer[Stat] = {
+    val oldScopes = dict.map(enteringScope)
+    dict = dict.map(resetScopeNum)
+    currSTable = currSTable.getNextScopeSSA
+    val transformedS = transformStat(stat)
+    currSTable = currSTable.getPrevScope
+    dict = dict.map(x => leavingScope(x, oldScopes))
+    transformedS
+  }
+
+  /* Transforms a given statement S into SSA form. */
+  private def transformStat(stat: Stat): ListBuffer[Stat] = {
+    val buf = ListBuffer.empty[Stat]
+    stat match {
+      case EqIdent(t, id, r) =>
+        val (v, rhs) = addToHashMap(id, r)
+        rhs match {
+          // Ensure all parameters are added to BUF
+          case call: Call => buf ++= addUndeclaredVars(rhs)
+          case _          =>
+        }
+        scopeRedefine(id)
+        deadCodeElimination(rhs, t, v, buf)
+      case eqAssign: EqAssign => transformEqAssignStat(eqAssign)
+      case Read(lhs)          => transformRead(lhs)
+      case _: Free            => transformFree(stat)
+      case Return(e)          => transExpOrRhs(e, Return)
+      case Exit(e)            => buf += Exit(transformExpr(e))
+      case Print(e)           => transExpOrRhs(e, Print)
+      case PrintLn(e)         => transExpOrRhs(e, PrintLn)
+      case If(cond, s1, s2)   => transformIf(cond, s1, s2)
+      case Seq(statList)      => transformSeqStat(statList)
+      case Skip               => buf
+      case While(cond, stat)  => transformWhile(cond, stat)
+      case Begin(stat)        => transformBegin(stat)
+      case stat               => buf += stat
+    }
+  }
+
   /* Transforms a given function F into SSA form. */
   def transformFunc(f: Func): (Func, VarStackSize) = {
     val Func(t, id, params, stat) = f
@@ -1015,6 +1020,7 @@ case class SSA(sTable: SymbolTable) {
           Ident(addToDict(v), pos)
         })
       )
+    // Update scope for in branch
     currSTable = currSTable.getNextScopeSSA
     val ssaStat = transformStat(stat)
     currSTable = currSTable.getPrevScope
