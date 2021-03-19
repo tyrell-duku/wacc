@@ -603,6 +603,8 @@ case class SSA(sTable: SymbolTable) {
       case ArrayLiter(None, pos) => ArrayLiter(None, pos)
       case pair: Newpair         => updateNewpair(varName, pair)
       case call: Call            => call
+      case id: Ident             => transformExpr(id)
+      case e: Expr               => e
       case _                     => ???
     }
 
@@ -615,17 +617,21 @@ case class SSA(sTable: SymbolTable) {
         val rhs = kvs.getOrElse(x, uniqueId)
         rhs match {
           // Not array, transformExpr as usual
-          case _: Expr => buf += pf(toExpr(rhs))
+          case e: Expr => buf += pf(e)
           // Heap variable has not been defined in current ast then add to list
           // of statements
           case r =>
             val rhsUpdated = updateRHS(r, varName)
             // Get latest ident as it may be updated
-            uniqueId = updateIdent(id)
             val t = currSTable.lookupAllType(id)
             stackSize += getBaseTypeSize(t)
-            buf += EqIdent(t, uniqueId, rhsUpdated)
-            buf += pf(uniqueId)
+            transformExpr(id) match {
+              case ident: Ident =>
+                uniqueId = ident
+                buf += EqIdent(t, uniqueId, rhsUpdated)
+                buf += pf(uniqueId)
+              case _ =>
+            }
         }
       // Not ident so not heap variable, transformExpr as usual
       case _ => buf += pf(transformExpr(e))
@@ -681,11 +687,19 @@ case class SSA(sTable: SymbolTable) {
             buf += RuntimeErr(Bounds)
           case expr =>
             val newIndices = es.map(transformExpr)
+            if (newIndices.map(containsIdent).reduce((b1, b2) => b1 || b2)) {
+              addToHashMap(
+                Ident(arrayElemIdentifier(varName, newIndices), pos),
+                r
+              )
+            } else {
+              addToDict(varName)
+            }
             val newId @ Ident(str, _) = updateIdent(id)
             val newArrayElem = ArrayElem(newId, newIndices, pos)
-            addToHashMap(Ident(arrayElemIdentifier(varName, es), pos), r)
+            val rhsNew = updateRHS(r, str)
             if (!kvs.contains(str)) {
-              buf += EqAssign(newArrayElem, r)
+              buf += EqAssign(newArrayElem, rhsNew)
             }
             buf
         }
