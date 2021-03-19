@@ -9,7 +9,7 @@ import backend.DefinedFuncs.PreDefinedFuncs.{FreePair, FreeArray}
 import backend.DefinedFuncs.RuntimeErrors.addRuntimeError
 import backend.IR.InstructionSet._
 import backend.IR.Operand._
-import frontend.Rules.{ArrayT, Ident, Pair, PtrT}
+import frontend.Rules.{ArrayT, Ident, Pair, PtrT, Expr}
 import scala.collection.mutable.ListBuffer
 
 object Free {
