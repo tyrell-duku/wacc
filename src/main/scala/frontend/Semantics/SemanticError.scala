@@ -46,10 +46,6 @@ sealed trait SemanticError {
         e.pos
       )
   }
-
-  def printPos(pos: (Int, Int)): String = pos match {
-    case (line: Int, col: Int) => "(line " + line + ", column " + col + ")"
-  }
 }
 
 case class TypeMismatch(invalid: AssignRHS, actualT: Type, expected: List[Type])

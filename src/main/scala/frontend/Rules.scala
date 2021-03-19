@@ -168,6 +168,10 @@ object Rules {
 
   /* FRONTEND */
 
+  def printPos(pos: (Int, Int)): String = pos match {
+    case (line: Int, col: Int) => "(line " + line + ", column " + col + ")"
+  }
+
   sealed case class Program(fs: List[Func], s: Stat) {
     def printStats(s: Stat, str: String): StringBuilder = {
       val sb = new StringBuilder()
