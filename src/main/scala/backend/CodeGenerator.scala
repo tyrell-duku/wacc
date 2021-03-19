@@ -146,7 +146,7 @@ object CodeGenerator {
       case _: ComparOps  => BoolT
       case _: EqOps      => BoolT
       case _: LogicalOps => BoolT
-      case _: BitWiseOps => IntT
+      case _: BitwiseOps => IntT
       case Addr(e, _)    => PtrT(getExprType(e))
       case DerefPtr(ptr, _) =>
         val PtrT(inner) = ptr.getType(sTable)

@@ -577,39 +577,39 @@ object Rules {
       pos.map((p: (Int, Int)) => (l: Expr, r: Expr) => Or(l, r, p)) <* op
   }
   // Traits for bitwise operators
-  sealed trait BitWiseOps extends BinOp {
+  sealed trait BitwiseOps extends BinOp {
     override val expected: (List[Type], Type) = (List(IntT), IntT)
   }
-  case class BitWiseAnd(lExpr: Expr, rExpr: Expr, pos: (Int, Int))
-      extends BitWiseOps {
+  case class BitwiseAnd(lExpr: Expr, rExpr: Expr, pos: (Int, Int))
+      extends BitwiseOps {
     val operatorStr = "&"
   }
-  object BitWiseAnd {
+  object BitwiseAnd {
     def apply(op: Parsley[_]): Parsley[(Expr, Expr) => Expr] =
       pos.map((p: (Int, Int)) =>
-        (l: Expr, r: Expr) => BitWiseAnd(l, r, p)
+        (l: Expr, r: Expr) => BitwiseAnd(l, r, p)
       ) <* op
   }
-  case class BitWiseOr(lExpr: Expr, rExpr: Expr, pos: (Int, Int))
-      extends BitWiseOps {
+  case class BitwiseOr(lExpr: Expr, rExpr: Expr, pos: (Int, Int))
+      extends BitwiseOps {
     val operatorStr = "|"
   }
-  object BitWiseOr {
+  object BitwiseOr {
     def apply(op: Parsley[_]): Parsley[(Expr, Expr) => Expr] =
-      pos.map((p: (Int, Int)) => (l: Expr, r: Expr) => BitWiseOr(l, r, p)) <* op
+      pos.map((p: (Int, Int)) => (l: Expr, r: Expr) => BitwiseOr(l, r, p)) <* op
   }
-  case class BitWiseXor(lExpr: Expr, rExpr: Expr, pos: (Int, Int))
-      extends BitWiseOps {
+  case class BitwiseXor(lExpr: Expr, rExpr: Expr, pos: (Int, Int))
+      extends BitwiseOps {
     val operatorStr = "^"
   }
-  object BitWiseXor {
+  object BitwiseXor {
     def apply(op: Parsley[_]): Parsley[(Expr, Expr) => Expr] =
       pos.map((p: (Int, Int)) =>
-        (l: Expr, r: Expr) => BitWiseXor(l, r, p)
+        (l: Expr, r: Expr) => BitwiseXor(l, r, p)
       ) <* op
   }
   case class LogicalShiftLeft(lExpr: Expr, rExpr: Expr, pos: (Int, Int))
-      extends BitWiseOps {
+      extends BitwiseOps {
     val operatorStr = "<<"
   }
   object LogicalShiftLeft {
@@ -619,7 +619,7 @@ object Rules {
       ) <* op
   }
   case class LogicalShiftRight(lExpr: Expr, rExpr: Expr, pos: (Int, Int))
-      extends BitWiseOps {
+      extends BitwiseOps {
     val operatorStr = ">>"
   }
   object LogicalShiftRight {
