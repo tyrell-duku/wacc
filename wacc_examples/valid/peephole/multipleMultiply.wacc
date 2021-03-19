@@ -1,0 +1,5 @@
+begin
+  println 5 * 1;
+  println 4 * 0;
+  println 6 * 8
+end

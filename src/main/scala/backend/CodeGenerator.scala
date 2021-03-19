@@ -149,10 +149,11 @@ object CodeGenerator {
     }
   }
 
-  /* Gets the inner type of the array. */
-  def getArrayInnerType(t: Type): Type = {
-    val ArrayT(inner) = t
-    inner
+  /* Gets the inner type of the array or pointer. */
+  def getInnerType(t: Type): Type = t match {
+    case ArrayT(inner) => inner
+    case PtrT(inner)   => inner
+    case _             => ???
   }
 
   /* Gets the type of the given expression E. */
@@ -168,7 +169,7 @@ object CodeGenerator {
         t
       case ArrayElem(id, es, _) =>
         var (_, t) = sTable(id)
-        t = es.foldLeft(t)((x, _) => getArrayInnerType(x))
+        t = es.foldLeft(t)((x, _) => getInnerType(x))
         t
       case _: BitwiseNot => IntT
       case _: Not        => BoolT
@@ -181,7 +182,13 @@ object CodeGenerator {
       case _: EqOps      => BoolT
       case _: LogicalOps => BoolT
       case _: BitwiseOps => IntT
-      case _: Runtime    => ???
+      case Addr(e, _)    => PtrT(getExprType(e))
+      case DerefPtr(ptr, _) =>
+        val PtrT(inner) = ptr.getType(sTable)
+        inner
+      case _: SizeOf  => IntT
+      case _: Runtime => ???
+      // case _         => ???
     }
   }
 
@@ -260,13 +267,14 @@ object CodeGenerator {
   /* Return size of T in SP. */
   def getBaseTypeSize(t: Type): Int = {
     t match {
-      case IntT           => INT_SIZE
-      case BoolT          => BOOL_SIZE
-      case CharT          => CHAR_SIZE
-      case StringT        => STR_SIZE
-      case ArrayT(innerT) => ARRAY_SIZE
-      case Pair(_, _)     => PAIR_SIZE
-      case _              => ERROR
+      case IntT    => INT_SIZE
+      case BoolT   => BOOL_SIZE
+      case CharT   => CHAR_SIZE
+      case StringT => STR_SIZE
+      // Heap variables are all of size ADDRESS_SIZE (4 bytes)
+      case ArrayT(_) | Pair(_, _) | PtrT(_) => ADDRESS_SIZE
+      // Semantically incorrect
+      case _ => ???
     }
   }
 

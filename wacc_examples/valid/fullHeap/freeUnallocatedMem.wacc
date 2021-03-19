@@ -1,0 +1,11 @@
+# Output:
+# Runtime Error
+
+# Program:
+
+begin
+  char c = 'h';
+  println c;
+  char *str = &c;
+  free str
+end

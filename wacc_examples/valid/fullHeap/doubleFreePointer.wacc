@@ -1,0 +1,12 @@
+# Output:
+# Runtime Error
+
+# Program:
+
+begin
+  int *x = malloc(4);
+  *x = 10;
+  println *x;
+  free x;
+  free x
+end

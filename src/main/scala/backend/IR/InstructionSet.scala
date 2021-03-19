@@ -95,6 +95,9 @@ object InstructionSet {
       if (offset == 0) Ldr(src, RegAdd(dst))
       else Ldr(src, RegisterOffset(dst, offset))
     }
+    def apply(isByte: Boolean, src: Reg, op: LoadOperand): Instruction = {
+      if (isByte) LdrSB(src, op) else Ldr(src, op)
+    }
   }
   // Load byte signed
   case class LdrSB(rd: Reg, op2: LoadOperand) extends Instruction {
@@ -123,6 +126,9 @@ object InstructionSet {
     def apply(src: Reg, dst: Reg, offset: Int): Instruction = {
       if (offset == 0) Str(src, RegAdd(dst))
       else Str(src, RegisterOffset(dst, offset))
+    }
+    def apply(isByte: Boolean, src: Reg, addr: Address): Instruction = {
+      if (isByte) StrB(src, addr) else Str(src, addr)
     }
   }
   // Store byte

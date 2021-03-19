@@ -3,8 +3,12 @@ package backend.CodeGeneration
 import backend.CodeGeneration.Arrays._
 import backend.CodeGeneration.Expressions.transExp
 import backend.CodeGeneration.Functions.transCall
+import backend.CodeGeneration.MemoryAllocs._
 import backend.CodeGeneration.Pairs._
 import backend.CodeGenerator._
+import backend.DefinedFuncs.PreDefinedFuncs.Overflow
+import backend.DefinedFuncs.RuntimeErrors.addRuntimeError
+import backend.IR.Condition.VS
 import backend.IR.InstructionSet._
 import backend.IR.Operand._
 import frontend.Rules._
@@ -25,6 +29,9 @@ object Assignments {
     val spOffset = currentSP - scopeSP
     val freeReg = getFreeReg()
     val (isByte, instrs) = assignRHS(t, aRHS, freeReg)
+    if (t.isPtr) {
+      addToHeap(id, aRHS)
+    }
     instructions ++= instrs
     instructions += Str(isByte, freeReg, SP, spOffset)
     addUnusedReg(freeReg)
@@ -47,6 +54,9 @@ object Assignments {
       case id: Ident =>
         val (index, t) = sTable(id)
         val (isByte, instrs) = assignRHS(t, aRHS, freeReg)
+        if (t.isPtr) {
+          addToHeap(id, aRHS)
+        }
         instructions ++= instrs
         val spOffset = currentSP - index
         instructions += Str(isByte, freeReg, SP, spOffset)
@@ -54,6 +64,13 @@ object Assignments {
         val (_, instrs) = assignRHS(getExprType(ae), aRHS, freeReg)
         instructions ++= instrs
         instructions ++= storeArrayElem(id, es, freeReg)
+      case deref @ DerefPtr(ptr, _) =>
+        val (isByte, instrs) = assignRHS(getExprType(deref), aRHS, freeReg)
+        instructions ++= instrs
+        val nextFreeReg = getFreeReg()
+        instructions ++= transExp(ptr, nextFreeReg)
+        instructions += Str(freeReg, RegAdd(nextFreeReg))
+        addUnusedReg(nextFreeReg)
       // Semantically incorrect
       case _ =>
     }
@@ -84,6 +101,8 @@ object Assignments {
         instructions ++= transArrayLiter(t, opArr, freeReg)
       case Newpair(fst, snd, _) =>
         instructions ++= assignRHSPair(t, fst, snd, freeReg)
+      case memAlloc: MemoryAlloc =>
+        instructions ++= transMemoryAlloc(t, memAlloc, freeReg)
       // Semantically incorrect
       case _ =>
     }
