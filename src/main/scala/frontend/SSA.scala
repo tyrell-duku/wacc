@@ -179,7 +179,7 @@ case class SSA(sTable: SymbolTable) {
      shared reference correctly. */
   private def isHeapVariable(id: Ident): Boolean =
     id.getType(currSTable) match {
-      case _: ArrayT | _: Pair => true
+      case _: ArrayT | _: Pair | _: PtrT => true
       case _                   => false
     }
 
@@ -224,7 +224,9 @@ case class SSA(sTable: SymbolTable) {
     var Ident(tempStr, _) = id
     var retVal: Expr = id
     val transIndices = ListBuffer.empty[Expr]
-
+    if (id.getType(currSTable).isPtr) {
+      return ArrayElem(updateIdent(id), es.map(transformExpr), Dummy_Pos)
+    }
     for (i <- es.indices) {
       val index = es(i)
       val transformedExpr = transformExpr(index)
@@ -278,8 +280,13 @@ case class SSA(sTable: SymbolTable) {
   private def transformExpr(e: Expr): Expr = e match {
     case sizeof: SizeOf => sizeof
     case id: Ident      => transformExprId(id)
-    case ae: ArrayElem  => transformExprArrayElem(ae)
-    case liter: Liter   => liter
+    case ae @ ArrayElem(id, es, pos) =>
+      if (id.getType(currSTable).isPtr) {
+        ArrayElem(updateIdent(id), es.map(transformExpr), pos)
+      } else {
+        transformExprArrayElem(ae)
+      }
+    case liter: Liter => liter
     case Len(exp, pos) =>
       exp match {
         case id @ Ident(str, _) =>
@@ -327,6 +334,9 @@ case class SSA(sTable: SymbolTable) {
     rhs match {
       case err: Runtime =>
         buf += RuntimeErr(err)
+      case memAlloc: MemoryAlloc if t.isPtr => 
+        stackSize += getBaseTypeSize(t)
+        buf += EqIdent(t, ident, rhs)
       case _: Expr | _: ArrayLiter | _: Newpair | _: PairElem => buf
       case _ =>
         stackSize += getBaseTypeSize(t)
@@ -375,12 +385,15 @@ case class SSA(sTable: SymbolTable) {
         val sndName = pairElemIdentifier(s, Not_Fst)
         e = getLatestHeapExpr(sndName)
         sndName
-      // TODO: Deref Ptr
+      case deref: DerefPtr =>
+        e = transformExpr(deref)
+        ""
       // Semantically incorrect
       case _ => ???
     }
     e match {
       case nullRef: NullRef => ListBuffer(RuntimeErr(nullRef))
+      case deref: DerefPtr  => ListBuffer(Read(deref))
       // If lhs evaluates to an ident then use that var for read
       case id: Ident =>
         val (_, curAssignmentNum, _) = dict(varName)
@@ -628,7 +641,7 @@ case class SSA(sTable: SymbolTable) {
      from the kvs. */
   private def updateArrayLiter(
       elems: List[Expr],
-      pos: (Int, Int),
+      pos: (Line, Col),
       arrName: VarName
   ): AssignRHS = {
     val updatedElems = ListBuffer.empty[Expr]
@@ -727,7 +740,7 @@ case class SSA(sTable: SymbolTable) {
   private def transformEqAssignPairElem(
       pe: PairElem,
       varName: VarName,
-      pos: (Int, Int),
+      pos: (Line, Col),
       rhs: AssignRHS,
       isFst: Boolean
   ): ListBuffer[Stat] = {
@@ -778,7 +791,11 @@ case class SSA(sTable: SymbolTable) {
       case EqAssign(snd @ Snd(Ident(varName, pos), _), r) =>
         transformEqAssignPairElem(snd, varName, pos, r, Not_Fst)
       case EqAssign(derefPtr: DerefPtr, r) =>
-        buf += EqAssign(derefPtr.map(transformExpr), r)
+        val updatedRhs = r match {
+          case e: Expr => transformExpr(e)
+          case _ => r
+        }
+        buf += EqAssign(derefPtr.map(transformExpr), updatedRhs)
       // Semantically incorrect
       case _ => ???
     }
