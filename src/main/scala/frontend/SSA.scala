@@ -180,7 +180,7 @@ case class SSA(sTable: SymbolTable) {
   private def isHeapVariable(id: Ident): Boolean =
     id.getType(currSTable) match {
       case _: ArrayT | _: Pair | _: PtrT => true
-      case _                   => false
+      case _                             => false
     }
 
   /* Transforms an ident ID into SSA form and applies constant propagation. */
@@ -278,8 +278,9 @@ case class SSA(sTable: SymbolTable) {
   /* Transforms an expression E into SSA form and applies constant folding &
      propagation. */
   private def transformExpr(e: Expr): Expr = e match {
-    case sizeof: SizeOf => sizeof
-    case id: Ident      => transformExprId(id)
+    case sizeof: SizeOf     => sizeof
+    case id: Ident          => transformExprId(id)
+    case Addr(id: Ident, _) => Addr(updateIdent(id), Dummy_Pos)
     case ae @ ArrayElem(id, es, pos) =>
       if (id.getType(currSTable).isPtr) {
         ArrayElem(updateIdent(id), es.map(transformExpr), pos)
@@ -334,7 +335,7 @@ case class SSA(sTable: SymbolTable) {
     rhs match {
       case err: Runtime =>
         buf += RuntimeErr(err)
-      case memAlloc: MemoryAlloc if t.isPtr => 
+      case memAlloc: MemoryAlloc if t.isPtr =>
         stackSize += getBaseTypeSize(t)
         buf += EqIdent(t, ident, rhs)
       case _: Expr | _: ArrayLiter | _: Newpair | _: PairElem => buf
@@ -698,6 +699,16 @@ case class SSA(sTable: SymbolTable) {
         var uniqueId @ Ident(x, _) = updateIdent(id)
         val rhs = kvs.getOrElse(x, uniqueId)
         rhs match {
+          // Address operator requires a variable stored in memory
+          case addr @ Addr(addrId @ Ident(addrStr, _), _) =>
+            val rhsToAdd = kvs(addrStr)
+            val t = rhsToAdd.getType(currSTable)
+            t match {
+              case _: PtrT =>
+              case _ =>
+                buf += EqIdent(rhs.getType(currSTable), addrId, rhsToAdd)
+            }
+            buf += pf(Addr(addrId, Dummy_Pos))
           // Not array, transformExpr as usual
           case e: Expr => buf += pf(e)
           // Heap variable has not been defined in current ast then add to list
@@ -715,6 +726,7 @@ case class SSA(sTable: SymbolTable) {
               case _ =>
             }
         }
+
       // Not ident so not heap variable, transformExpr as usual
       case _ => buf += pf(transformExpr(e))
     }
@@ -793,7 +805,7 @@ case class SSA(sTable: SymbolTable) {
       case EqAssign(derefPtr: DerefPtr, r) =>
         val updatedRhs = r match {
           case e: Expr => transformExpr(e)
-          case _ => r
+          case _       => r
         }
         buf += EqAssign(derefPtr.map(transformExpr), updatedRhs)
       // Semantically incorrect
