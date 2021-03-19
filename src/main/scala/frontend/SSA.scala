@@ -178,13 +178,12 @@ case class SSA(sTable: SymbolTable) {
     val lookupStr = curAssignmentNum.toString + varName
     kvs.get(lookupStr) match {
       case Some(arrayLiter: ArrayLiter) => arrayLiter.len
-      case None =>
+      case _ =>
         var length = 0
         while (kvs.contains(lookupStr + "-" + length)) {
           length += 1
         }
         length
-      case _ => ???
     }
   }
 
